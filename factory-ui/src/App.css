@@ -138,6 +138,30 @@
   color: #6b7280;
 }
 
+.toolbar-btn.continuous-btn {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.toolbar-btn.continuous-btn:hover:not(:disabled) {
+  background: #bfdbfe;
+  border-color: #93c5fd;
+}
+
+.toolbar-btn.stop-btn {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.toolbar-btn.stop-btn:hover:not(:disabled) {
+  background: #fde68a;
+  border-color: #fcd34d;
+}
+
 .toolbar-info {
   display: flex;
   gap: 16px;
@@ -166,6 +190,16 @@
   background: #fee2e2;
   color: #dc2626;
   border: 1px solid #fecaca;
+}
+
+.continuous-status {
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
 }
 
 .react-flow-wrapper {

@@ -210,6 +210,86 @@ export class ApiService {
       throw error;
     }
   }
+
+  async startContinuousExecution(workflow: WorkflowData): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/continuous/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(workflow),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to start continuous execution:', error);
+      throw error;
+    }
+  }
+
+  async stopContinuousExecution(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/continuous/stop`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to stop continuous execution:', error);
+      throw error;
+    }
+  }
+
+  async getContinuousStatus(): Promise<{
+    is_running: boolean;
+    has_workflow: boolean;
+    execution_count: number;
+    last_execution_time: number;
+    loop_interval: number;
+    results: Record<string, any>;
+    logs: Array<{ level: string; message: string }>;
+  }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/continuous/status`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to get continuous status:', error);
+      throw error;
+    }
+  }
+
+  async setContinuousInterval(interval: number): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/continuous/set-interval`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(interval),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to set continuous interval:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiService = ApiService.getInstance();

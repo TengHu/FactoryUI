@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -46,6 +46,8 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResults, setExecutionResults] = useState<any>(null);
+  const [isContinuousRunning, setIsContinuousRunning] = useState(false);
+  const [continuousStatus, setContinuousStatus] = useState<any>(null);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => {
@@ -340,7 +342,30 @@ function App() {
     return isValid;
   }, [nodes]);
 
-  const runWorkflow = useCallback(async () => {
+  const prepareWorkflowData = useCallback(() => {
+    return {
+      nodes: nodes.map(node => ({
+        id: node.id,
+        type: node.data.nodeInfo?.name || node.data.type || node.type,
+        data: node.data,
+        position: node.position
+      })),
+      edges: edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle
+      })),
+      metadata: {
+        name: `workflow-execution-${Date.now()}`,
+        created: new Date().toISOString(),
+        version: '1.0.0'
+      }
+    };
+  }, [nodes, edges]);
+
+  const runWorkflowOnce = useCallback(async () => {
     if (nodes.length === 0) {
       alert('No nodes to execute. Please add some nodes to the canvas first.');
       return;
@@ -350,35 +375,15 @@ function App() {
     setExecutionResults(null);
 
     try {
-      const workflowData = {
-        nodes: nodes.map(node => ({
-          id: node.id,
-          type: node.data.nodeInfo?.name || node.data.type || node.type,
-          data: node.data,
-          position: node.position
-        })),
-        edges: edges.map(edge => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          sourceHandle: edge.sourceHandle,
-          targetHandle: edge.targetHandle
-        })),
-        metadata: {
-          name: `workflow-execution-${Date.now()}`,
-          created: new Date().toISOString(),
-          version: '1.0.0'
-        }
-      };
-
-      console.log('Executing workflow:', workflowData);
-      const result = await apiService.executeWorkflow(workflowData);
+      const workflowData = prepareWorkflowData();
+      console.log('Executing workflow once:', workflowData);
       
+      const result = await apiService.executeWorkflow(workflowData);
       setExecutionResults(result);
       
       if (result.success) {
-        console.log('Workflow triggered successfully:', result);
-        alert('Workflow triggered successfully! Check the console for details.');
+        console.log('Workflow executed successfully:', result);
+        alert('Workflow executed successfully! Check the console for details.');
       } else {
         console.error('Workflow execution failed:', result);
         alert(`Workflow execution failed: ${result.error || 'Unknown error'}`);
@@ -390,7 +395,83 @@ function App() {
     } finally {
       setIsExecuting(false);
     }
-  }, [nodes, edges]);
+  }, [nodes.length, prepareWorkflowData]);
+
+  const startContinuousExecution = useCallback(async () => {
+    if (nodes.length === 0) {
+      alert('No nodes to execute. Please add some nodes to the canvas first.');
+      return;
+    }
+
+    try {
+      const workflowData = prepareWorkflowData();
+      console.log('Starting continuous execution:', workflowData);
+      
+      const result = await apiService.startContinuousExecution(workflowData);
+      
+      if (result.success) {
+        setIsContinuousRunning(true);
+        console.log('Continuous execution started:', result);
+        alert('Continuous execution started! The workflow will run repeatedly.');
+        
+        // Start polling for status updates
+        pollContinuousStatus();
+      } else {
+        alert(`Failed to start continuous execution: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error starting continuous execution:', error);
+      alert('Failed to start continuous execution. Please check the backend server.');
+    }
+  }, [nodes.length, prepareWorkflowData]);
+
+  const stopContinuousExecution = useCallback(async () => {
+    try {
+      const result = await apiService.stopContinuousExecution();
+      
+      if (result.success) {
+        setIsContinuousRunning(false);
+        setContinuousStatus(null);
+        console.log('Continuous execution stopped:', result);
+        alert('Continuous execution stopped.');
+      } else {
+        alert(`Failed to stop continuous execution: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error stopping continuous execution:', error);
+      alert('Failed to stop continuous execution. Please check the backend server.');
+    }
+  }, []);
+
+  const pollContinuousStatus = useCallback(async () => {
+    if (!isContinuousRunning) return;
+    
+    try {
+      const status = await apiService.getContinuousStatus();
+      setContinuousStatus(status);
+      
+      if (status.is_running) {
+        // Continue polling every 2 seconds
+        setTimeout(pollContinuousStatus, 2000);
+      } else {
+        // Execution stopped
+        setIsContinuousRunning(false);
+      }
+    } catch (error) {
+      console.error('Error polling continuous status:', error);
+      // Continue polling even if there's an error
+      if (isContinuousRunning) {
+        setTimeout(pollContinuousStatus, 5000);
+      }
+    }
+  }, [isContinuousRunning]);
+
+  // Start polling when continuous execution begins
+  React.useEffect(() => {
+    if (isContinuousRunning) {
+      pollContinuousStatus();
+    }
+  }, [isContinuousRunning, pollContinuousStatus]);
 
   return (
     <div className="app">
@@ -471,12 +552,31 @@ function App() {
         <div className="toolbar-group">
           <button 
             className="toolbar-btn run-btn" 
-            onClick={runWorkflow}
-            disabled={nodes.length === 0 || isExecuting}
-            title="Execute the current workflow"
+            onClick={runWorkflowOnce}
+            disabled={nodes.length === 0 || isExecuting || isContinuousRunning}
+            title="Execute the workflow once"
           >
-            {isExecuting ? '⏳ Running...' : '▶️ Run'}
+            {isExecuting ? '⏳ Running...' : '▶️ Run Once'}
           </button>
+          
+          {!isContinuousRunning ? (
+            <button 
+              className="toolbar-btn continuous-btn" 
+              onClick={startContinuousExecution}
+              disabled={nodes.length === 0 || isExecuting}
+              title="Start continuous execution"
+            >
+              🔄 Run Continuous
+            </button>
+          ) : (
+            <button 
+              className="toolbar-btn stop-btn" 
+              onClick={stopContinuousExecution}
+              title="Stop continuous execution"
+            >
+              ⏹️ Stop
+            </button>
+          )}
           <button className="toolbar-btn" onClick={loadWorkflow} title="Load workflow from JSON file">
             📂 Load
           </button>
@@ -501,7 +601,14 @@ function App() {
         <div className="toolbar-info">
           <span className="node-count">Nodes: {nodes.length}</span>
           <span className="edge-count">Connections: {edges.length}</span>
-          {executionResults && (
+          
+          {isContinuousRunning && continuousStatus && (
+            <span className="continuous-status">
+              🔄 Continuous: {continuousStatus.execution_count} runs
+            </span>
+          )}
+          
+          {executionResults && !isContinuousRunning && (
             <span className={`execution-status ${executionResults.success ? 'success' : 'error'}`}>
               {executionResults.success ? '✅ Success' : '❌ Failed'}
             </span>
