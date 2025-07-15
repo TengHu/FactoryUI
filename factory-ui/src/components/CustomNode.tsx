@@ -37,12 +37,14 @@ const CustomNode = ({ data, selected }: NodeProps<CustomNodeData>) => {
       <div className="node-io-row">
         {/* Inputs column */}
         <div className="io-column io-inputs">
-          {allInputs.map((input, index) => {
+          {allInputs.map((input) => {
             const isRequired = requiredInputs.includes(input);
-            const type =
+            const typeInfo =
               (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
               (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
-              'unknown';
+              ['unknown'];
+            const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+            
             return (
               <div key={`input-${input}`} className="io-item input-item">
                 <Handle
@@ -50,15 +52,18 @@ const CustomNode = ({ data, selected }: NodeProps<CustomNodeData>) => {
                   position={Position.Left}
                   id={input}
                   className="connection-handle input-handle"
+                  data-input-type={typeName}
                   style={{
                     background: isRequired ? '#ef4444' : '#94a3b8',
                     border: '2px solid white',
                     width: '10px',
                     height: '10px',
                   }}
-                  title={`${input} (${isRequired ? 'required' : 'optional'})`}
+                  title={`${input} (${typeName}) - ${isRequired ? 'required' : 'optional'}`}
                 />
-                <span className={`connection-label ${isRequired ? 'required' : 'optional'}`}>{`${input} (${type[0]})`}</span>
+                <span className={`connection-label ${isRequired ? 'required' : 'optional'}`}>
+                  {`${input} (${typeName})`}
+                </span>
               </div>
             );
           })}
@@ -77,6 +82,7 @@ const CustomNode = ({ data, selected }: NodeProps<CustomNodeData>) => {
                   position={Position.Right}
                   id={outputId}
                   className="connection-handle output-handle"
+                  data-output-type={output}
                   style={{
                     background: '#22c55e',
                     border: '2px solid white',

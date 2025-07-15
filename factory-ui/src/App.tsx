@@ -17,6 +17,7 @@ import './App.css';
 import NodePanel from './components/NodePanel';
 import CustomNode from './components/CustomNode';
 import { NodeInfo } from './services/api';
+import { canConnect, getConnectionError } from './utils/typeMatching';
 
 interface WorkflowData {
   nodes: Node[];
@@ -45,8 +46,62 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const onConnect = useCallback(
-    (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params: Edge | Connection) => {
+      // Find source and target nodes to get type information
+      const sourceNode = nodes.find(node => node.id === params.source);
+      const targetNode = nodes.find(node => node.id === params.target);
+      
+      if (!sourceNode || !targetNode) {
+        console.warn('Source or target node not found for connection');
+        return;
+      }
+      
+      // Get type information from node data
+      const sourceNodeInfo = sourceNode.data.nodeInfo as NodeInfo;
+      const targetNodeInfo = targetNode.data.nodeInfo as NodeInfo;
+      
+      // Get output type from source
+      const sourceHandleId = params.sourceHandle || 'output';
+      let outputType = 'unknown';
+      
+      if (sourceNodeInfo && sourceNodeInfo.return_types) {
+        if (sourceHandleId === 'output' && sourceNodeInfo.return_types.length === 1) {
+          outputType = sourceNodeInfo.return_types[0];
+        } else if (sourceHandleId.startsWith('output-')) {
+          const index = parseInt(sourceHandleId.split('-')[1]);
+          outputType = sourceNodeInfo.return_types[index] || 'unknown';
+        }
+      }
+      
+      // Get input type from target
+      const targetHandleId = params.targetHandle || '';
+      let inputType = 'unknown';
+      
+      if (targetNodeInfo && targetHandleId) {
+        const requiredInputs = targetNodeInfo.input_types.required || {};
+        const optionalInputs = targetNodeInfo.input_types.optional || {};
+        
+        const inputTypeInfo = requiredInputs[targetHandleId] || optionalInputs[targetHandleId];
+        if (inputTypeInfo) {
+          inputType = Array.isArray(inputTypeInfo) ? inputTypeInfo[0] : inputTypeInfo;
+        }
+      }
+      
+      // Check type compatibility
+      if (!canConnect(outputType, inputType)) {
+        const errorMessage = getConnectionError(outputType, inputType);
+        console.warn(errorMessage);
+        
+        // Show user feedback
+        alert(errorMessage);
+        return;
+      }
+      
+      // Connection is valid, proceed
+      console.log(`Valid connection: ${outputType} → ${inputType}`);
+      setEdges((eds) => addEdge(params, eds));
+    },
+    [setEdges, nodes]
   );
 
   const handleFileLoad = useCallback((file: File) => {
@@ -233,6 +288,56 @@ function App() {
     }
   }, [nodes.length, edges.length, setNodes, setEdges]);
 
+  const isValidConnection = useCallback((connection: Connection) => {
+    // Find source and target nodes to get type information
+    const sourceNode = nodes.find(node => node.id === connection.source);
+    const targetNode = nodes.find(node => node.id === connection.target);
+    
+    if (!sourceNode || !targetNode) {
+      return false;
+    }
+    
+    // Get type information from node data
+    const sourceNodeInfo = sourceNode.data.nodeInfo as NodeInfo;
+    const targetNodeInfo = targetNode.data.nodeInfo as NodeInfo;
+    
+    // Get output type from source
+    const sourceHandleId = connection.sourceHandle || 'output';
+    let outputType = 'unknown';
+    
+    if (sourceNodeInfo && sourceNodeInfo.return_types) {
+      if (sourceHandleId === 'output' && sourceNodeInfo.return_types.length === 1) {
+        outputType = sourceNodeInfo.return_types[0];
+      } else if (sourceHandleId.startsWith('output-')) {
+        const index = parseInt(sourceHandleId.split('-')[1]);
+        outputType = sourceNodeInfo.return_types[index] || 'unknown';
+      }
+    }
+    
+    // Get input type from target
+    const targetHandleId = connection.targetHandle || '';
+    let inputType = 'unknown';
+    
+    if (targetNodeInfo && targetHandleId) {
+      const requiredInputs = targetNodeInfo.input_types.required || {};
+      const optionalInputs = targetNodeInfo.input_types.optional || {};
+      
+      const inputTypeInfo = requiredInputs[targetHandleId] || optionalInputs[targetHandleId];
+      if (inputTypeInfo) {
+        inputType = Array.isArray(inputTypeInfo) ? inputTypeInfo[0] : inputTypeInfo;
+      }
+    }
+    
+    // Check type compatibility
+    const isValid = canConnect(outputType, inputType);
+    
+    if (!isValid) {
+      console.log(`Invalid connection attempt: ${outputType} → ${inputType}`);
+    }
+    
+    return isValid;
+  }, [nodes]);
+
   return (
     <div className="app">
       <div className="app-tabs">
@@ -274,6 +379,7 @@ function App() {
                     setReactFlowInstance(instance);
                   }}
                   nodeTypes={nodeTypes}
+                  isValidConnection={isValidConnection}
                   connectionMode={ConnectionMode.Loose}
                   fitView
                 >
