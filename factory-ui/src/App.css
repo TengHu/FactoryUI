@@ -1,38 +1,65 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.app {
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.app-tabs {
+  display: flex;
+  background: #f6f8fa;
+  border-bottom: 1px solid #d1d9e0;
+  padding: 0;
+  margin: 0;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #656d76;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: #24292f;
+  background: #f3f4f6;
+}
+
+.tab.active {
+  color: #0969da;
+  border-bottom-color: #0969da;
+  background: #fff;
+}
+
+.app-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.canvas-container {
+  display: flex;
+  height: 100%;
+}
+
+.react-flow-wrapper {
+  flex: 1;
+  background: #fafbfc;
+}
+
+.nodes-tab {
+  height: 100%;
+  display: flex;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  background: #fafbfc;
 }
 
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.nodes-tab .node-panel {
+  max-width: 800px;
+  width: 100%;
+  margin: 20px;
 }
