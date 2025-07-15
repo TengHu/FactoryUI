@@ -20,8 +20,12 @@ export const TYPE_COMPATIBILITY: TypeCompatibility = {
   'EXEC': ['EXEC'], // Execution flow
   'DATA': ['DATA', 'ANY'], // Generic data
   
+  // Robot SDK types
+  'SCSSERVOSDK': ['SCSSERVOSDK', 'ANY'], // Feetech servo SDK instance
+  'DICT': ['DICT', 'ANY'], // Dictionary/object data
+  
   // Unknown types can connect to anything (fallback)
-  'unknown': ['unknown', 'ANY', 'STRING', 'INT', 'FLOAT', 'BOOLEAN', 'NUMBER', 'DATA', 'EXEC'],
+  'unknown': ['unknown', 'ANY', 'STRING', 'INT', 'FLOAT', 'BOOLEAN', 'NUMBER', 'DATA', 'EXEC', 'SCSSERVOSDK', 'DICT'],
 };
 
 /**

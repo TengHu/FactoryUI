@@ -1,7 +1,15 @@
 import time
 import random
+import sys
+import os
 from typing import Any, Dict
 from core.node_base import NodeBase, NodeCategory
+
+# Add feetech-servo-sdk to path for robot connectivity
+feetech_path = os.path.join(os.path.dirname(__file__), 'feetech-servo-sdk')
+sys.path.insert(0, feetech_path)
+
+from feetech_servo import ScsServoSDK
 
 class InputNode(NodeBase):
     """Basic input node for providing data to the workflow"""
@@ -333,6 +341,68 @@ class ConcatNode(NodeBase):
     def execute(self, a: str, b: str) -> str:
         return f"{a}+{b}"
 
+class ConnectRobotNode(NodeBase):
+    """Connect to a robot and return ScsServoSDK instance"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "port_name": ("STRING", {"default": ""})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> tuple:
+        return ("ScsServoSDK",)
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "connect_robot"
+    
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.ROBOT.value
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Connect Robot"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Connect to a robot using ScsServoSDK.connect() and return SDK instance"
+    
+    def connect_robot(self, port_name: str) -> tuple:
+        """Connect to robot and return SDK instance"""
+        
+        sdk = ScsServoSDK()
+        
+        try:
+            # Connect to servo controller
+            # If port_name is empty, pass None to auto-detect
+            port_to_use = port_name if port_name.strip() else None
+            success = sdk.connect(port_name=port_to_use)
+            
+            if not success:
+                raise Exception("Failed to connect to robot")
+            
+            print(f"✓ Robot connected successfully")
+            if sdk.port_handler:
+                print(f"  Port: {sdk.port_handler.port_name}")
+            
+            return (sdk,)
+            
+        except Exception as e:
+            # Clean up on failure
+            try:
+                sdk.disconnect()
+            except:
+                pass
+            
+            error_msg = f"Robot connection failed: {str(e)}"
+            print(f"❌ {error_msg}")
+            raise Exception(error_msg)
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
@@ -343,5 +413,6 @@ NODE_CLASS_MAPPINGS = {
     "MathNode": MathNode,
     "HelloWorldNode": HelloWorldNode,
     "PrintNode": PrintNode,
-    "ConcatNode": ConcatNode
+    "ConcatNode": ConcatNode,
+    "ConnectRobotNode": ConnectRobotNode
 }
