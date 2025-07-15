@@ -53,7 +53,7 @@ robot_state = {
 }
 
 # Global continuous executor instance
-continuous_executor = ContinuousExecutor(loop_interval=1.0)
+continuous_executor = ContinuousExecutor(loop_interval=0)
 
 @app.on_event("startup")
 async def startup_event():

@@ -265,8 +265,75 @@ class So101WritePositionNode(NodeBase):
             raise Exception(f"Failed to write positions: {error_msg}")
 
 
+class UnlockRemoteNode(NodeBase):
+    """Node for unlocking remote control of the SO-101 robot"""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "sdk": ("ScsServoSDK", {}),
+            },
+            "optional": {}
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {}
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "unlock_remote"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.ROBOT.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Unlock Remote"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Unlock remote control for the SO-101 robot using ScsServoSDK"
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+UnlockRemoteNode
+
+Purpose: Unlocks remote control functionality for the SO-101 robot, allowing manual or programmatic control of the servos.
+
+Inputs:
+  - sdk (ScsServoSDK): The SDK instance for communicating with the robot servos
+
+Outputs:
+  - None (this node has no outputs)
+
+Usage: Use this node to enable remote control mode on the SO-101 robot. This is typically required before sending position commands or reading servo status. Place this node early in your workflow before other robot control nodes.
+
+Note: This operation may be required to establish proper communication with the robot's servo controller and enable command execution.
+        """
+
+    def unlock_remote(self, sdk: ScsServoSDK) -> tuple:
+        """Unlock remote control for the robot using _unlock_servo method"""
+        import traceback
+        try:
+            # Use the specific _unlock_servo method from ScsServoSDK
+            for servo_id in range(1, 7):
+                sdk.write_torque_enable(servo_id, False)
+            
+            return ()  # Return empty tuple since no outputs
+            
+        except Exception as e:
+            error_msg = str(e) + "\n" + traceback.format_exc()
+            print(f"❌ Failed to unlock remote: {error_msg}")
+            raise Exception(f"Failed to unlock remote control: {error_msg}")
+
+
 NODE_CLASS_MAPPINGS = {
     "RobotStatusReader": RobotStatusReader,
     "SO101JointAnglesToPositions": SO101JointAnglesToPositions,
-    "So101WritePositionNode": So101WritePositionNode
+    "So101WritePositionNode": So101WritePositionNode,
+    "UnlockRemoteNode": UnlockRemoteNode
 }
