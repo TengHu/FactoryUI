@@ -234,6 +234,70 @@ class MathNode(NodeBase):
         else:
             raise ValueError(f"Unknown operation: {operation}")
 
+class HelloWorldNode(NodeBase):
+    """A node that returns 'hello world' with no input."""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {}
+
+    @classmethod
+    def RETURN_TYPES(cls) -> tuple:
+        return ("STRING",)
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "execute"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Hello World"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Returns the string 'hello world'"
+
+    def execute(self) -> str:
+        return "hello world"
+
+class PrintNode(NodeBase):
+    """A node that prints the input string and returns no output."""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "text": ("STRING", {})
+            }
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> tuple:
+        return tuple()
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "execute"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Print"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Prints the input string to the console."
+
+    def execute(self, text: str):
+        print(text)
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
@@ -241,5 +305,7 @@ NODE_CLASS_MAPPINGS = {
     "TextProcessorNode": TextProcessorNode,
     "DelayNode": DelayNode,
     "RandomNumberNode": RandomNumberNode,
-    "MathNode": MathNode
+    "MathNode": MathNode,
+    "HelloWorldNode": HelloWorldNode,
+    "PrintNode": PrintNode
 }
