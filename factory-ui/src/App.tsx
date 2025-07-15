@@ -8,6 +8,8 @@ import ReactFlow, {
   useEdgesState,
   ConnectionMode,
   ReactFlowProvider,
+  Background,
+  BackgroundVariant,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './App.css';
@@ -114,7 +116,9 @@ function App() {
                   onDragOver={onDragOver}
                   connectionMode={ConnectionMode.Loose}
                   fitView
-                />
+                >
+                  <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+                </ReactFlow>
               </div>
             </ReactFlowProvider>
           </div>
