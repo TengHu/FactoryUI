@@ -128,7 +128,7 @@ class JointControlNode(NodeBase):
     def RETURN_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "control_result": ("DICT", {})
+                "angles": ("DICT", {})
             }
         }
     
@@ -150,16 +150,27 @@ class JointControlNode(NodeBase):
     
     def control_joints(self, sdk: ScsServoSDK, rotation: float, pitch: float, elbow: float, 
                       wrist_pitch: float, wrist_roll: float, jaw: float, 
-                      servo_mapping: str = "1,2,3,4,5,6", move_time: int = 1000) -> tuple:
-        """Control robot joints with specified angles"""
-        
-        # Parse servo mapping
+                      servo_mapping: str = "1,2,3,4,5,6") -> tuple:
+        """Control robot joints with specified angles (type safe)"""
+        # Type safety for angles
+        try:
+            rotation = float(rotation)
+            pitch = float(pitch)
+            elbow = float(elbow)
+            wrist_pitch = float(wrist_pitch)
+            wrist_roll = float(wrist_roll)
+            jaw = float(jaw)
+        except Exception as e:
+            raise ValueError(f"All joint angles must be convertible to float: {e}")
+        # Type safety for servo_mapping
+        if not isinstance(servo_mapping, str):
+            raise ValueError("servo_mapping must be a string of comma-separated integers")
         try:
             servo_ids = [int(id.strip()) for id in servo_mapping.split(",")]
             if len(servo_ids) != 6:
                 raise ValueError(f"Servo mapping must contain exactly 6 servo IDs, got {len(servo_ids)}")
-        except ValueError as e:
-            raise ValueError(f"Invalid servo_mapping format: {servo_mapping}. Use comma-separated integers like '1,2,3,4,5,6'")
+        except Exception as e:
+            raise ValueError(f"Invalid servo_mapping format: {servo_mapping}. Use comma-separated integers like '1,2,3,4,5,6'. Error: {e}")
         
         # Map joint angles to servo IDs
         joint_angles = [rotation, pitch, elbow, wrist_pitch, wrist_roll, jaw]
@@ -168,7 +179,6 @@ class JointControlNode(NodeBase):
         control_data = {
             "joint_commands": {},
             "servo_mapping": dict(zip(joint_names, servo_ids)),
-            "move_time": move_time,
             "timestamp": __import__('time').time()
         }
         
@@ -188,7 +198,7 @@ class JointControlNode(NodeBase):
                 
                 # Send command to servo
                 try:
-                    sdk.write_position(servo_id, servo_position, move_time)
+                    sdk.write_position(servo_id, servo_position)
                 except Exception as e:
                     print(f"Warning: Failed to control servo {servo_id} ({joint_name}): {e}")
                     control_data["joint_commands"][joint_name]["error"] = str(e) + "\n" + traceback.format_exc()
@@ -202,7 +212,9 @@ class JointControlNode(NodeBase):
             control_data["message"] = f"Joint control failed: {e}"
             raise Exception(f"Joint control failed: {e}\n{traceback.format_exc()}")
         
-        return (control_data,)
+        # After all processing, return the angles as a dictionary
+        angles_dict = dict(zip(joint_names, joint_angles))
+        return ({"angles": angles_dict},)
 
 
 class So101WritePositionNode(NodeBase):
