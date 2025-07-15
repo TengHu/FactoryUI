@@ -120,14 +120,12 @@ class RobotStatusReader(NodeBase):
         return (status_data, status_data["positions"])
 
 
-class JointControlNode(NodeBase):
-    """Node for controlling robot joints with individual joint angles"""
+class SO101JointAnglesToPositions(NodeBase):
     
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "sdk": ("ScsServoSDK", {}),
                 "rotation": ("FLOAT", {"default": 0.0, "min": -180.0, "max": 180.0}),
                 "pitch": ("FLOAT", {"default": 0.0, "min": -90.0, "max": 90.0}),
                 "elbow": ("FLOAT", {"default": 0.0, "min": -120.0, "max": 120.0}),
@@ -136,8 +134,6 @@ class JointControlNode(NodeBase):
                 "jaw": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 90.0}),
             },
             "optional": {
-                "servo_mapping": ("STRING", {"default": "1,2,3,4,5,6"}),
-                "move_time": ("INT", {"default": 1000, "min": 100, "max": 5000}),
             }
         }
     
@@ -145,13 +141,13 @@ class JointControlNode(NodeBase):
     def RETURN_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "angles": ("DICT", {})
+                "positions": ("DICT", {})
             }
         }
     
     @classmethod
     def FUNCTION(cls) -> str:
-        return "control_joints"
+        return "angles_to_positions"
     
     @classmethod
     def CATEGORY(cls) -> str:
@@ -159,37 +155,22 @@ class JointControlNode(NodeBase):
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
-        return "Joint Control"
+        return "SO-101 Joint Angles to Positions"
     
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Control robot joints with individual angle inputs for rotation, pitch, elbow, wrist_pitch, wrist_roll, and jaw"
-    
+        return "Convert joint angles to servo positions for the SO-101 robot"
+        
     @classmethod
     def get_detailed_description(cls) -> str:
         return (
             """
-            JointControlNode Node\n\n"
-            "Purpose: Controls robot joints by sending individual angle commands to each joint (rotation, pitch, elbow, wrist_pitch, wrist_roll, jaw) using feetech-servo-sdk.\n"
-            "Inputs:\n"
-            "  - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n"
-            "  - rotation (FLOAT): Angle for the rotation joint (-180 to 180).\n"
-            "  - pitch (FLOAT): Angle for the pitch joint (-90 to 90).\n"
-            "  - elbow (FLOAT): Angle for the elbow joint (-120 to 120).\n"
-            "  - wrist_pitch (FLOAT): Angle for the wrist pitch joint (-90 to 90).\n"
-            "  - wrist_roll (FLOAT): Angle for the wrist roll joint (-180 to 180).\n"
-            "  - jaw (FLOAT): Angle for the jaw joint (0 to 90).\n"
-            "  - servo_mapping (STRING, optional): Comma-separated servo IDs for each joint (default: '1,2,3,4,5,6').\n"
-            "  - move_time (INT, optional): Time in ms for the move (default: 1000).\n"
-            "Outputs:\n"
-            "  - angles (DICT): Dictionary of joint names and their commanded angles.\n"
+            
             """
         )
     
-    def control_joints(self, sdk: ScsServoSDK, rotation: float, pitch: float, elbow: float, 
-                      wrist_pitch: float, wrist_roll: float, jaw: float, 
-                      servo_mapping: str = "1,2,3,4,5,6") -> tuple:
-        """Control robot joints with specified angles (type safe)"""
+    def angles_to_positions(self, rotation: float, pitch: float, elbow: float, 
+                      wrist_pitch: float, wrist_roll: float, jaw: float) -> tuple:
         # Type safety for angles
         try:
             rotation = float(rotation)
@@ -200,61 +181,25 @@ class JointControlNode(NodeBase):
             jaw = float(jaw)
         except Exception as e:
             raise ValueError(f"All joint angles must be convertible to float: {e}")
-        # Type safety for servo_mapping
-        if not isinstance(servo_mapping, str):
-            raise ValueError("servo_mapping must be a string of comma-separated integers")
-        try:
-            servo_ids = [int(id.strip()) for id in servo_mapping.split(",")]
-            if len(servo_ids) != 6:
-                raise ValueError(f"Servo mapping must contain exactly 6 servo IDs, got {len(servo_ids)}")
-        except Exception as e:
-            raise ValueError(f"Invalid servo_mapping format: {servo_mapping}. Use comma-separated integers like '1,2,3,4,5,6'. Error: {e}")
-        
+       
+        servo_ids = [1,2,3,4,5,6]
+         
         # Map joint angles to servo IDs
         joint_angles = [rotation, pitch, elbow, wrist_pitch, wrist_roll, jaw]
         joint_names = ["rotation", "pitch", "elbow", "wrist_pitch", "wrist_roll", "jaw"]
         
-        control_data = {
-            "joint_commands": {},
-            "servo_mapping": dict(zip(joint_names, servo_ids)),
-            "timestamp": __import__('time').time()
-        }
-        
-        try:
-            # Convert angles to servo positions and send commands
-            for joint_name, angle, servo_id in zip(joint_names, joint_angles, servo_ids):
-                # Convert angle to servo position (assuming 0-4095 range for SCS servos)
-                # This is a basic conversion - you may need to adjust based on your servo configuration
+        positions = {}
+        # Convert angles to servo positions and send commands
+        for joint_name, angle, servo_id in zip(joint_names, joint_angles, servo_ids):
+            # Convert angle to servo position (assuming 0-4095 range for SCS servos)
+            # This is a basic conversion - you may need to adjust based on your servo configuration
+            servo_position = int(round((angle * 4096) / 360)) # Convert 0-360 to 0-4096
+            servo_position = min(4096, max(0, servo_position))
+            positions[servo_id] = servo_position
                 
-                
-                servo_position = int(round((angle * 4096) / 360)) # Convert 0-360 to 0-4096
-                servo_position = min(4096, max(0, servo_position))
-
-                control_data["joint_commands"][joint_name] = {
-                    "servo_id": servo_id,
-                    "angle": angle,
-                    "position": servo_position
-                }
-                
-                # Send command to servo
-                try:
-                    sdk.write_position(servo_id, servo_position)
-                except Exception as e:
-                    print(f"Warning: Failed to control servo {servo_id} ({joint_name}): {e}")
-                    control_data["joint_commands"][joint_name]["error"] = str(e) + "\n" + traceback.format_exc()
             
-            control_data["success"] = True
-            control_data["message"] = f"Successfully sent commands to {len(servo_ids)} joints"
-            
-        except Exception as e:
-            control_data["success"] = False
-            control_data["error"] = str(e) + "\n" + traceback.format_exc()
-            control_data["message"] = f"Joint control failed: {e}"
-            raise Exception(f"Joint control failed: {e}\n{traceback.format_exc()}")
         
-        # After all processing, return the angles as a dictionary
-        angles_dict = dict(zip(joint_names, joint_angles))
-        return ({"angles": angles_dict},)
+        return (positions,)
 
 
 class So101WritePositionNode(NodeBase):
@@ -322,6 +267,6 @@ class So101WritePositionNode(NodeBase):
 
 NODE_CLASS_MAPPINGS = {
     "RobotStatusReader": RobotStatusReader,
-    "JointControlNode": JointControlNode,
+    "SO101JointAnglesToPositions": SO101JointAnglesToPositions,
     "So101WritePositionNode": So101WritePositionNode
 }
