@@ -1,0 +1,186 @@
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Dict, Any, List, Optional
+import os
+import sys
+
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from core.node_registry import node_registry
+from core.workflow_executor import workflow_executor
+
+app = FastAPI(title="Factory UI Backend", version="1.0.0")
+
+# CORS middleware for frontend communication
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # React dev server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Pydantic models for request/response
+class WorkflowRequest(BaseModel):
+    nodes: List[Dict[str, Any]]
+    edges: List[Dict[str, Any]]
+    metadata: Optional[Dict[str, Any]] = {}
+
+class WorkflowResponse(BaseModel):
+    success: bool
+    message: str
+    workflow_id: Optional[str] = None
+
+class ExecutionResponse(BaseModel):
+    success: bool
+    results: Optional[Dict[str, Any]] = None
+    logs: Optional[List[Dict[str, Any]]] = None
+    error: Optional[str] = None
+
+class RobotConnectionRequest(BaseModel):
+    port: str
+    baudrate: int = 115200
+    device_type: str = "serial"
+
+# Robot connection state
+robot_state = {
+    "connected": False,
+    "port": None,
+    "device_info": None
+}
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the application"""
+    # Discover nodes from custom_nodes directory
+    custom_nodes_dir = os.path.join(os.path.dirname(__file__), "..", "custom_nodes")
+    node_registry.discover_nodes(custom_nodes_dir)
+    print(f"Discovered {len(node_registry.get_all_nodes())} nodes")
+
+@app.get("/")
+async def root():
+    """Health check endpoint"""
+    return {"message": "Factory UI Backend is running"}
+
+@app.get("/nodes")
+async def get_available_nodes():
+    """Get all available node types"""
+    return {
+        "nodes": node_registry.get_all_node_info(),
+        "count": len(node_registry.get_all_nodes())
+    }
+
+@app.get("/nodes/{node_name}")
+async def get_node_info(node_name: str):
+    """Get detailed information about a specific node"""
+    node_info = node_registry.get_node_info(node_name)
+    if not node_info:
+        raise HTTPException(status_code=404, detail=f"Node {node_name} not found")
+    return node_info
+
+@app.post("/workflow", response_model=WorkflowResponse)
+async def save_workflow(workflow: WorkflowRequest):
+    """Save a workflow (placeholder - could save to database/file)"""
+    try:
+        # For now, just validate the workflow structure
+        if not workflow.nodes:
+            raise HTTPException(status_code=400, detail="Workflow must contain at least one node")
+        
+        # Could implement actual saving logic here
+        return WorkflowResponse(
+            success=True,
+            message="Workflow saved successfully",
+            workflow_id="temp_id"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/run", response_model=ExecutionResponse)
+async def run_workflow(workflow: WorkflowRequest):
+    """Execute a workflow"""
+    try:
+        if workflow_executor.is_running:
+            raise HTTPException(status_code=409, detail="Another workflow is already running")
+        
+        # Convert workflow to execution format
+        workflow_data = {
+            "nodes": workflow.nodes,
+            "edges": workflow.edges,
+            "metadata": workflow.metadata
+        }
+        
+        # Execute workflow
+        result = await workflow_executor.execute_workflow(workflow_data)
+        
+        return ExecutionResponse(**result)
+    
+    except Exception as e:
+        return ExecutionResponse(
+            success=False,
+            error=str(e)
+        )
+
+@app.post("/stop")
+async def stop_execution():
+    """Stop the current workflow execution"""
+    stopped = workflow_executor.stop_execution()
+    return {
+        "success": stopped,
+        "message": "Execution stopped" if stopped else "No execution running"
+    }
+
+@app.get("/status")
+async def get_execution_status():
+    """Get current execution status"""
+    return workflow_executor.get_status()
+
+@app.post("/robot/connect")
+async def connect_robot(connection: RobotConnectionRequest):
+    """Connect to a robot device"""
+    try:
+        # Placeholder for robot connection logic
+        # This would integrate with your actual robot communication library
+        robot_state["connected"] = True
+        robot_state["port"] = connection.port
+        robot_state["device_info"] = {
+            "port": connection.port,
+            "baudrate": connection.baudrate,
+            "device_type": connection.device_type
+        }
+        
+        return {
+            "success": True,
+            "message": f"Connected to robot on {connection.port}",
+            "device_info": robot_state["device_info"]
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to connect to robot: {str(e)}")
+
+@app.post("/robot/disconnect")
+async def disconnect_robot():
+    """Disconnect from robot device"""
+    try:
+        # Placeholder for robot disconnection logic
+        robot_state["connected"] = False
+        robot_state["port"] = None
+        robot_state["device_info"] = None
+        
+        return {
+            "success": True,
+            "message": "Disconnected from robot"
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to disconnect from robot: {str(e)}")
+
+@app.get("/robot/status")
+async def get_robot_status():
+    """Get robot connection status"""
+    return robot_state
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
