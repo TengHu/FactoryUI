@@ -16,7 +16,7 @@ import 'reactflow/dist/style.css';
 import './App.css';
 import NodePanel from './components/NodePanel';
 import CustomNode from './components/CustomNode';
-import { NodeInfo } from './services/api';
+import { NodeInfo, apiService } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
 
 interface WorkflowData {
@@ -44,6 +44,8 @@ function App() {
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const [isDraggedOver, setIsDraggedOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionResults, setExecutionResults] = useState<any>(null);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => {
@@ -338,6 +340,58 @@ function App() {
     return isValid;
   }, [nodes]);
 
+  const runWorkflow = useCallback(async () => {
+    if (nodes.length === 0) {
+      alert('No nodes to execute. Please add some nodes to the canvas first.');
+      return;
+    }
+
+    setIsExecuting(true);
+    setExecutionResults(null);
+
+    try {
+      const workflowData = {
+        nodes: nodes.map(node => ({
+          id: node.id,
+          type: node.type,
+          data: node.data,
+          position: node.position
+        })),
+        edges: edges.map(edge => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle,
+          targetHandle: edge.targetHandle
+        })),
+        metadata: {
+          name: `workflow-execution-${Date.now()}`,
+          created: new Date().toISOString(),
+          version: '1.0.0'
+        }
+      };
+
+      console.log('Executing workflow:', workflowData);
+      const result = await apiService.executeWorkflow(workflowData);
+      
+      setExecutionResults(result);
+      
+      if (result.success) {
+        console.log('Workflow executed successfully:', result);
+        alert('Workflow executed successfully! Check the console for details.');
+      } else {
+        console.error('Workflow execution failed:', result);
+        alert(`Workflow execution failed: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error executing workflow:', error);
+      setExecutionResults({ success: false, error: 'Network or server error' });
+      alert('Failed to execute workflow. Please check the backend server.');
+    } finally {
+      setIsExecuting(false);
+    }
+  }, [nodes, edges]);
+
   return (
     <div className="app">
       <div className="app-tabs">
@@ -415,6 +469,14 @@ function App() {
         />
         
         <div className="toolbar-group">
+          <button 
+            className="toolbar-btn run-btn" 
+            onClick={runWorkflow}
+            disabled={nodes.length === 0 || isExecuting}
+            title="Execute the current workflow"
+          >
+            {isExecuting ? '⏳ Running...' : '▶️ Run'}
+          </button>
           <button className="toolbar-btn" onClick={loadWorkflow} title="Load workflow from JSON file">
             📂 Load
           </button>
@@ -439,6 +501,11 @@ function App() {
         <div className="toolbar-info">
           <span className="node-count">Nodes: {nodes.length}</span>
           <span className="edge-count">Connections: {edges.length}</span>
+          {executionResults && (
+            <span className={`execution-status ${executionResults.success ? 'success' : 'error'}`}>
+              {executionResults.success ? '✅ Success' : '❌ Failed'}
+            </span>
+          )}
         </div>
       </div>
     </div>

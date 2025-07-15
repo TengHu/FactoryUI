@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.node_registry import node_registry
 from core.workflow_executor import workflow_executor
+from continuous_executor import ContinuousExecutor
 
 app = FastAPI(title="Factory UI Backend", version="1.0.0")
 
@@ -50,6 +51,9 @@ robot_state = {
     "port": None,
     "device_info": None
 }
+
+# Global continuous executor instance
+continuous_executor = ContinuousExecutor(loop_interval=1.0)
 
 @app.on_event("startup")
 async def startup_event():
@@ -134,7 +138,13 @@ async def stop_execution():
 @app.get("/status")
 async def get_execution_status():
     """Get current execution status"""
-    return workflow_executor.get_status()
+    regular_status = workflow_executor.get_status()
+    continuous_status = continuous_executor.get_status()
+    
+    return {
+        "regular_execution": regular_status,
+        "continuous_execution": continuous_status
+    }
 
 @app.post("/robot/connect")
 async def connect_robot(connection: RobotConnectionRequest):
@@ -180,6 +190,65 @@ async def disconnect_robot():
 async def get_robot_status():
     """Get robot connection status"""
     return robot_state
+
+@app.post("/continuous/start")
+async def start_continuous_execution(workflow: WorkflowRequest):
+    """Start continuous execution of a workflow"""
+    try:
+        # Convert workflow to execution format
+        workflow_data = {
+            "nodes": workflow.nodes,
+            "edges": workflow.edges,
+            "metadata": workflow.metadata
+        }
+        
+        # Load workflow into continuous executor
+        if continuous_executor.load_workflow(workflow_data):
+            continuous_executor.start_continuous_execution()
+            return {
+                "success": True,
+                "message": "Continuous execution started"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Failed to load workflow for continuous execution"
+            }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start continuous execution: {str(e)}")
+
+@app.post("/continuous/stop")
+async def stop_continuous_execution():
+    """Stop continuous execution"""
+    try:
+        continuous_executor.stop_continuous_execution()
+        return {
+            "success": True,
+            "message": "Continuous execution stopped"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to stop continuous execution: {str(e)}")
+
+@app.get("/continuous/status")
+async def get_continuous_status():
+    """Get continuous execution status"""
+    return continuous_executor.get_status()
+
+@app.post("/continuous/set-interval")
+async def set_continuous_interval(interval: float):
+    """Set the execution interval for continuous mode"""
+    try:
+        if interval < 0.1:
+            raise HTTPException(status_code=400, detail="Interval must be at least 0.1 seconds")
+        
+        continuous_executor.loop_interval = interval
+        return {
+            "success": True,
+            "message": f"Execution interval set to {interval} seconds"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to set interval: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
