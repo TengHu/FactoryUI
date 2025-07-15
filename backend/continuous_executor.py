@@ -76,6 +76,13 @@ class ContinuousExecutor:
             self.thread.join(timeout=5.0)
         self.log_message("info", "Stopped continuous execution")
     
+    def set_loop_interval(self, interval: float):
+        """Set the loop interval (sleep time between iterations)"""
+        if interval <= 0:
+            raise ValueError("Loop interval must be positive")
+        self.loop_interval = interval
+        self.log_message("info", f"Set loop interval to {interval} seconds")
+    
     def _execution_loop(self):
         """Main execution loop that runs continuously"""
         self.log_message("info", "Continuous execution loop started")
