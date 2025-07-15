@@ -298,6 +298,41 @@ class PrintNode(NodeBase):
     def execute(self, text: str):
         print(text)
 
+class ConcatNode(NodeBase):
+    """Concatenate two strings with a '+' in between."""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "a": ("STRING", {}),
+                "b": ("STRING", {})
+            }
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> tuple:
+        return ("STRING",)
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "execute"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.PROCESSING.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Concat"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Concatenate two strings with a '+' in between."
+
+    def execute(self, a: str, b: str) -> str:
+        return f"{a}+{b}"
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
@@ -307,5 +342,6 @@ NODE_CLASS_MAPPINGS = {
     "RandomNumberNode": RandomNumberNode,
     "MathNode": MathNode,
     "HelloWorldNode": HelloWorldNode,
-    "PrintNode": PrintNode
+    "PrintNode": PrintNode,
+    "ConcatNode": ConcatNode
 }
