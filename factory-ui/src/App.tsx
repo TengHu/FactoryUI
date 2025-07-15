@@ -353,7 +353,7 @@ function App() {
       const workflowData = {
         nodes: nodes.map(node => ({
           id: node.id,
-          type: node.type,
+          type: node.data.nodeInfo?.name || node.data.type || node.type,
           data: node.data,
           position: node.position
         })),
@@ -377,8 +377,8 @@ function App() {
       setExecutionResults(result);
       
       if (result.success) {
-        console.log('Workflow executed successfully:', result);
-        alert('Workflow executed successfully! Check the console for details.');
+        console.log('Workflow triggered successfully:', result);
+        alert('Workflow triggered successfully! Check the console for details.');
       } else {
         console.error('Workflow execution failed:', result);
         alert(`Workflow execution failed: ${result.error || 'Unknown error'}`);
