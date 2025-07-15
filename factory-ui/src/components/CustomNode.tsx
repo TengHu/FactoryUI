@@ -14,10 +14,11 @@ interface CustomNodeData {
   type: string;
   inputModes?: Record<string, 'connection' | 'manual'>;
   inputValues?: Record<string, string>;
+  bypassed?: boolean;
 }
 
 const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
-  const { nodeInfo, inputModes = {}, inputValues = {} } = data;
+  const { nodeInfo, inputModes = {}, inputValues = {}, bypassed = false } = data;
   const onContextMenu = (props as any).onContextMenu;
   const onInputValueChange = (props as any).onInputValueChange;
   
@@ -80,7 +81,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
 
   return (
     <div 
-      className={`custom-node ${selected ? 'selected' : ''} node-${category}`}
+      className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} node-${category}`}
       onContextMenu={handleContextMenu}
     >
       {/* Node header */}

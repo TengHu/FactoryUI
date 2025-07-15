@@ -434,3 +434,38 @@
   border-radius: 6px;
   border: 1px solid #e1e4e8;
 }
+
+/* Bypassed node styles */
+.custom-node.bypassed {
+  opacity: 0.5;
+  background: #f8f9fa !important;
+  border-color: #6c757d !important;
+  position: relative;
+}
+
+.custom-node.bypassed::before {
+  content: 'BYPASSED';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  background: rgba(108, 117, 125, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.custom-node.bypassed .node-title,
+.custom-node.bypassed .node-description,
+.custom-node.bypassed .connection-label {
+  color: #6c757d !important;
+}
+
+.custom-node.bypassed .connection-handle {
+  opacity: 0.5;
+}

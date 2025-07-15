@@ -410,8 +410,25 @@ function App() {
   }, [nodes]);
 
   const prepareWorkflowData = useCallback(() => {
+    // Filter out bypassed nodes
+    const activeNodes = nodes.filter(node => !node.data.bypassed);
+    const activeNodeIds = new Set(activeNodes.map(node => node.id));
+    
+    // Filter out edges connected to bypassed nodes
+    const activeEdges = edges.filter(edge => 
+      activeNodeIds.has(edge.source) && activeNodeIds.has(edge.target)
+    );
+    
+    // Log bypassed nodes for user feedback
+    const bypassedNodes = nodes.filter(node => node.data.bypassed);
+    if (bypassedNodes.length > 0) {
+      console.log(`⚫ Skipping ${bypassedNodes.length} bypassed node(s):`, 
+        bypassedNodes.map(n => n.data.nodeInfo.display_name).join(', ')
+      );
+    }
+    
     return {
-      nodes: nodes.map(node => ({
+      nodes: activeNodes.map(node => ({
         id: node.id,
         type: node.data.nodeInfo?.name || node.data.type || node.type,
         data: {
@@ -420,7 +437,7 @@ function App() {
         },
         position: node.position
       })),
-      edges: edges.map(edge => ({
+      edges: activeEdges.map(edge => ({
         id: edge.id,
         source: edge.source,
         target: edge.target,
@@ -446,6 +463,14 @@ function App() {
 
     try {
       const workflowData = prepareWorkflowData();
+      
+      // Check if all nodes are bypassed
+      if (workflowData.nodes.length === 0) {
+        alert('All nodes are bypassed. Please enable at least one node to execute the workflow.');
+        setIsExecuting(false);
+        return;
+      }
+      
       console.log('Executing workflow once:', workflowData);
       
       const result = await apiService.executeWorkflow(workflowData);
@@ -475,6 +500,13 @@ function App() {
 
     try {
       const workflowData = prepareWorkflowData();
+      
+      // Check if all nodes are bypassed
+      if (workflowData.nodes.length === 0) {
+        alert('All nodes are bypassed. Please enable at least one node to execute the workflow.');
+        return;
+      }
+      
       console.log('Starting continuous execution:', workflowData);
       
       const result = await apiService.startContinuousExecution(workflowData);
@@ -648,6 +680,28 @@ function App() {
     }
   }, [copiedNodeData, setNodes, contextMenu.isVisible, contextMenu.position, reactFlowInstance]);
 
+  // Toggle bypass functionality
+  const toggleBypass = useCallback(() => {
+    if (contextMenu.nodeId) {
+      setNodes(nodes => 
+        nodes.map(node => {
+          if (node.id === contextMenu.nodeId) {
+            const newBypassed = !node.data.bypassed;
+            console.log(`${newBypassed ? '⚫' : '✓'} Node ${newBypassed ? 'bypassed' : 'activated'}:`, node.data.nodeInfo.display_name);
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                bypassed: newBypassed
+              }
+            };
+          }
+          return node;
+        })
+      );
+    }
+  }, [contextMenu.nodeId, setNodes]);
+
   // Keyboard event handler for copy/paste
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     // Only handle if not typing in an input field
@@ -754,7 +808,17 @@ function App() {
   }, [contextMenu.nodeId, setNodes, setEdges]);
 
   const contextMenuItems: ContextMenuItem[] = React.useMemo(() => {
+    // Check if current node is bypassed
+    const currentNode = contextMenu.nodeId ? nodes.find(n => n.id === contextMenu.nodeId) : null;
+    const isBypassed = currentNode?.data?.bypassed || false;
+    
     const baseItems: ContextMenuItem[] = [
+      {
+        id: 'bypass',
+        label: isBypassed ? 'Enable Node' : 'Bypass Node',
+        icon: isBypassed ? '✅' : '⚫',
+        onClick: toggleBypass,
+      },
       {
         id: 'copy',
         label: 'Copy Node (Ctrl+C)',
@@ -836,7 +900,7 @@ function App() {
     }
 
     return baseItems;
-  }, [copyNode, pasteNode, copiedNodeData, copyNodeId, duplicateNode, deleteNode, contextMenu.nodeInfo, contextMenu.nodeId, nodes, toggleInputMode]);
+  }, [toggleBypass, copyNode, pasteNode, copiedNodeData, copyNodeId, duplicateNode, deleteNode, contextMenu.nodeInfo, contextMenu.nodeId, nodes, toggleInputMode]);
 
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
