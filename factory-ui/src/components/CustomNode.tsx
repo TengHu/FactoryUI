@@ -39,6 +39,10 @@ const CustomNode = ({ data, selected }: NodeProps<CustomNodeData>) => {
         <div className="io-column io-inputs">
           {allInputs.map((input, index) => {
             const isRequired = requiredInputs.includes(input);
+            const type =
+              (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
+              (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
+              'unknown';
             return (
               <div key={`input-${input}`} className="io-item input-item">
                 <Handle
@@ -54,7 +58,7 @@ const CustomNode = ({ data, selected }: NodeProps<CustomNodeData>) => {
                   }}
                   title={`${input} (${isRequired ? 'required' : 'optional'})`}
                 />
-                <span className={`connection-label ${isRequired ? 'required' : 'optional'}`}>{input}</span>
+                <span className={`connection-label ${isRequired ? 'required' : 'optional'}`}>{`${input} (${type[0]})`}</span>
               </div>
             );
           })}
