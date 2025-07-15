@@ -10,10 +10,12 @@ import ReactFlow, {
   ReactFlowProvider,
   Background,
   BackgroundVariant,
+  NodeTypes,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './App.css';
 import NodePanel from './components/NodePanel';
+import CustomNode from './components/CustomNode';
 import { NodeInfo } from './services/api';
 
 interface WorkflowData {
@@ -28,6 +30,10 @@ interface WorkflowData {
 
 const initialNodes: Node[] = [];
 const initialEdges: Edge[] = [];
+
+const nodeTypes: NodeTypes = {
+  customNode: CustomNode,
+};
 
 function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -142,7 +148,7 @@ function App() {
 
         const newNode: Node = {
           id: `${nodeInfo.name}-${Date.now()}`,
-          type: 'default',
+          type: 'customNode',
           position,
           data: { 
             label: nodeInfo.display_name,
@@ -267,6 +273,7 @@ function App() {
                     console.log('ReactFlow instance initialized:', instance);
                     setReactFlowInstance(instance);
                   }}
+                  nodeTypes={nodeTypes}
                   connectionMode={ConnectionMode.Loose}
                   fitView
                 >
