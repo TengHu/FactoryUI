@@ -4,12 +4,16 @@ export interface NodeInfo {
   name: string;
   display_name: string;
   description: string;
+  detailed_description?: string;
   category: string;
   input_types: {
     required?: Record<string, any>;
     optional?: Record<string, any>;
   };
-  return_types: string[];
+  return_types: {
+    required?: Record<string, any>;
+    optional?: Record<string, any>;
+  } | string[];
   function: string;
 }
 

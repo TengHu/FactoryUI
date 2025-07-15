@@ -53,7 +53,7 @@ robot_state = {
 }
 
 # Global continuous executor instance
-continuous_executor = ContinuousExecutor(loop_interval=1.0)
+continuous_executor = ContinuousExecutor(loop_interval=0)
 
 @app.on_event("startup")
 async def startup_event():
@@ -118,6 +118,7 @@ async def run_workflow(workflow: WorkflowRequest):
         # Execute workflow
         result = await workflow_executor.execute_workflow(workflow_data)
         
+
         return ExecutionResponse(**result)
     
     except Exception as e:

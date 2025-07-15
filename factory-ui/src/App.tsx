@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -17,6 +17,7 @@ import './App.css';
 import NodePanel from './components/NodePanel';
 import CustomNode from './components/CustomNode';
 import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
+import ThemeToggle from './components/ThemeToggle';
 import { NodeInfo, apiService } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
 
@@ -63,6 +64,9 @@ function App() {
     nodeId: null,
     nodeInfo: null,
   });
+  
+  // State for copy/paste functionality
+  const [copiedNodeData, setCopiedNodeData] = useState<Node | null>(null);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => {
@@ -84,12 +88,36 @@ function App() {
       let outputType = 'unknown';
       
       if (sourceNodeInfo && sourceNodeInfo.return_types) {
-        if (sourceHandleId === 'output' && sourceNodeInfo.return_types.length === 1) {
-          outputType = sourceNodeInfo.return_types[0];
-        } else if (sourceHandleId.startsWith('output-')) {
-          const index = parseInt(sourceHandleId.split('-')[1]);
-          outputType = sourceNodeInfo.return_types[index] || 'unknown';
-        }
+        // Helper function to get output type from return_types
+        const getOutputType = (returnTypes: any, handleId: string) => {
+          if (Array.isArray(returnTypes)) {
+            // Old format: string array
+            if (handleId === 'output' && returnTypes.length === 1) {
+              return returnTypes[0];
+            } else if (handleId.startsWith('output-')) {
+              const index = parseInt(handleId.split('-')[1]);
+              return returnTypes[index] || 'unknown';
+            }
+          } else if (returnTypes && typeof returnTypes === 'object') {
+            // New format: dict with required/optional
+            const allOutputs = {...(returnTypes.required || {}), ...(returnTypes.optional || {})};
+            const outputEntries = Object.entries(allOutputs);
+            
+            if (handleId === 'output' && outputEntries.length === 1) {
+              const [, typeInfo] = outputEntries[0];
+              return Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+            } else if (handleId.startsWith('output-')) {
+              const index = parseInt(handleId.split('-')[1]);
+              if (outputEntries[index]) {
+                const [, typeInfo] = outputEntries[index];
+                return Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+              }
+            }
+          }
+          return 'unknown';
+        };
+        
+        outputType = getOutputType(sourceNodeInfo.return_types, sourceHandleId);
       }
       
       // Get input type from target
@@ -325,12 +353,36 @@ function App() {
     let outputType = 'unknown';
     
     if (sourceNodeInfo && sourceNodeInfo.return_types) {
-      if (sourceHandleId === 'output' && sourceNodeInfo.return_types.length === 1) {
-        outputType = sourceNodeInfo.return_types[0];
-      } else if (sourceHandleId.startsWith('output-')) {
-        const index = parseInt(sourceHandleId.split('-')[1]);
-        outputType = sourceNodeInfo.return_types[index] || 'unknown';
-      }
+      // Helper function to get output type from return_types
+      const getOutputType = (returnTypes: any, handleId: string) => {
+        if (Array.isArray(returnTypes)) {
+          // Old format: string array
+          if (handleId === 'output' && returnTypes.length === 1) {
+            return returnTypes[0];
+          } else if (handleId.startsWith('output-')) {
+            const index = parseInt(handleId.split('-')[1]);
+            return returnTypes[index] || 'unknown';
+          }
+        } else if (returnTypes && typeof returnTypes === 'object') {
+          // New format: dict with required/optional
+          const allOutputs = {...(returnTypes.required || {}), ...(returnTypes.optional || {})};
+          const outputEntries = Object.entries(allOutputs);
+          
+          if (handleId === 'output' && outputEntries.length === 1) {
+            const [, typeInfo] = outputEntries[0];
+            return Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+          } else if (handleId.startsWith('output-')) {
+            const index = parseInt(handleId.split('-')[1]);
+            if (outputEntries[index]) {
+              const [, typeInfo] = outputEntries[index];
+              return Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+            }
+          }
+        }
+        return 'unknown';
+      };
+      
+      outputType = getOutputType(sourceNodeInfo.return_types, sourceHandleId);
     }
     
     // Get input type from target
@@ -358,8 +410,25 @@ function App() {
   }, [nodes]);
 
   const prepareWorkflowData = useCallback(() => {
+    // Filter out bypassed nodes
+    const activeNodes = nodes.filter(node => !node.data.bypassed);
+    const activeNodeIds = new Set(activeNodes.map(node => node.id));
+    
+    // Filter out edges connected to bypassed nodes
+    const activeEdges = edges.filter(edge => 
+      activeNodeIds.has(edge.source) && activeNodeIds.has(edge.target)
+    );
+    
+    // Log bypassed nodes for user feedback
+    const bypassedNodes = nodes.filter(node => node.data.bypassed);
+    if (bypassedNodes.length > 0) {
+      console.log(`⚫ Skipping ${bypassedNodes.length} bypassed node(s):`, 
+        bypassedNodes.map(n => n.data.nodeInfo.display_name).join(', ')
+      );
+    }
+    
     return {
-      nodes: nodes.map(node => ({
+      nodes: activeNodes.map(node => ({
         id: node.id,
         type: node.data.nodeInfo?.name || node.data.type || node.type,
         data: {
@@ -368,7 +437,7 @@ function App() {
         },
         position: node.position
       })),
-      edges: edges.map(edge => ({
+      edges: activeEdges.map(edge => ({
         id: edge.id,
         source: edge.source,
         target: edge.target,
@@ -394,6 +463,14 @@ function App() {
 
     try {
       const workflowData = prepareWorkflowData();
+      
+      // Check if all nodes are bypassed
+      if (workflowData.nodes.length === 0) {
+        alert('All nodes are bypassed. Please enable at least one node to execute the workflow.');
+        setIsExecuting(false);
+        return;
+      }
+      
       console.log('Executing workflow once:', workflowData);
       
       const result = await apiService.executeWorkflow(workflowData);
@@ -423,6 +500,13 @@ function App() {
 
     try {
       const workflowData = prepareWorkflowData();
+      
+      // Check if all nodes are bypassed
+      if (workflowData.nodes.length === 0) {
+        alert('All nodes are bypassed. Please enable at least one node to execute the workflow.');
+        return;
+      }
+      
       console.log('Starting continuous execution:', workflowData);
       
       const result = await apiService.startContinuousExecution(workflowData);
@@ -537,6 +621,130 @@ function App() {
     }
   }, [contextMenu.nodeId]);
 
+  // Copy node functionality
+  const copyNode = useCallback(() => {
+    if (contextMenu.nodeId) {
+      const nodeToCopy = nodes.find(node => node.id === contextMenu.nodeId);
+      if (nodeToCopy) {
+        setCopiedNodeData(nodeToCopy);
+        console.log('✓ Node copied:', nodeToCopy.data.nodeInfo.display_name);
+      }
+    }
+  }, [contextMenu.nodeId, nodes]);
+
+  // Copy selected node (for keyboard shortcut)
+  const copySelectedNode = useCallback(() => {
+    const selectedNode = nodes.find(node => node.selected);
+    if (selectedNode) {
+      setCopiedNodeData(selectedNode);
+      console.log('✓ Node copied:', selectedNode.data.nodeInfo.display_name);
+    } else {
+      console.log('⚠ No node selected to copy');
+    }
+  }, [nodes]);
+
+  // Paste node functionality
+  const pasteNode = useCallback((position?: { x: number; y: number }) => {
+    if (copiedNodeData) {
+      let pastePosition: { x: number; y: number };
+      
+      // If position provided, use it
+      if (position) {
+        pastePosition = position;
+      } else if (contextMenu.isVisible && reactFlowInstance) {
+        // Convert screen coordinates to flow coordinates
+        pastePosition = reactFlowInstance.project({
+          x: contextMenu.position.x,
+          y: contextMenu.position.y
+        });
+      } else {
+        // Default position with some offset from the original
+        pastePosition = {
+          x: copiedNodeData.position.x + 50,
+          y: copiedNodeData.position.y + 50
+        };
+      }
+      
+      // Create new node with unique ID
+      const newNode: Node = {
+        ...copiedNodeData,
+        id: `${copiedNodeData.data.nodeInfo.name}-${Date.now()}`,
+        position: pastePosition,
+        selected: false, // Don't select the pasted node by default
+      };
+
+      setNodes(nodes => [...nodes, newNode]);
+      console.log('✓ Node pasted:', newNode.data.nodeInfo.display_name);
+    } else {
+      console.log('⚠ No node copied to paste');
+    }
+  }, [copiedNodeData, setNodes, contextMenu.isVisible, contextMenu.position, reactFlowInstance]);
+
+  // Toggle bypass functionality
+  const toggleBypass = useCallback(() => {
+    if (contextMenu.nodeId) {
+      setNodes(nodes => 
+        nodes.map(node => {
+          if (node.id === contextMenu.nodeId) {
+            const newBypassed = !node.data.bypassed;
+            console.log(`${newBypassed ? '⚫' : '✓'} Node ${newBypassed ? 'bypassed' : 'activated'}:`, node.data.nodeInfo.display_name);
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                bypassed: newBypassed
+              }
+            };
+          }
+          return node;
+        })
+      );
+    }
+  }, [contextMenu.nodeId, setNodes]);
+
+  // Keyboard event handler for copy/paste
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    // Only handle if not typing in an input field
+    if (event.target instanceof HTMLInputElement || 
+        event.target instanceof HTMLTextAreaElement ||
+        (event.target as HTMLElement).contentEditable === 'true') {
+      return;
+    }
+
+    // Handle copy (Ctrl+C or Cmd+C)
+    if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+      event.preventDefault();
+      copySelectedNode();
+    }
+
+    // Handle paste (Ctrl+V or Cmd+V)
+    if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+      event.preventDefault();
+      // Paste at a default position, could be enhanced to paste at mouse position
+      pasteNode();
+    }
+
+    // Handle delete (Delete or Backspace)
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      const selectedNode = nodes.find(node => node.selected);
+      if (selectedNode) {
+        setNodes(nodes => nodes.filter(node => node.id !== selectedNode.id));
+        setEdges(edges => edges.filter(edge => 
+          edge.source !== selectedNode.id && edge.target !== selectedNode.id
+        ));
+      }
+    }
+  }, [copySelectedNode, pasteNode, nodes, setNodes, setEdges]);
+
+  // Add keyboard event listener
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
   const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
     setNodes(nodes => 
       nodes.map(node => {
@@ -600,7 +808,30 @@ function App() {
   }, [contextMenu.nodeId, setNodes, setEdges]);
 
   const contextMenuItems: ContextMenuItem[] = React.useMemo(() => {
+    // Check if current node is bypassed
+    const currentNode = contextMenu.nodeId ? nodes.find(n => n.id === contextMenu.nodeId) : null;
+    const isBypassed = currentNode?.data?.bypassed || false;
+    
     const baseItems: ContextMenuItem[] = [
+      {
+        id: 'bypass',
+        label: isBypassed ? 'Enable Node' : 'Bypass Node',
+        icon: isBypassed ? '✅' : '⚫',
+        onClick: toggleBypass,
+      },
+      {
+        id: 'copy',
+        label: 'Copy Node (Ctrl+C)',
+        icon: '📋',
+        onClick: copyNode,
+      },
+      {
+        id: 'paste',
+        label: 'Paste Node (Ctrl+V)',
+        icon: '📄',
+        onClick: () => pasteNode(),
+        disabled: !copiedNodeData,
+      },
       {
         id: 'copy-id',
         label: 'Copy Node ID',
@@ -615,7 +846,7 @@ function App() {
       },
       {
         id: 'delete',
-        label: 'Delete',
+        label: 'Delete (Del)',
         icon: '🗑️',
         danger: true,
         onClick: deleteNode,
@@ -669,7 +900,7 @@ function App() {
     }
 
     return baseItems;
-  }, [copyNodeId, duplicateNode, deleteNode, contextMenu.nodeInfo, contextMenu.nodeId, nodes, toggleInputMode]);
+  }, [toggleBypass, copyNode, pasteNode, copiedNodeData, copyNodeId, duplicateNode, deleteNode, contextMenu.nodeInfo, contextMenu.nodeId, nodes, toggleInputMode]);
 
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
@@ -678,18 +909,23 @@ function App() {
   return (
     <div className="app">
       <div className="app-tabs">
-        <button 
-          className={`tab ${activeTab === 'canvas' ? 'active' : ''}`}
-          onClick={() => setActiveTab('canvas')}
-        >
-          Canvas
-        </button>
-        <button 
-          className={`tab ${activeTab === 'nodes' ? 'active' : ''}`}
-          onClick={() => setActiveTab('nodes')}
-        >
-          Available Nodes
-        </button>
+        <div className="tab-group">
+          <button 
+            className={`tab ${activeTab === 'canvas' ? 'active' : ''}`}
+            onClick={() => setActiveTab('canvas')}
+          >
+            Canvas
+          </button>
+          <button 
+            className={`tab ${activeTab === 'nodes' ? 'active' : ''}`}
+            onClick={() => setActiveTab('nodes')}
+          >
+            Available Nodes
+          </button>
+        </div>
+        <div className="tab-controls">
+          <ThemeToggle />
+        </div>
       </div>
       
       <div className="app-content">

@@ -1,7 +1,15 @@
 import time
 import random
+import sys
+import os
 from typing import Any, Dict
 from core.node_base import NodeBase, NodeCategory
+
+# Add feetech-servo-sdk to path for robot connectivity
+feetech_path = os.path.join(os.path.dirname(__file__), 'feetech-servo-sdk')
+sys.path.insert(0, feetech_path)
+
+from feetech_servo import ScsServoSDK
 
 class InputNode(NodeBase):
     """Basic input node for providing data to the workflow"""
@@ -15,8 +23,12 @@ class InputNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -34,6 +46,22 @@ class InputNode(NodeBase):
     def DESCRIPTION(cls) -> str:
         return "Provides input data to the workflow"
     
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+InputNode
+
+Purpose: Provides input data to the workflow by allowing users to enter text values manually.
+
+Inputs:
+  - value (STRING): The input text value to pass through the workflow (default: empty string)
+
+Outputs:
+  - output (STRING): The same value that was input, passed through to connected nodes
+
+Usage: Use this node to inject text data into your workflow, either by setting a default value or connecting it to other nodes that provide string data.
+        """
+    
     def execute(self, value: str) -> str:
         return value
 
@@ -49,8 +77,12 @@ class OutputNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -67,6 +99,22 @@ class OutputNode(NodeBase):
     @classmethod
     def DESCRIPTION(cls) -> str:
         return "Displays workflow output"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+OutputNode
+
+Purpose: Displays workflow output by printing the input value to the console and passing it through.
+
+Inputs:
+  - input (STRING): The value to display and pass through
+
+Outputs:
+  - output (STRING): The same value that was input, after displaying it
+
+Usage: Use this node at the end of your workflow to see the final results. It will print the value to the console and also pass it through for further processing if needed.
+        """
     
     def execute(self, input: str) -> str:
         print(f"Output: {input}")
@@ -85,8 +133,12 @@ class TextProcessorNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -103,6 +155,27 @@ class TextProcessorNode(NodeBase):
     @classmethod
     def DESCRIPTION(cls) -> str:
         return "Apply text transformations"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+TextProcessorNode
+
+Purpose: Applies various text transformations to input strings.
+
+Inputs:
+  - text (STRING): The input text to transform
+  - operation (SELECTION): The transformation to apply - options are:
+    * uppercase: Convert text to uppercase
+    * lowercase: Convert text to lowercase  
+    * reverse: Reverse the order of characters
+    * length: Return the length of the text as a string
+
+Outputs:
+  - output (STRING): The transformed text result
+
+Usage: Use this node to manipulate text data in your workflow. Select the desired operation from the dropdown to transform your input text.
+        """
     
     def execute(self, text: str, operation: str) -> str:
         if operation == "uppercase":
@@ -129,8 +202,12 @@ class DelayNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -147,6 +224,23 @@ class DelayNode(NodeBase):
     @classmethod
     def DESCRIPTION(cls) -> str:
         return "Add delay to workflow execution"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+DelayNode
+
+Purpose: Adds a configurable delay to workflow execution, useful for timing control and rate limiting.
+
+Inputs:
+  - input (STRING): The value to pass through after the delay
+  - delay_seconds (FLOAT): The number of seconds to wait (range: 0.1 to 10.0, default: 1.0)
+
+Outputs:
+  - output (STRING): The same input value, passed through after the delay
+
+Usage: Use this node to add pauses in your workflow, for example when interfacing with hardware that needs time between commands or when rate-limiting API calls.
+        """
     
     def execute(self, input: str, delay_seconds: float) -> str:
         time.sleep(delay_seconds)
@@ -165,8 +259,12 @@ class RandomNumberNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("INT",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("INT", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -183,6 +281,23 @@ class RandomNumberNode(NodeBase):
     @classmethod
     def DESCRIPTION(cls) -> str:
         return "Generate random integer between min and max values"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+RandomNumberNode
+
+Purpose: Generates random integer values within a specified range.
+
+Inputs:
+  - min_value (INT): The minimum value for the random number (default: 0)
+  - max_value (INT): The maximum value for the random number (default: 100)
+
+Outputs:
+  - output (INT): A random integer between min_value and max_value (inclusive)
+
+Usage: Use this node to introduce randomness into your workflow, such as for testing, simulations, or generating varied inputs for robot movements.
+        """
     
     def execute(self, min_value: int, max_value: int) -> int:
         return random.randint(min_value, max_value)
@@ -201,8 +316,12 @@ class MathNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("FLOAT",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("FLOAT", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -219,6 +338,28 @@ class MathNode(NodeBase):
     @classmethod
     def DESCRIPTION(cls) -> str:
         return "Perform basic mathematical operations"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+MathNode
+
+Purpose: Performs basic mathematical operations on two floating-point numbers.
+
+Inputs:
+  - a (FLOAT): The first operand (default: 0.0)
+  - b (FLOAT): The second operand (default: 0.0)
+  - operation (SELECTION): The mathematical operation to perform:
+    * add: a + b
+    * subtract: a - b
+    * multiply: a * b
+    * divide: a / b (throws error if b is 0)
+
+Outputs:
+  - output (FLOAT): The result of the mathematical operation
+
+Usage: Use this node for calculations in your workflow, such as converting units, scaling values, or performing computations on sensor data.
+        """
     
     def execute(self, a: float, b: float, operation: str) -> float:
         if operation == "add":
@@ -242,8 +383,12 @@ class HelloWorldNode(NodeBase):
         return {}
 
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
 
     @classmethod
     def FUNCTION(cls) -> str:
@@ -261,23 +406,39 @@ class HelloWorldNode(NodeBase):
     def DESCRIPTION(cls) -> str:
         return "Returns the string 'hello world'"
 
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+HelloWorldNode
+
+Purpose: A simple test node that outputs 'hello world' with no inputs required.
+
+Inputs:
+  - None
+
+Outputs:
+  - output (STRING): Always returns the string 'hello world'
+
+Usage: Use this node for testing workflow connectivity and as a simple starting point for new workflows.
+        """
+
     def execute(self) -> str:
         return "hello world"
 
-class PrintNode(NodeBase):
-    """A node that prints the input string and returns no output."""
+class PrintToConsoleNode(NodeBase):
+    """A node that prints the input value and returns no output."""
 
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "text": ("STRING", {})
+                "value": ("ANY", {})
             }
         }
 
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return tuple()
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {}
 
     @classmethod
     def FUNCTION(cls) -> str:
@@ -289,14 +450,30 @@ class PrintNode(NodeBase):
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
-        return "Print"
+        return "Print To Console"
 
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Prints the input string to the console."
+        return "Prints the input value to the console."
 
-    def execute(self, text: str):
-        print(text)
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+PrintToConsoleNode
+
+Purpose: Prints any input value to the console for debugging and monitoring purposes.
+
+Inputs:
+  - value (ANY): Any value to print to the console
+
+Outputs:
+  - None (this node has no outputs)
+
+Usage: Use this node to debug your workflow by printing intermediate values to the console. Place it anywhere in your workflow to see what data is flowing through.
+        """
+
+    def execute(self, value: Any):
+        print(value)
 
 class ConcatNode(NodeBase):
     """Concatenate two strings with a '+' in between."""
@@ -311,8 +488,12 @@ class ConcatNode(NodeBase):
         }
 
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
 
     @classmethod
     def FUNCTION(cls) -> str:
@@ -330,18 +511,112 @@ class ConcatNode(NodeBase):
     def DESCRIPTION(cls) -> str:
         return "Concatenate two strings with a '+' in between."
 
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+ConcatNode
+
+Purpose: Concatenates two strings with a '+' character between them.
+
+Inputs:
+  - a (STRING): The first string
+  - b (STRING): The second string
+
+Outputs:
+  - output (STRING): The concatenated result in format 'a+b'
+
+Usage: Use this node to combine string values in your workflow, useful for creating composite commands or labels.
+        """
+
     def execute(self, a: str, b: str) -> str:
         return f"{a}+{b}"
+
+class ConnectRobotNode(NodeBase):
+    """Connect to a robot and return ScsServoSDK instance"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "port_name": ("STRING", {"default": ""})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "sdk": ("ScsServoSDK", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "connect_robot"
+    
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.ROBOT.value
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Connect Robot"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Connect to a robot using ScsServoSDK.connect() and return SDK instance"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+ConnectRobotNode
+
+Purpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.
+
+Inputs:
+  - port_name (STRING): The serial port name to connect to (leave empty for auto-detection)
+
+Outputs:
+  - sdk (ScsServoSDK): The connected SDK instance that can be used by other robot control nodes
+
+Usage: Use this node at the beginning of robot workflows to establish communication. The SDK output should be connected to other robot nodes that require servo control. If port_name is empty, the system will attempt to auto-detect the robot.
+        """
+    
+    def connect_robot(self, port_name: str) -> tuple:
+        """Connect to robot and return SDK instance"""
+        
+        sdk = ScsServoSDK()
+        
+        try:
+            # Connect to servo controller
+            # If port_name is empty, pass None to auto-detect
+            port_to_use = port_name if port_name.strip() else None
+            success = sdk.connect(port_name=port_to_use)
+            
+            if not success:
+                raise Exception("Failed to connect to robot")
+            
+            print(f"✓ Robot connected successfully")
+            if sdk.port_handler:
+                print(f"  Port: {sdk.port_handler.port_name}")
+            
+            return (sdk,)
+            
+        except Exception as e:
+            # Clean up on failure
+            try:
+                sdk.disconnect()
+            except:
+                pass
+            
+            error_msg = f"Robot connection failed: {str(e)}"
+            print(f"❌ {error_msg}")
+            raise Exception(error_msg)
 
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
-    "OutputNode": OutputNode,
-    "TextProcessorNode": TextProcessorNode,
-    "DelayNode": DelayNode,
-    "RandomNumberNode": RandomNumberNode,
-    "MathNode": MathNode,
-    "HelloWorldNode": HelloWorldNode,
-    "PrintNode": PrintNode,
-    "ConcatNode": ConcatNode
+    "PrintToConsoleNode": PrintToConsoleNode,
+    # "ConcatNode": ConcatNode,
+    "ConnectRobotNode": ConnectRobotNode
 }

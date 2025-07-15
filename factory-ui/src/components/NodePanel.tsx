@@ -130,7 +130,9 @@ const NodePanel = ({ onNodeDrag }: NodePanelProps) => {
                              Object.keys(node.input_types.optional || {}).length}
                   </span>
                   <span className="node-outputs">
-                    Outputs: {node.return_types.length}
+                    Outputs: {Array.isArray(node.return_types) 
+                      ? node.return_types.length 
+                      : Object.keys(node.return_types.required || {}).length + Object.keys(node.return_types.optional || {}).length}
                   </span>
                 </div>
               </div>

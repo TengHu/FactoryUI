@@ -5,13 +5,54 @@ import json
 import traceback
 from .node_registry import node_registry
 
+def make_serializable(obj):
+    """Convert objects to serializable representations"""
+    if obj is None:
+        return None
+    
+    # Handle tuples and lists
+    if isinstance(obj, (tuple, list)):
+        return [make_serializable(item) for item in obj]
+    
+    # Handle dictionaries
+    if isinstance(obj, dict):
+        return {key: make_serializable(value) for key, value in obj.items()}
+    
+    # Handle basic serializable types
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+    
+    # Handle ScsServoSDK and other complex objects
+    if hasattr(obj, '__class__'):
+        class_name = obj.__class__.__name__
+        if class_name == 'ScsServoSDK':
+            # Return a reference representation
+            return {
+                "_type": "ScsServoSDK",
+                "_class": class_name,
+                "_connected": hasattr(obj, 'port_handler') and obj.port_handler and obj.port_handler.is_open,
+                "_port": obj.port_handler.port_name if hasattr(obj, 'port_handler') and obj.port_handler else None,
+                "_object_id": id(obj)
+            }
+        else:
+            # For other non-serializable objects, return type info
+            return {
+                "_type": "object",
+                "_class": class_name,
+                "_object_id": id(obj)
+            }
+    
+    # Fallback for unknown types
+    return str(obj)
+
 class WorkflowExecutor:
     """Executes workflows by running nodes in topological order"""
     
     def __init__(self):
         self.is_running = False
         self.current_workflow = None
-        self.execution_results = {}
+        self.execution_results = {}  # Serializable results for API
+        self.execution_objects = {}  # Actual objects for node connections
         self.execution_logs = []
     
     async def execute_workflow(self, workflow_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -19,6 +60,7 @@ class WorkflowExecutor:
         self.is_running = True
         self.current_workflow = workflow_data
         self.execution_results = {}
+        self.execution_objects = {}
         self.execution_logs = []
         
         try:
@@ -145,8 +187,11 @@ class WorkflowExecutor:
                 else:
                     result = execute_func(**inputs)
                 
-                # Store result
-                self.execution_results[node_id] = result
+                # Store actual result for node connections
+                self.execution_objects[node_id] = result
+                
+                # Store serializable result for API response
+                self.execution_results[node_id] = make_serializable(result)
                 
                 self.execution_logs.append({
                     "level": "info",
@@ -175,14 +220,25 @@ class WorkflowExecutor:
                 source_handle = edge.get("sourceHandle", "output")
                 target_handle = edge.get("targetHandle", "input")
                 
-                # Get result from source node
-                if source_id in self.execution_results:
-                    source_result = self.execution_results[source_id]
+                # Get actual result from source node (not serialized version)
+                if source_id in self.execution_objects:
+                    source_result = self.execution_objects[source_id]
                     
                     # Handle different output formats
-                    if isinstance(source_result, dict) and source_handle in source_result:
-                        inputs[target_handle] = source_result[source_handle]
+                    if isinstance(source_result, tuple):
+                        # Multiple outputs - extract by index
+                        if source_handle.startswith("output-"):
+                            index = int(source_handle.split("-")[1])
+                            if index < len(source_result):
+                                inputs[target_handle] = source_result[index]
+                        elif len(source_result) == 1:
+                            # Single output in tuple
+                            inputs[target_handle] = source_result[0]
+                        else:
+                            # Default to first output
+                            inputs[target_handle] = source_result[0] if source_result else None
                     else:
+                        # Single output
                         inputs[target_handle] = source_result
         
         # Get inputs from node data (default values, parameters)

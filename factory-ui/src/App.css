@@ -7,10 +7,22 @@
 
 .app-tabs {
   display: flex;
-  background: #f6f8fa;
-  border-bottom: 1px solid #d1d9e0;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   padding: 0;
   margin: 0;
+}
+
+.tab-group {
+  display: flex;
+}
+
+.tab-controls {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
 }
 
 .tab {
@@ -20,20 +32,20 @@
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: #656d76;
+  color: var(--text-secondary);
   border-bottom: 2px solid transparent;
   transition: all 0.2s ease;
 }
 
 .tab:hover {
-  color: #24292f;
-  background: #f3f4f6;
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 .tab.active {
-  color: #0969da;
-  border-bottom-color: #0969da;
-  background: #fff;
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+  background: var(--bg-primary);
 }
 
 .app-content {
@@ -48,14 +60,14 @@
 
 .react-flow-wrapper {
   flex: 1;
-  background: #fafbfc;
+  background: var(--bg-tertiary);
 }
 
 .nodes-tab {
   height: 100%;
   display: flex;
   justify-content: center;
-  background: #fafbfc;
+  background: var(--bg-tertiary);
 }
 
 .nodes-tab .node-panel {
@@ -69,8 +81,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  background: #fff;
-  border-top: 1px solid #d1d9e0;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -84,19 +96,19 @@
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: #f6f8fa;
-  border: 1px solid #d1d9e0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #24292f;
+  color: var(--text-primary);
 }
 
 .toolbar-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-  border-color: #c1c9d0;
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
   transform: translateY(-1px);
 }
 
@@ -121,52 +133,52 @@
 }
 
 .toolbar-btn.run-btn {
-  background: #dcfce7;
-  border-color: #bbf7d0;
-  color: #166534;
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-color);
   font-weight: 600;
 }
 
 .toolbar-btn.run-btn:hover:not(:disabled) {
-  background: #bbf7d0;
-  border-color: #86efac;
+  background: var(--success-border);
+  border-color: var(--success-color);
 }
 
 .toolbar-btn.run-btn:disabled {
-  background: #f3f4f6;
-  border-color: #d1d5da;
-  color: #6b7280;
+  background: var(--bg-hover);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
 }
 
 .toolbar-btn.continuous-btn {
-  background: #dbeafe;
-  border-color: #bfdbfe;
-  color: #1e40af;
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-color);
   font-weight: 600;
 }
 
 .toolbar-btn.continuous-btn:hover:not(:disabled) {
-  background: #bfdbfe;
-  border-color: #93c5fd;
+  background: var(--info-border);
+  border-color: var(--info-color);
 }
 
 .toolbar-btn.stop-btn {
-  background: #fef3c7;
-  border-color: #fde68a;
-  color: #92400e;
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-color);
   font-weight: 600;
 }
 
 .toolbar-btn.stop-btn:hover:not(:disabled) {
-  background: #fde68a;
-  border-color: #fcd34d;
+  background: var(--warning-border);
+  border-color: var(--warning-color);
 }
 
 .toolbar-info {
   display: flex;
   gap: 16px;
   font-size: 13px;
-  color: #656d76;
+  color: var(--text-secondary);
 }
 
 .node-count, .edge-count {
@@ -181,15 +193,15 @@
 }
 
 .execution-status.success {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #bbf7d0;
+  background: var(--success-bg);
+  color: var(--success-color);
+  border: 1px solid var(--success-border);
 }
 
 .execution-status.error {
-  background: #fee2e2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: var(--error-bg);
+  color: var(--error-color);
+  border: 1px solid var(--error-border);
 }
 
 .continuous-status {
@@ -197,9 +209,9 @@
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
+  background: var(--info-bg);
+  color: var(--info-color);
+  border: 1px solid var(--info-border);
 }
 
 .react-flow-wrapper {

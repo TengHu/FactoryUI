@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { NodeInfo } from '../services/api';
 import './CustomNode.css';
@@ -14,20 +14,45 @@ interface CustomNodeData {
   type: string;
   inputModes?: Record<string, 'connection' | 'manual'>;
   inputValues?: Record<string, string>;
+  bypassed?: boolean;
 }
 
 const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
-  const { nodeInfo, inputModes = {}, inputValues = {} } = data;
+  const { nodeInfo, inputModes = {}, inputValues = {}, bypassed = false } = data;
   const onContextMenu = (props as any).onContextMenu;
   const onInputValueChange = (props as any).onInputValueChange;
+  
+  // State for detailed description modal
+  const [showDetailedDescription, setShowDetailedDescription] = useState(false);
 
   // Parse inputs from nodeInfo
   const requiredInputs = Object.keys(nodeInfo.input_types.required || {});
   const optionalInputs = Object.keys(nodeInfo.input_types.optional || {});
   const allInputs = [...requiredInputs, ...optionalInputs];
   
-  // Parse outputs from nodeInfo
-  const outputs = nodeInfo.return_types || [];
+  // Parse outputs from nodeInfo - handle both old format (string[]) and new format (dict)
+  let outputs: Array<{name: string, type: string, required?: boolean}> = [];
+  if (Array.isArray(nodeInfo.return_types)) {
+    // Old format: string array
+    outputs = nodeInfo.return_types.map((type, index) => ({
+      name: (nodeInfo.return_types as string[]).length === 1 ? 'output' : `output-${index}`,
+      type: type,
+      required: true
+    }));
+  } else if (nodeInfo.return_types && typeof nodeInfo.return_types === 'object') {
+    // New format: dict with required/optional
+    const requiredOutputs = Object.entries(nodeInfo.return_types.required || {}).map(([name, typeInfo]) => ({
+      name,
+      type: Array.isArray(typeInfo) ? typeInfo[0] : typeInfo,
+      required: true
+    }));
+    const optionalOutputs = Object.entries(nodeInfo.return_types.optional || {}).map(([name, typeInfo]) => ({
+      name,
+      type: Array.isArray(typeInfo) ? typeInfo[0] : typeInfo,
+      required: false
+    }));
+    outputs = [...requiredOutputs, ...optionalOutputs];
+  }
 
   // Get category for styling
   const category = nodeInfo.category;
@@ -40,15 +65,40 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     }
   };
 
+  const handleQuestionMarkClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setShowDetailedDescription(true);
+  };
+
+  const handleModalClose = (event?: React.MouseEvent) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    setShowDetailedDescription(false);
+  };
+
   return (
     <div 
-      className={`custom-node ${selected ? 'selected' : ''} node-${category}`}
+      className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} node-${category}`}
       onContextMenu={handleContextMenu}
     >
       {/* Node header */}
       <div className="node-header">
         <div className="node-title">{nodeInfo.display_name}</div>
-        <div className="node-category-badge">{category}</div>
+        <div className="node-header-right">
+          <div className="node-category-badge">{category}</div>
+          {nodeInfo.detailed_description && (
+            <button 
+              className="node-help-button"
+              onClick={handleQuestionMarkClick}
+              title="Show detailed description"
+            >
+              ?
+            </button>
+          )}
+        </div>
       </div>
       {nodeInfo.description && (
         <div className="node-description">{nodeInfo.description}</div>
@@ -119,28 +169,50 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
         <div className="io-column io-outputs">
           {outputs.map((output, index) => {
             const outputId = outputs.length === 1 ? 'output' : `output-${index}`;
+            const isRequired = output.required !== false; // Default to required if not specified
             return (
               <div key={`output-${index}`} className="io-item output-item">
-                <span className="connection-label output-label">{output}</span>
+                <span className={`connection-label output-label ${isRequired ? 'required' : 'optional'}`}>
+                  {`${output.name} (${output.type})`}
+                </span>
                 <Handle
                   type="source"
                   position={Position.Right}
                   id={outputId}
                   className="connection-handle output-handle"
-                  data-output-type={output}
+                  data-output-type={output.type}
                   style={{
-                    background: '#22c55e',
+                    background: isRequired ? '#22c55e' : '#10b981',
                     border: '2px solid white',
                     width: '10px',
                     height: '10px',
                   }}
-                  title={`Output: ${output}`}
+                  title={`${output.name} (${output.type}) - ${isRequired ? 'required' : 'optional'}`}
                 />
               </div>
             );
           })}
         </div>
       </div>
+      
+      {/* Detailed Description Modal */}
+      {showDetailedDescription && (
+        <div className="node-modal-overlay" onClick={handleModalClose}>
+          <div className="node-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="node-modal-header">
+              <h3>{nodeInfo.display_name} - Detailed Description</h3>
+              <button className="node-modal-close" onClick={handleModalClose}>
+                ×
+              </button>
+            </div>
+            <div className="node-modal-content">
+              <pre className="node-detailed-description">
+                {nodeInfo.detailed_description}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

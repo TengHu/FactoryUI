@@ -250,9 +250,22 @@ class ContinuousExecutor:
                     source_result = node_results[source_id]
                     
                     # Handle different output formats
-                    if isinstance(source_result, dict) and source_handle in source_result:
+                    if isinstance(source_result, tuple):
+                        # Multiple outputs - extract by index
+                        if source_handle.startswith("output-"):
+                            index = int(source_handle.split("-")[1])
+                            if index < len(source_result):
+                                inputs[target_handle] = source_result[index]
+                        elif len(source_result) == 1:
+                            # Single output in tuple
+                            inputs[target_handle] = source_result[0]
+                        else:
+                            # Default to first output
+                            inputs[target_handle] = source_result[0] if source_result else None
+                    elif isinstance(source_result, dict) and source_handle in source_result:
                         inputs[target_handle] = source_result[source_handle]
                     else:
+                        # Single output
                         inputs[target_handle] = source_result
         
         # Get inputs from node data (default values, parameters)
