@@ -3,14 +3,19 @@ import { Handle, Position, NodeProps } from 'reactflow';
 import { NodeInfo } from '../services/api';
 import './CustomNode.css';
 
+export interface CustomNodeProps extends NodeProps<CustomNodeData> {
+  onContextMenu?: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void;
+}
+
 interface CustomNodeData {
   label: string;
   nodeInfo: NodeInfo;
   type: string;
 }
 
-const CustomNode = ({ data, selected }: NodeProps<CustomNodeData>) => {
+const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const { nodeInfo } = data;
+  const onContextMenu = (props as any).onContextMenu;
 
   // Parse inputs from nodeInfo
   const requiredInputs = Object.keys(nodeInfo.input_types.required || {});
@@ -23,8 +28,19 @@ const CustomNode = ({ data, selected }: NodeProps<CustomNodeData>) => {
   // Get category for styling
   const category = nodeInfo.category;
 
+  const handleContextMenu = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (onContextMenu) {
+      onContextMenu(event, id, nodeInfo);
+    }
+  };
+
   return (
-    <div className={`custom-node ${selected ? 'selected' : ''} node-${category}`}>
+    <div 
+      className={`custom-node ${selected ? 'selected' : ''} node-${category}`}
+      onContextMenu={handleContextMenu}
+    >
       {/* Node header */}
       <div className="node-header">
         <div className="node-title">{nodeInfo.display_name}</div>

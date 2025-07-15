@@ -1,0 +1,61 @@
+.context-menu {
+  background: white;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.context-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #24292e;
+  transition: background-color 0.15s ease;
+}
+
+.context-menu-item:hover:not(.disabled) {
+  background: #f6f8fa;
+}
+
+.context-menu-item.disabled {
+  color: #8b949e;
+  cursor: not-allowed;
+}
+
+.context-menu-item.danger {
+  color: #cf222e;
+}
+
+.context-menu-item.danger:hover:not(.disabled) {
+  background: #ffebee;
+}
+
+.context-menu-icon {
+  margin-right: 8px;
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+}
+
+.context-menu-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+/* Separator */
+.context-menu-separator {
+  height: 1px;
+  background: #e1e4e8;
+  margin: 4px 0;
+}

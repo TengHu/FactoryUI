@@ -16,6 +16,7 @@ import 'reactflow/dist/style.css';
 import './App.css';
 import NodePanel from './components/NodePanel';
 import CustomNode from './components/CustomNode';
+import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
 import { NodeInfo, apiService } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
 
@@ -32,8 +33,8 @@ interface WorkflowData {
 const initialNodes: Node[] = [];
 const initialEdges: Edge[] = [];
 
-const nodeTypes: NodeTypes = {
-  customNode: CustomNode,
+const createCustomNodeWithContextMenu = (onContextMenu: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void) => {
+  return (props: any) => <CustomNode {...props} onContextMenu={onContextMenu} />;
 };
 
 function App() {
@@ -48,6 +49,17 @@ function App() {
   const [executionResults, setExecutionResults] = useState<any>(null);
   const [isContinuousRunning, setIsContinuousRunning] = useState(false);
   const [continuousStatus, setContinuousStatus] = useState<any>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    isVisible: boolean;
+    position: { x: number; y: number };
+    nodeId: string | null;
+    nodeInfo: NodeInfo | null;
+  }>({
+    isVisible: false,
+    position: { x: 0, y: 0 },
+    nodeId: null,
+    nodeInfo: null,
+  });
 
   const onConnect = useCallback(
     (params: Edge | Connection) => {
@@ -473,6 +485,78 @@ function App() {
     }
   }, [isContinuousRunning, pollContinuousStatus]);
 
+  const handleNodeContextMenu = useCallback((event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => {
+    setContextMenu({
+      isVisible: true,
+      position: { x: event.clientX, y: event.clientY },
+      nodeId,
+      nodeInfo,
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(prev => ({ ...prev, isVisible: false }));
+  }, []);
+
+  const deleteNode = useCallback(() => {
+    if (contextMenu.nodeId) {
+      setNodes(nodes => nodes.filter(node => node.id !== contextMenu.nodeId));
+      setEdges(edges => edges.filter(edge => 
+        edge.source !== contextMenu.nodeId && edge.target !== contextMenu.nodeId
+      ));
+    }
+  }, [contextMenu.nodeId, setNodes, setEdges]);
+
+  const duplicateNode = useCallback(() => {
+    if (contextMenu.nodeId && contextMenu.nodeInfo) {
+      const originalNode = nodes.find(node => node.id === contextMenu.nodeId);
+      if (originalNode) {
+        const newNode: Node = {
+          ...originalNode,
+          id: `${contextMenu.nodeInfo.name}-${Date.now()}`,
+          position: {
+            x: originalNode.position.x + 50,
+            y: originalNode.position.y + 50,
+          },
+        };
+        setNodes(nodes => [...nodes, newNode]);
+      }
+    }
+  }, [contextMenu.nodeId, contextMenu.nodeInfo, nodes, setNodes]);
+
+  const copyNodeId = useCallback(() => {
+    if (contextMenu.nodeId) {
+      navigator.clipboard.writeText(contextMenu.nodeId);
+      alert(`Node ID copied: ${contextMenu.nodeId}`);
+    }
+  }, [contextMenu.nodeId]);
+
+  const contextMenuItems: ContextMenuItem[] = [
+    {
+      id: 'copy-id',
+      label: 'Copy Node ID',
+      icon: '📋',
+      onClick: copyNodeId,
+    },
+    {
+      id: 'duplicate',
+      label: 'Duplicate',
+      icon: '📄',
+      onClick: duplicateNode,
+    },
+    {
+      id: 'delete',
+      label: 'Delete',
+      icon: '🗑️',
+      danger: true,
+      onClick: deleteNode,
+    },
+  ];
+
+  const nodeTypes: NodeTypes = React.useMemo(() => ({
+    customNode: createCustomNodeWithContextMenu(handleNodeContextMenu),
+  }), [handleNodeContextMenu]);
+
   return (
     <div className="app">
       <div className="app-tabs">
@@ -615,6 +699,13 @@ function App() {
           )}
         </div>
       </div>
+      
+      <ContextMenu
+        isVisible={contextMenu.isVisible}
+        position={contextMenu.position}
+        items={contextMenuItems}
+        onClose={closeContextMenu}
+      />
     </div>
   );
 }
