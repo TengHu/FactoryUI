@@ -64,7 +64,9 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
               (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
               ['unknown'];
             const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-            const inputMode = inputModes[input] || 'connection';
+            // Default to manual mode for STRING and FLOAT inputs, connection mode for others
+            const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
+            const inputMode = inputModes[input] || defaultMode;
             const inputValue = inputValues[input] || '';
             
             return (

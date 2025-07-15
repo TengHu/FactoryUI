@@ -563,7 +563,15 @@ function App() {
     setNodes(nodes => 
       nodes.map(node => {
         if (node.id === contextMenu.nodeId) {
-          const currentMode = node.data.inputModes?.[inputName] || 'connection';
+          // Get the type information to determine default mode
+          const nodeInfo = node.data.nodeInfo as NodeInfo;
+          const typeInfo = 
+            nodeInfo.input_types.required?.[inputName] ||
+            nodeInfo.input_types.optional?.[inputName];
+          const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+          const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
+          
+          const currentMode = node.data.inputModes?.[inputName] || defaultMode;
           const newMode = currentMode === 'connection' ? 'manual' : 'connection';
           
           // If switching to connection mode, remove any edges for this input
@@ -621,15 +629,15 @@ function App() {
       const optionalInputs = Object.keys(contextMenu.nodeInfo.input_types.optional || {});
       const allInputs = [...requiredInputs, ...optionalInputs];
       
-      const stringInputs = allInputs.filter(inputName => {
+      const manualInputs = allInputs.filter(inputName => {
         const typeInfo = 
           contextMenu.nodeInfo!.input_types.required?.[inputName] ||
           contextMenu.nodeInfo!.input_types.optional?.[inputName];
         const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-        return typeName === 'STRING';
+        return typeName === 'STRING' || typeName === 'FLOAT';
       });
 
-      if (stringInputs.length > 0) {
+      if (manualInputs.length > 0) {
         // Add separator
         baseItems.splice(-1, 0, {
           id: 'separator',
@@ -639,8 +647,15 @@ function App() {
         });
 
         // Add input mode toggles
-        stringInputs.forEach(inputName => {
-          const currentMode = node?.data.inputModes?.[inputName] || 'connection';
+        manualInputs.forEach(inputName => {
+          // Get the type information to determine default mode
+          const typeInfo = 
+            contextMenu.nodeInfo!.input_types.required?.[inputName] ||
+            contextMenu.nodeInfo!.input_types.optional?.[inputName];
+          const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+          const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
+          
+          const currentMode = node?.data.inputModes?.[inputName] || defaultMode;
           const isManual = currentMode === 'manual';
           
           baseItems.splice(-1, 0, {
