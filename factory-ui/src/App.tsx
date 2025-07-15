@@ -17,6 +17,7 @@ import './App.css';
 import NodePanel from './components/NodePanel';
 import CustomNode from './components/CustomNode';
 import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
+import ThemeToggle from './components/ThemeToggle';
 import { NodeInfo, apiService } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
 
@@ -678,18 +679,23 @@ function App() {
   return (
     <div className="app">
       <div className="app-tabs">
-        <button 
-          className={`tab ${activeTab === 'canvas' ? 'active' : ''}`}
-          onClick={() => setActiveTab('canvas')}
-        >
-          Canvas
-        </button>
-        <button 
-          className={`tab ${activeTab === 'nodes' ? 'active' : ''}`}
-          onClick={() => setActiveTab('nodes')}
-        >
-          Available Nodes
-        </button>
+        <div className="tab-group">
+          <button 
+            className={`tab ${activeTab === 'canvas' ? 'active' : ''}`}
+            onClick={() => setActiveTab('canvas')}
+          >
+            Canvas
+          </button>
+          <button 
+            className={`tab ${activeTab === 'nodes' ? 'active' : ''}`}
+            onClick={() => setActiveTab('nodes')}
+          >
+            Available Nodes
+          </button>
+        </div>
+        <div className="tab-controls">
+          <ThemeToggle />
+        </div>
       </div>
       
       <div className="app-content">
