@@ -71,10 +71,19 @@ class NodeRegistry:
         if not node_class:
             return None
         
+        # Get detailed description if available
+        detailed_description = ""
+        if hasattr(node_class, 'get_detailed_description'):
+            try:
+                detailed_description = node_class.get_detailed_description()
+            except Exception as e:
+                print(f"Warning: Failed to get detailed description for {name}: {e}")
+        
         return {
             "name": name,
             "display_name": node_class.DISPLAY_NAME(),
             "description": node_class.DESCRIPTION(),
+            "detailed_description": detailed_description,
             "category": node_class.CATEGORY(),
             "input_types": node_class.INPUT_TYPES(),
             "return_types": node_class.RETURN_TYPES(),

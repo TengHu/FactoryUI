@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { NodeInfo } from '../services/api';
 import './CustomNode.css';
@@ -20,6 +20,9 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const { nodeInfo, inputModes = {}, inputValues = {} } = data;
   const onContextMenu = (props as any).onContextMenu;
   const onInputValueChange = (props as any).onInputValueChange;
+  
+  // State for detailed description modal
+  const [showDetailedDescription, setShowDetailedDescription] = useState(false);
 
   // Parse inputs from nodeInfo
   const requiredInputs = Object.keys(nodeInfo.input_types.required || {});
@@ -61,6 +64,20 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     }
   };
 
+  const handleQuestionMarkClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setShowDetailedDescription(true);
+  };
+
+  const handleModalClose = (event?: React.MouseEvent) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    setShowDetailedDescription(false);
+  };
+
   return (
     <div 
       className={`custom-node ${selected ? 'selected' : ''} node-${category}`}
@@ -69,7 +86,18 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       {/* Node header */}
       <div className="node-header">
         <div className="node-title">{nodeInfo.display_name}</div>
-        <div className="node-category-badge">{category}</div>
+        <div className="node-header-right">
+          <div className="node-category-badge">{category}</div>
+          {nodeInfo.detailed_description && (
+            <button 
+              className="node-help-button"
+              onClick={handleQuestionMarkClick}
+              title="Show detailed description"
+            >
+              ?
+            </button>
+          )}
+        </div>
       </div>
       {nodeInfo.description && (
         <div className="node-description">{nodeInfo.description}</div>
@@ -165,6 +193,25 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
           })}
         </div>
       </div>
+      
+      {/* Detailed Description Modal */}
+      {showDetailedDescription && (
+        <div className="node-modal-overlay" onClick={handleModalClose}>
+          <div className="node-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="node-modal-header">
+              <h3>{nodeInfo.display_name} - Detailed Description</h3>
+              <button className="node-modal-close" onClick={handleModalClose}>
+                ×
+              </button>
+            </div>
+            <div className="node-modal-content">
+              <pre className="node-detailed-description">
+                {nodeInfo.detailed_description}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

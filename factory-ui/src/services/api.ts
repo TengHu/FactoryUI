@@ -4,6 +4,7 @@ export interface NodeInfo {
   name: string;
   display_name: string;
   description: string;
+  detailed_description?: string;
   category: string;
   input_types: {
     required?: Record<string, any>;

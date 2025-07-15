@@ -52,6 +52,23 @@ class RobotStatusReader(NodeBase):
     def DESCRIPTION(cls) -> str:
         return "Read status (positions, modes) from connected robot servos using feetech-servo-sdk"
     
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return (
+            """
+            RobotStatusReader Node\n\n"
+            "Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk.\n"
+            "Inputs:\n"
+            "  - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n"
+            "  - servo_ids (STRING): Comma-separated list of servo IDs to read (e.g., '1,2,3,4,5').\n"
+            "  - read_positions (BOOLEAN, optional): Whether to read servo positions (default: True).\n"
+            "  - read_modes (BOOLEAN, optional): Whether to read servo modes (default: False).\n"
+            "Outputs:\n"
+            "  - status_data (DICT): Dictionary containing read positions, modes (if requested), servo_ids, timestamp, and connection status.\n"
+            "  - positions (DICT): Dictionary of servo positions keyed by servo ID.\n"
+            """
+        )
+    
     def read_robot_status(self, sdk: ScsServoSDK, servo_ids: str,
                          read_positions: bool = True, read_modes: bool = False) -> tuple:
         """Read status from robot servos using a provided ScsServoSDK instance"""
@@ -147,6 +164,27 @@ class JointControlNode(NodeBase):
     @classmethod
     def DESCRIPTION(cls) -> str:
         return "Control robot joints with individual angle inputs for rotation, pitch, elbow, wrist_pitch, wrist_roll, and jaw"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return (
+            """
+            JointControlNode Node\n\n"
+            "Purpose: Controls robot joints by sending individual angle commands to each joint (rotation, pitch, elbow, wrist_pitch, wrist_roll, jaw) using feetech-servo-sdk.\n"
+            "Inputs:\n"
+            "  - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n"
+            "  - rotation (FLOAT): Angle for the rotation joint (-180 to 180).\n"
+            "  - pitch (FLOAT): Angle for the pitch joint (-90 to 90).\n"
+            "  - elbow (FLOAT): Angle for the elbow joint (-120 to 120).\n"
+            "  - wrist_pitch (FLOAT): Angle for the wrist pitch joint (-90 to 90).\n"
+            "  - wrist_roll (FLOAT): Angle for the wrist roll joint (-180 to 180).\n"
+            "  - jaw (FLOAT): Angle for the jaw joint (0 to 90).\n"
+            "  - servo_mapping (STRING, optional): Comma-separated servo IDs for each joint (default: '1,2,3,4,5,6').\n"
+            "  - move_time (INT, optional): Time in ms for the move (default: 1000).\n"
+            "Outputs:\n"
+            "  - angles (DICT): Dictionary of joint names and their commanded angles.\n"
+            """
+        )
     
     def control_joints(self, sdk: ScsServoSDK, rotation: float, pitch: float, elbow: float, 
                       wrist_pitch: float, wrist_roll: float, jaw: float, 
@@ -256,6 +294,20 @@ class So101WritePositionNode(NodeBase):
     @classmethod
     def DESCRIPTION(cls) -> str:
         return "Write multiple servo positions to the robot using ScsServoSDK."
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return (
+            """
+            So101WritePositionNode Node\n\n"
+            "Purpose: Writes multiple servo positions to the robot using ScsServoSDK.\n"
+            "Inputs:\n"
+            "  - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n"
+            "  - positions (DICT): Dictionary mapping servo IDs to target positions.\n"
+            "Outputs:\n"
+            "  - write_result (DICT): Dictionary reflecting the positions written to the servos.\n"
+            """
+        )
 
     def write_positions(self, sdk: ScsServoSDK, positions: dict) -> tuple:
         """Write positions to robot servos"""

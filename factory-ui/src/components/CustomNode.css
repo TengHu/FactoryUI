@@ -55,6 +55,13 @@
   gap: 8px;
 }
 
+.node-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .node-title {
   font-weight: 600;
   font-size: 14px;
@@ -310,4 +317,120 @@
 .manual-input::placeholder {
   color: #8b949e;
   font-style: italic;
+}
+
+/* Help button styles */
+.node-help-button {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #d1d5da;
+  border-radius: 50%;
+  background: #f6f8fa;
+  color: #586069;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  margin: 0;
+  outline: none;
+}
+
+.node-help-button:hover {
+  background: #0969da;
+  color: white;
+  border-color: #0969da;
+  transform: scale(1.1);
+}
+
+.node-help-button:active {
+  transform: scale(0.95);
+}
+
+/* Modal styles */
+.node-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.node-modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  max-height: 80vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.node-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e1e4e8;
+  background: #f6f8fa;
+}
+
+.node-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #24292e;
+  flex: 1;
+}
+
+.node-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #586069;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.node-modal-close:hover {
+  background: #e1e4e8;
+  color: #24292e;
+}
+
+.node-modal-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.node-detailed-description {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #24292e;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  background: #f6f8fa;
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid #e1e4e8;
 }
