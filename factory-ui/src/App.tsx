@@ -33,42 +33,65 @@ function App() {
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
+    event.dataTransfer.dropEffect = 'copy';
+    console.log('Drag over canvas');
   }, []);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      console.log('Drop event triggered');
 
-      if (!reactFlowWrapper.current || !reactFlowInstance) {
+      const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
+      if (!reactFlowBounds) {
+        console.log('Missing reactFlowBounds');
+        return;
+      }
+      
+      if (!reactFlowInstance) {
+        console.log('Missing reactFlowInstance');
         return;
       }
 
-      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
       const nodeData = event.dataTransfer.getData('application/json');
+      console.log('Node data from transfer:', nodeData);
       
       if (!nodeData) {
+        console.log('No node data found');
         return;
       }
 
-      const nodeInfo: NodeInfo = JSON.parse(nodeData);
-      const position = reactFlowInstance.project({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      });
+      try {
+        const nodeInfo: NodeInfo = JSON.parse(nodeData);
+        console.log('Parsed node info:', nodeInfo);
+        
+        const position = reactFlowInstance.project({
+          x: event.clientX - reactFlowBounds.left,
+          y: event.clientY - reactFlowBounds.top,
+        });
+        console.log('Calculated position:', position);
 
-      const newNode: Node = {
-        id: `${nodeInfo.name}-${Date.now()}`,
-        type: 'default',
-        position,
-        data: { 
-          label: nodeInfo.display_name,
-          nodeInfo,
-          type: nodeInfo.name
-        },
-      };
+        const newNode: Node = {
+          id: `${nodeInfo.name}-${Date.now()}`,
+          type: 'default',
+          position,
+          data: { 
+            label: nodeInfo.display_name,
+            nodeInfo,
+            type: nodeInfo.name
+          },
+        };
 
-      setNodes((nds) => nds.concat(newNode));
+        console.log('Adding new node:', newNode);
+        setNodes((nds) => {
+          console.log('Previous nodes:', nds);
+          const updated = [...nds, newNode];
+          console.log('Updated nodes:', updated);
+          return updated;
+        });
+      } catch (error) {
+        console.error('Error parsing node data:', error);
+      }
     },
     [reactFlowInstance, setNodes]
   );
@@ -104,6 +127,8 @@ function App() {
                 className="react-flow-wrapper" 
                 ref={reactFlowWrapper}
                 style={{ flex: 1, height: '100%' }}
+                onDrop={onDrop}
+                onDragOver={onDragOver}
               >
                 <ReactFlow
                   nodes={nodes}
@@ -111,9 +136,10 @@ function App() {
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
                   onConnect={onConnect}
-                  onInit={setReactFlowInstance}
-                  onDrop={onDrop}
-                  onDragOver={onDragOver}
+                  onInit={(instance) => {
+                    console.log('ReactFlow instance initialized:', instance);
+                    setReactFlowInstance(instance);
+                  }}
                   connectionMode={ConnectionMode.Loose}
                   fitView
                 >

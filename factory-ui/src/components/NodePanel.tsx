@@ -31,6 +31,7 @@ const NodePanel = ({ onNodeDrag }: NodePanelProps) => {
   };
 
   const handleDragStart = (nodeInfo: NodeInfo, event: React.DragEvent) => {
+    console.log('Drag start for node:', nodeInfo.display_name);
     event.dataTransfer.setData('application/json', JSON.stringify(nodeInfo));
     event.dataTransfer.effectAllowed = 'copy';
     onNodeDrag(nodeInfo, event);
