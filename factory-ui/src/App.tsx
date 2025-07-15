@@ -16,6 +16,16 @@ import './App.css';
 import NodePanel from './components/NodePanel';
 import { NodeInfo } from './services/api';
 
+interface WorkflowData {
+  nodes: Node[];
+  edges: Edge[];
+  metadata: {
+    name: string;
+    created: string;
+    version: string;
+  };
+}
+
 const initialNodes: Node[] = [];
 const initialEdges: Edge[] = [];
 
@@ -25,23 +35,82 @@ function App() {
   const [activeTab, setActiveTab] = useState<'canvas' | 'nodes'>('canvas');
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const [isDraggedOver, setIsDraggedOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
+  const handleFileLoad = useCallback((file: File) => {
+    if (!file.name.endsWith('.json')) {
+      alert('Please select a JSON file');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const workflowData: WorkflowData = JSON.parse(content);
+        
+        // Validate the structure
+        if (!workflowData.nodes || !workflowData.edges) {
+          alert('Invalid workflow file format');
+          return;
+        }
+
+        setNodes(workflowData.nodes);
+        setEdges(workflowData.edges);
+        
+        console.log('Workflow loaded:', workflowData.metadata?.name || 'Unknown');
+        
+        // Fit view after a short delay to ensure nodes are rendered
+        setTimeout(() => {
+          if (reactFlowInstance) {
+            reactFlowInstance.fitView();
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.error('Error loading workflow:', error);
+        alert('Error loading workflow file');
+      }
+    };
+    reader.readAsText(file);
+  }, [setNodes, setEdges, reactFlowInstance]);
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'copy';
-    console.log('Drag over canvas');
+    
+    // Check if dragging a file
+    const hasFiles = event.dataTransfer.types.includes('Files');
+    if (hasFiles) {
+      event.dataTransfer.dropEffect = 'copy';
+      setIsDraggedOver(true);
+      console.log('Drag over canvas - file detected');
+    } else {
+      // Dragging a node
+      event.dataTransfer.dropEffect = 'copy';
+      console.log('Drag over canvas - node');
+    }
   }, []);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      setIsDraggedOver(false);
       console.log('Drop event triggered');
 
+      // Check if dropping a file
+      const files = event.dataTransfer.files;
+      if (files.length > 0) {
+        handleFileLoad(files[0]);
+        return;
+      }
+
+      // Handle node drop
       const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
       if (!reactFlowBounds) {
         console.log('Missing reactFlowBounds');
@@ -93,13 +162,70 @@ function App() {
         console.error('Error parsing node data:', error);
       }
     },
-    [reactFlowInstance, setNodes]
+    [reactFlowInstance, setNodes, handleFileLoad]
   );
 
   const onNodeDrag = useCallback((nodeInfo: NodeInfo, event: React.DragEvent) => {
     // Optional: Handle node drag start
     console.log('Dragging node:', nodeInfo.display_name);
   }, []);
+
+  const onDragLeave = useCallback((event: React.DragEvent) => {
+    // Only reset if leaving the entire wrapper area
+    if (!event.currentTarget.contains(event.relatedTarget as Element)) {
+      setIsDraggedOver(false);
+    }
+  }, []);
+
+  const saveWorkflow = useCallback(() => {
+    const workflowData: WorkflowData = {
+      nodes,
+      edges,
+      metadata: {
+        name: `workflow-${new Date().toISOString().split('T')[0]}`,
+        created: new Date().toISOString(),
+        version: '1.0.0'
+      }
+    };
+
+    const dataStr = JSON.stringify(workflowData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${workflowData.metadata.name}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    console.log('Workflow saved:', workflowData.metadata.name);
+  }, [nodes, edges]);
+
+  const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFileLoad(file);
+    }
+    // Reset the input value so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [handleFileLoad]);
+
+  const loadWorkflow = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const clearCanvas = useCallback(() => {
+    if (nodes.length > 0 || edges.length > 0) {
+      if (window.confirm('Are you sure you want to clear the canvas? This will remove all nodes and connections.')) {
+        setNodes([]);
+        setEdges([]);
+      }
+    }
+  }, [nodes.length, edges.length, setNodes, setEdges]);
 
   return (
     <div className="app">
@@ -124,11 +250,12 @@ function App() {
             <NodePanel onNodeDrag={onNodeDrag} />
             <ReactFlowProvider>
               <div 
-                className="react-flow-wrapper" 
+                className={`react-flow-wrapper ${isDraggedOver ? 'drag-over' : ''}`}
                 ref={reactFlowWrapper}
                 style={{ flex: 1, height: '100%' }}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
               >
                 <ReactFlow
                   nodes={nodes}
@@ -145,6 +272,14 @@ function App() {
                 >
                   <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
                 </ReactFlow>
+                
+                {isDraggedOver && (
+                  <div className="drop-overlay">
+                    <div className="drop-message">
+                      <span>📁 Drop JSON file to load workflow</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </ReactFlowProvider>
           </div>
@@ -155,6 +290,43 @@ function App() {
             <NodePanel onNodeDrag={onNodeDrag} />
           </div>
         )}
+      </div>
+      
+      <div className="app-toolbar">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleFileInputChange}
+          style={{ display: 'none' }}
+        />
+        
+        <div className="toolbar-group">
+          <button className="toolbar-btn" onClick={loadWorkflow} title="Load workflow from JSON file">
+            📂 Load
+          </button>
+          <button 
+            className="toolbar-btn" 
+            onClick={saveWorkflow} 
+            disabled={nodes.length === 0}
+            title="Save workflow as JSON file"
+          >
+            💾 Save
+          </button>
+          <button 
+            className="toolbar-btn danger" 
+            onClick={clearCanvas}
+            disabled={nodes.length === 0 && edges.length === 0}
+            title="Clear all nodes and connections"
+          >
+            🗑️ Clear
+          </button>
+        </div>
+        
+        <div className="toolbar-info">
+          <span className="node-count">Nodes: {nodes.length}</span>
+          <span className="edge-count">Connections: {edges.length}</span>
+        </div>
       </div>
     </div>
   );

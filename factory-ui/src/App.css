@@ -63,3 +63,110 @@
   width: 100%;
   margin: 20px;
 }
+
+.app-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: #fff;
+  border-top: 1px solid #d1d9e0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 12px;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f6f8fa;
+  border: 1px solid #d1d9e0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #24292f;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #c1c9d0;
+  transform: translateY(-1px);
+}
+
+.toolbar-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-btn.danger {
+  background: #fff5f5;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.toolbar-btn.danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+.toolbar-info {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #656d76;
+}
+
+.node-count, .edge-count {
+  font-weight: 500;
+}
+
+.react-flow-wrapper {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.react-flow-wrapper.drag-over {
+  background: #f0f9ff !important;
+}
+
+.drop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(59, 130, 246, 0.1);
+  border: 2px dashed #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.drop-message {
+  background: #3b82f6;
+  color: white;
+  padding: 16px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.drop-message span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
