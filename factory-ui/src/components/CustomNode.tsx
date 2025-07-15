@@ -26,8 +26,29 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const optionalInputs = Object.keys(nodeInfo.input_types.optional || {});
   const allInputs = [...requiredInputs, ...optionalInputs];
   
-  // Parse outputs from nodeInfo
-  const outputs = nodeInfo.return_types || [];
+  // Parse outputs from nodeInfo - handle both old format (string[]) and new format (dict)
+  let outputs: Array<{name: string, type: string, required?: boolean}> = [];
+  if (Array.isArray(nodeInfo.return_types)) {
+    // Old format: string array
+    outputs = nodeInfo.return_types.map((type, index) => ({
+      name: (nodeInfo.return_types as string[]).length === 1 ? 'output' : `output-${index}`,
+      type: type,
+      required: true
+    }));
+  } else if (nodeInfo.return_types && typeof nodeInfo.return_types === 'object') {
+    // New format: dict with required/optional
+    const requiredOutputs = Object.entries(nodeInfo.return_types.required || {}).map(([name, typeInfo]) => ({
+      name,
+      type: Array.isArray(typeInfo) ? typeInfo[0] : typeInfo,
+      required: true
+    }));
+    const optionalOutputs = Object.entries(nodeInfo.return_types.optional || {}).map(([name, typeInfo]) => ({
+      name,
+      type: Array.isArray(typeInfo) ? typeInfo[0] : typeInfo,
+      required: false
+    }));
+    outputs = [...requiredOutputs, ...optionalOutputs];
+  }
 
   // Get category for styling
   const category = nodeInfo.category;
@@ -119,22 +140,25 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
         <div className="io-column io-outputs">
           {outputs.map((output, index) => {
             const outputId = outputs.length === 1 ? 'output' : `output-${index}`;
+            const isRequired = output.required !== false; // Default to required if not specified
             return (
               <div key={`output-${index}`} className="io-item output-item">
-                <span className="connection-label output-label">{output}</span>
+                <span className={`connection-label output-label ${isRequired ? 'required' : 'optional'}`}>
+                  {`${output.name} (${output.type})`}
+                </span>
                 <Handle
                   type="source"
                   position={Position.Right}
                   id={outputId}
                   className="connection-handle output-handle"
-                  data-output-type={output}
+                  data-output-type={output.type}
                   style={{
-                    background: '#22c55e',
+                    background: isRequired ? '#22c55e' : '#10b981',
                     border: '2px solid white',
                     width: '10px',
                     height: '10px',
                   }}
-                  title={`Output: ${output}`}
+                  title={`${output.name} (${output.type}) - ${isRequired ? 'required' : 'optional'}`}
                 />
               </div>
             );

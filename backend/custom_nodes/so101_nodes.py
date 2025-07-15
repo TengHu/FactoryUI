@@ -28,8 +28,13 @@ class RobotStatusReader(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("DICT",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "status_data": ("DICT", {}),
+                "positions": ("DICT", {}),
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -47,7 +52,7 @@ class RobotStatusReader(NodeBase):
     def DESCRIPTION(cls) -> str:
         return "Read status (positions, modes) from connected robot servos using feetech-servo-sdk"
     
-    def read_robot_status(self, sdk: ScsServoSDK, servo_ids: str, port: str = "", baud_rate: int = 1000000,
+    def read_robot_status(self, sdk: ScsServoSDK, servo_ids: str,
                          read_positions: bool = True, read_modes: bool = False) -> tuple:
         """Read status from robot servos using a provided ScsServoSDK instance"""
         
@@ -95,7 +100,7 @@ class RobotStatusReader(NodeBase):
             }
             raise Exception(f"Robot status read failed: {e}")
         
-        return (status_data,)
+        return (status_data, status_data["positions"])
 
 
 class JointControlNode(NodeBase):
@@ -120,8 +125,12 @@ class JointControlNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("DICT",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "control_result": ("DICT", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -207,13 +216,16 @@ class So101WritePositionNode(NodeBase):
                 "positions": ("DICT", {}),  # {servo_id: position, ...}
             },
             "optional": {
-                "move_time": ("INT", {"default": 1000, "min": 100, "max": 5000}),
             }
         }
 
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("DICT",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "write_result": ("DICT", {})
+            }
+        }
 
     @classmethod
     def FUNCTION(cls) -> str:
@@ -231,11 +243,11 @@ class So101WritePositionNode(NodeBase):
     def DESCRIPTION(cls) -> str:
         return "Write multiple servo positions to the robot using ScsServoSDK."
 
-    def write_positions(self, sdk: ScsServoSDK, positions: dict, move_time: int = 1000) -> tuple:
+    def write_positions(self, sdk: ScsServoSDK, positions: dict) -> tuple:
         """Write positions to robot servos"""
         import traceback
         try:
-            sdk.sync_write_positions(positions, move_time=move_time)
+            sdk.sync_write_positions(positions)
             return (positions,)
         except Exception as e:
             error_msg = str(e) + "\n" + traceback.format_exc()

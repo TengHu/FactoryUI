@@ -9,7 +9,10 @@ export interface NodeInfo {
     required?: Record<string, any>;
     optional?: Record<string, any>;
   };
-  return_types: string[];
+  return_types: {
+    required?: Record<string, any>;
+    optional?: Record<string, any>;
+  } | string[];
   function: string;
 }
 

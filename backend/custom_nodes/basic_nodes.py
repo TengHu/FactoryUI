@@ -23,8 +23,12 @@ class InputNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -57,8 +61,12 @@ class OutputNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -93,8 +101,12 @@ class TextProcessorNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -137,8 +149,12 @@ class DelayNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -173,8 +189,12 @@ class RandomNumberNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("INT",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("INT", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -209,8 +229,12 @@ class MathNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("FLOAT",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("FLOAT", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:
@@ -250,8 +274,12 @@ class HelloWorldNode(NodeBase):
         return {}
 
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
 
     @classmethod
     def FUNCTION(cls) -> str:
@@ -284,8 +312,8 @@ class PrintToConsoleNode(NodeBase):
         }
 
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return tuple()
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {}
 
     @classmethod
     def FUNCTION(cls) -> str:
@@ -319,8 +347,12 @@ class ConcatNode(NodeBase):
         }
 
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("STRING",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "output": ("STRING", {})
+            }
+        }
 
     @classmethod
     def FUNCTION(cls) -> str:
@@ -353,8 +385,12 @@ class ConnectRobotNode(NodeBase):
         }
     
     @classmethod
-    def RETURN_TYPES(cls) -> tuple:
-        return ("ScsServoSDK",)
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "sdk": ("ScsServoSDK", {})
+            }
+        }
     
     @classmethod
     def FUNCTION(cls) -> str:

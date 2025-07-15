@@ -85,12 +85,36 @@ function App() {
       let outputType = 'unknown';
       
       if (sourceNodeInfo && sourceNodeInfo.return_types) {
-        if (sourceHandleId === 'output' && sourceNodeInfo.return_types.length === 1) {
-          outputType = sourceNodeInfo.return_types[0];
-        } else if (sourceHandleId.startsWith('output-')) {
-          const index = parseInt(sourceHandleId.split('-')[1]);
-          outputType = sourceNodeInfo.return_types[index] || 'unknown';
-        }
+        // Helper function to get output type from return_types
+        const getOutputType = (returnTypes: any, handleId: string) => {
+          if (Array.isArray(returnTypes)) {
+            // Old format: string array
+            if (handleId === 'output' && returnTypes.length === 1) {
+              return returnTypes[0];
+            } else if (handleId.startsWith('output-')) {
+              const index = parseInt(handleId.split('-')[1]);
+              return returnTypes[index] || 'unknown';
+            }
+          } else if (returnTypes && typeof returnTypes === 'object') {
+            // New format: dict with required/optional
+            const allOutputs = {...(returnTypes.required || {}), ...(returnTypes.optional || {})};
+            const outputEntries = Object.entries(allOutputs);
+            
+            if (handleId === 'output' && outputEntries.length === 1) {
+              const [, typeInfo] = outputEntries[0];
+              return Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+            } else if (handleId.startsWith('output-')) {
+              const index = parseInt(handleId.split('-')[1]);
+              if (outputEntries[index]) {
+                const [, typeInfo] = outputEntries[index];
+                return Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+              }
+            }
+          }
+          return 'unknown';
+        };
+        
+        outputType = getOutputType(sourceNodeInfo.return_types, sourceHandleId);
       }
       
       // Get input type from target
@@ -326,12 +350,36 @@ function App() {
     let outputType = 'unknown';
     
     if (sourceNodeInfo && sourceNodeInfo.return_types) {
-      if (sourceHandleId === 'output' && sourceNodeInfo.return_types.length === 1) {
-        outputType = sourceNodeInfo.return_types[0];
-      } else if (sourceHandleId.startsWith('output-')) {
-        const index = parseInt(sourceHandleId.split('-')[1]);
-        outputType = sourceNodeInfo.return_types[index] || 'unknown';
-      }
+      // Helper function to get output type from return_types
+      const getOutputType = (returnTypes: any, handleId: string) => {
+        if (Array.isArray(returnTypes)) {
+          // Old format: string array
+          if (handleId === 'output' && returnTypes.length === 1) {
+            return returnTypes[0];
+          } else if (handleId.startsWith('output-')) {
+            const index = parseInt(handleId.split('-')[1]);
+            return returnTypes[index] || 'unknown';
+          }
+        } else if (returnTypes && typeof returnTypes === 'object') {
+          // New format: dict with required/optional
+          const allOutputs = {...(returnTypes.required || {}), ...(returnTypes.optional || {})};
+          const outputEntries = Object.entries(allOutputs);
+          
+          if (handleId === 'output' && outputEntries.length === 1) {
+            const [, typeInfo] = outputEntries[0];
+            return Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+          } else if (handleId.startsWith('output-')) {
+            const index = parseInt(handleId.split('-')[1]);
+            if (outputEntries[index]) {
+              const [, typeInfo] = outputEntries[index];
+              return Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+            }
+          }
+        }
+        return 'unknown';
+      };
+      
+      outputType = getOutputType(sourceNodeInfo.return_types, sourceHandleId);
     }
     
     // Get input type from target
