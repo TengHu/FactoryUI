@@ -1,0 +1,243 @@
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.app-tabs {
+  display: flex;
+  background: #f6f8fa;
+  border-bottom: 1px solid #d1d9e0;
+  padding: 0;
+  margin: 0;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #656d76;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: #24292f;
+  background: #f3f4f6;
+}
+
+.tab.active {
+  color: #0969da;
+  border-bottom-color: #0969da;
+  background: #fff;
+}
+
+.app-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.canvas-container {
+  display: flex;
+  height: 100%;
+}
+
+.react-flow-wrapper {
+  flex: 1;
+  background: #fafbfc;
+}
+
+.nodes-tab {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  background: #fafbfc;
+}
+
+.nodes-tab .node-panel {
+  max-width: 800px;
+  width: 100%;
+  margin: 20px;
+}
+
+.app-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: #fff;
+  border-top: 1px solid #d1d9e0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 12px;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f6f8fa;
+  border: 1px solid #d1d9e0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #24292f;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #c1c9d0;
+  transform: translateY(-1px);
+}
+
+.toolbar-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-btn.danger {
+  background: #fff5f5;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.toolbar-btn.danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+.toolbar-btn.run-btn {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+  font-weight: 600;
+}
+
+.toolbar-btn.run-btn:hover:not(:disabled) {
+  background: #bbf7d0;
+  border-color: #86efac;
+}
+
+.toolbar-btn.run-btn:disabled {
+  background: #f3f4f6;
+  border-color: #d1d5da;
+  color: #6b7280;
+}
+
+.toolbar-btn.continuous-btn {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.toolbar-btn.continuous-btn:hover:not(:disabled) {
+  background: #bfdbfe;
+  border-color: #93c5fd;
+}
+
+.toolbar-btn.stop-btn {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.toolbar-btn.stop-btn:hover:not(:disabled) {
+  background: #fde68a;
+  border-color: #fcd34d;
+}
+
+.toolbar-info {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #656d76;
+}
+
+.node-count, .edge-count {
+  font-weight: 500;
+}
+
+.execution-status {
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.execution-status.success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.execution-status.error {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.continuous-status {
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.react-flow-wrapper {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.react-flow-wrapper.drag-over {
+  background: #f0f9ff !important;
+}
+
+.drop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(59, 130, 246, 0.1);
+  border: 2px dashed #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.drop-message {
+  background: #3b82f6;
+  color: white;
+  padding: 16px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.drop-message span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
