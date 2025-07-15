@@ -274,3 +274,40 @@
   position: static !important;
   right: 0 !important;
 }
+
+.manual-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.input-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #586069;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.manual-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #fff;
+  color: #24292e;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.manual-input:focus {
+  border-color: #0969da;
+  box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.1);
+}
+
+.manual-input::placeholder {
+  color: #8b949e;
+  font-style: italic;
+}

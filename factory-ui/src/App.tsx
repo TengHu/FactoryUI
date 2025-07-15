@@ -33,8 +33,11 @@ interface WorkflowData {
 const initialNodes: Node[] = [];
 const initialEdges: Edge[] = [];
 
-const createCustomNodeWithContextMenu = (onContextMenu: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void) => {
-  return (props: any) => <CustomNode {...props} onContextMenu={onContextMenu} />;
+const createCustomNodeWithContextMenu = (
+  onContextMenu: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void,
+  onInputValueChange: (nodeId: string, inputName: string, value: string) => void
+) => {
+  return (props: any) => <CustomNode {...props} onContextMenu={onContextMenu} onInputValueChange={onInputValueChange} />;
 };
 
 function App() {
@@ -359,7 +362,10 @@ function App() {
       nodes: nodes.map(node => ({
         id: node.id,
         type: node.data.nodeInfo?.name || node.data.type || node.type,
-        data: node.data,
+        data: {
+          ...node.data,
+          parameters: node.data.inputValues || {}
+        },
         position: node.position
       })),
       edges: edges.map(edge => ({
@@ -531,31 +537,128 @@ function App() {
     }
   }, [contextMenu.nodeId]);
 
-  const contextMenuItems: ContextMenuItem[] = [
-    {
-      id: 'copy-id',
-      label: 'Copy Node ID',
-      icon: '📋',
-      onClick: copyNodeId,
-    },
-    {
-      id: 'duplicate',
-      label: 'Duplicate',
-      icon: '📄',
-      onClick: duplicateNode,
-    },
-    {
-      id: 'delete',
-      label: 'Delete',
-      icon: '🗑️',
-      danger: true,
-      onClick: deleteNode,
-    },
-  ];
+  const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
+    setNodes(nodes => 
+      nodes.map(node => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              inputValues: {
+                ...node.data.inputValues,
+                [inputName]: value
+              }
+            }
+          };
+        }
+        return node;
+      })
+    );
+  }, [setNodes]);
+
+  const toggleInputMode = useCallback((inputName: string) => {
+    if (!contextMenu.nodeId) return;
+    
+    setNodes(nodes => 
+      nodes.map(node => {
+        if (node.id === contextMenu.nodeId) {
+          const currentMode = node.data.inputModes?.[inputName] || 'connection';
+          const newMode = currentMode === 'connection' ? 'manual' : 'connection';
+          
+          // If switching to connection mode, remove any edges for this input
+          if (newMode === 'connection') {
+            setEdges(edges => 
+              edges.filter(edge => 
+                !(edge.target === contextMenu.nodeId && edge.targetHandle === inputName)
+              )
+            );
+          }
+          
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              inputModes: {
+                ...node.data.inputModes,
+                [inputName]: newMode
+              }
+            }
+          };
+        }
+        return node;
+      })
+    );
+  }, [contextMenu.nodeId, setNodes, setEdges]);
+
+  const contextMenuItems: ContextMenuItem[] = React.useMemo(() => {
+    const baseItems: ContextMenuItem[] = [
+      {
+        id: 'copy-id',
+        label: 'Copy Node ID',
+        icon: '📋',
+        onClick: copyNodeId,
+      },
+      {
+        id: 'duplicate',
+        label: 'Duplicate',
+        icon: '📄',
+        onClick: duplicateNode,
+      },
+      {
+        id: 'delete',
+        label: 'Delete',
+        icon: '🗑️',
+        danger: true,
+        onClick: deleteNode,
+      },
+    ];
+
+    // Add input mode toggles if the node has string inputs
+    if (contextMenu.nodeInfo && contextMenu.nodeId) {
+      const node = nodes.find(n => n.id === contextMenu.nodeId);
+      const requiredInputs = Object.keys(contextMenu.nodeInfo.input_types.required || {});
+      const optionalInputs = Object.keys(contextMenu.nodeInfo.input_types.optional || {});
+      const allInputs = [...requiredInputs, ...optionalInputs];
+      
+      const stringInputs = allInputs.filter(inputName => {
+        const typeInfo = 
+          contextMenu.nodeInfo!.input_types.required?.[inputName] ||
+          contextMenu.nodeInfo!.input_types.optional?.[inputName];
+        const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+        return typeName === 'STRING';
+      });
+
+      if (stringInputs.length > 0) {
+        // Add separator
+        baseItems.splice(-1, 0, {
+          id: 'separator',
+          label: '---',
+          onClick: () => {},
+          disabled: true,
+        });
+
+        // Add input mode toggles
+        stringInputs.forEach(inputName => {
+          const currentMode = node?.data.inputModes?.[inputName] || 'connection';
+          const isManual = currentMode === 'manual';
+          
+          baseItems.splice(-1, 0, {
+            id: `toggle-${inputName}`,
+            label: `${inputName}: ${isManual ? 'Switch to Connection' : 'Switch to Manual Input'}`,
+            icon: isManual ? '🔗' : '✏️',
+            onClick: () => toggleInputMode(inputName),
+          });
+        });
+      }
+    }
+
+    return baseItems;
+  }, [copyNodeId, duplicateNode, deleteNode, contextMenu.nodeInfo, contextMenu.nodeId, nodes, toggleInputMode]);
 
   const nodeTypes: NodeTypes = React.useMemo(() => ({
-    customNode: createCustomNodeWithContextMenu(handleNodeContextMenu),
-  }), [handleNodeContextMenu]);
+    customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
+  }), [handleNodeContextMenu, handleInputValueChange]);
 
   return (
     <div className="app">
