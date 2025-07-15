@@ -272,7 +272,7 @@ class HelloWorldNode(NodeBase):
     def execute(self) -> str:
         return "hello world"
 
-class PrintNode(NodeBase):
+class PrintToConsoleNode(NodeBase):
     """A node that prints the input value and returns no output."""
 
     @classmethod
@@ -297,7 +297,7 @@ class PrintNode(NodeBase):
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
-        return "Print"
+        return "Print To Console"
 
     @classmethod
     def DESCRIPTION(cls) -> str:
@@ -406,13 +406,7 @@ class ConnectRobotNode(NodeBase):
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
-    "OutputNode": OutputNode,
-    "TextProcessorNode": TextProcessorNode,
-    "DelayNode": DelayNode,
-    "RandomNumberNode": RandomNumberNode,
-    "MathNode": MathNode,
-    "HelloWorldNode": HelloWorldNode,
-    "PrintNode": PrintNode,
-    "ConcatNode": ConcatNode,
+    "PrintToConsoleNode": PrintToConsoleNode,
+    # "ConcatNode": ConcatNode,
     "ConnectRobotNode": ConnectRobotNode
 }

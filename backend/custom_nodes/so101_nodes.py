@@ -17,9 +17,8 @@ class RobotStatusReader(NodeBase):
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
+                "sdk": ("ScsServoSDK", {}),
                 "servo_ids": ("STRING", {"default": "1,2,3,4,5"}),
-                "port": ("STRING", {"default": ""}),
-                "baud_rate": ("INT", {"default": 1000000, "min": 9600, "max": 4000000}),
             },
             "optional": {
                 "read_positions": ("BOOLEAN", {"default": True}),
@@ -47,9 +46,9 @@ class RobotStatusReader(NodeBase):
     def DESCRIPTION(cls) -> str:
         return "Read status (positions, modes) from connected robot servos using feetech-servo-sdk"
     
-    def read_robot_status(self, servo_ids: str, port: str = "", baud_rate: int = 1000000,
+    def read_robot_status(self, sdk: ScsServoSDK, servo_ids: str, port: str = "", baud_rate: int = 1000000,
                          read_positions: bool = True, read_modes: bool = False) -> tuple:
-        """Read status from robot servos"""
+        """Read status from robot servos using a provided ScsServoSDK instance"""
         
         # Parse servo IDs
         try:
@@ -57,19 +56,9 @@ class RobotStatusReader(NodeBase):
         except ValueError:
             raise ValueError(f"Invalid servo_ids format: {servo_ids}. Use comma-separated integers like '1,2,3'")
         
-        sdk = ScsServoSDK()
         status_data = {}
         
         try:
-            # Connect to servo controller
-            if port:
-                success = sdk.connect(port_name=port, baud_rate=baud_rate)
-            else:
-                success = sdk.connect(baud_rate=baud_rate)
-            
-            if not success:
-                raise Exception("Failed to connect to servo controller")
-            
             # Read positions if requested
             if read_positions:
                 try:
@@ -104,12 +93,6 @@ class RobotStatusReader(NodeBase):
                 "connected": False
             }
             raise Exception(f"Robot status read failed: {e}")
-        
-        finally:
-            try:
-                sdk.disconnect()
-            except:
-                pass
         
         return (status_data,)
 
