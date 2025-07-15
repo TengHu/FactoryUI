@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -64,6 +64,9 @@ function App() {
     nodeId: null,
     nodeInfo: null,
   });
+  
+  // State for copy/paste functionality
+  const [copiedNodeData, setCopiedNodeData] = useState<Node | null>(null);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => {
@@ -586,6 +589,108 @@ function App() {
     }
   }, [contextMenu.nodeId]);
 
+  // Copy node functionality
+  const copyNode = useCallback(() => {
+    if (contextMenu.nodeId) {
+      const nodeToCopy = nodes.find(node => node.id === contextMenu.nodeId);
+      if (nodeToCopy) {
+        setCopiedNodeData(nodeToCopy);
+        console.log('✓ Node copied:', nodeToCopy.data.nodeInfo.display_name);
+      }
+    }
+  }, [contextMenu.nodeId, nodes]);
+
+  // Copy selected node (for keyboard shortcut)
+  const copySelectedNode = useCallback(() => {
+    const selectedNode = nodes.find(node => node.selected);
+    if (selectedNode) {
+      setCopiedNodeData(selectedNode);
+      console.log('✓ Node copied:', selectedNode.data.nodeInfo.display_name);
+    } else {
+      console.log('⚠ No node selected to copy');
+    }
+  }, [nodes]);
+
+  // Paste node functionality
+  const pasteNode = useCallback((position?: { x: number; y: number }) => {
+    if (copiedNodeData) {
+      let pastePosition: { x: number; y: number };
+      
+      // If position provided, use it
+      if (position) {
+        pastePosition = position;
+      } else if (contextMenu.isVisible && reactFlowInstance) {
+        // Convert screen coordinates to flow coordinates
+        pastePosition = reactFlowInstance.project({
+          x: contextMenu.position.x,
+          y: contextMenu.position.y
+        });
+      } else {
+        // Default position with some offset from the original
+        pastePosition = {
+          x: copiedNodeData.position.x + 50,
+          y: copiedNodeData.position.y + 50
+        };
+      }
+      
+      // Create new node with unique ID
+      const newNode: Node = {
+        ...copiedNodeData,
+        id: `${copiedNodeData.data.nodeInfo.name}-${Date.now()}`,
+        position: pastePosition,
+        selected: false, // Don't select the pasted node by default
+      };
+
+      setNodes(nodes => [...nodes, newNode]);
+      console.log('✓ Node pasted:', newNode.data.nodeInfo.display_name);
+    } else {
+      console.log('⚠ No node copied to paste');
+    }
+  }, [copiedNodeData, setNodes, contextMenu.isVisible, contextMenu.position, reactFlowInstance]);
+
+  // Keyboard event handler for copy/paste
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    // Only handle if not typing in an input field
+    if (event.target instanceof HTMLInputElement || 
+        event.target instanceof HTMLTextAreaElement ||
+        (event.target as HTMLElement).contentEditable === 'true') {
+      return;
+    }
+
+    // Handle copy (Ctrl+C or Cmd+C)
+    if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+      event.preventDefault();
+      copySelectedNode();
+    }
+
+    // Handle paste (Ctrl+V or Cmd+V)
+    if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+      event.preventDefault();
+      // Paste at a default position, could be enhanced to paste at mouse position
+      pasteNode();
+    }
+
+    // Handle delete (Delete or Backspace)
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      const selectedNode = nodes.find(node => node.selected);
+      if (selectedNode) {
+        setNodes(nodes => nodes.filter(node => node.id !== selectedNode.id));
+        setEdges(edges => edges.filter(edge => 
+          edge.source !== selectedNode.id && edge.target !== selectedNode.id
+        ));
+      }
+    }
+  }, [copySelectedNode, pasteNode, nodes, setNodes, setEdges]);
+
+  // Add keyboard event listener
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
   const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
     setNodes(nodes => 
       nodes.map(node => {
@@ -651,6 +756,19 @@ function App() {
   const contextMenuItems: ContextMenuItem[] = React.useMemo(() => {
     const baseItems: ContextMenuItem[] = [
       {
+        id: 'copy',
+        label: 'Copy Node (Ctrl+C)',
+        icon: '📋',
+        onClick: copyNode,
+      },
+      {
+        id: 'paste',
+        label: 'Paste Node (Ctrl+V)',
+        icon: '📄',
+        onClick: () => pasteNode(),
+        disabled: !copiedNodeData,
+      },
+      {
         id: 'copy-id',
         label: 'Copy Node ID',
         icon: '📋',
@@ -664,7 +782,7 @@ function App() {
       },
       {
         id: 'delete',
-        label: 'Delete',
+        label: 'Delete (Del)',
         icon: '🗑️',
         danger: true,
         onClick: deleteNode,
@@ -718,7 +836,7 @@ function App() {
     }
 
     return baseItems;
-  }, [copyNodeId, duplicateNode, deleteNode, contextMenu.nodeInfo, contextMenu.nodeId, nodes, toggleInputMode]);
+  }, [copyNode, pasteNode, copiedNodeData, copyNodeId, duplicateNode, deleteNode, contextMenu.nodeInfo, contextMenu.nodeId, nodes, toggleInputMode]);
 
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
