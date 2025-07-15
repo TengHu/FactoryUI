@@ -187,9 +187,11 @@ class JointControlNode(NodeBase):
             for joint_name, angle, servo_id in zip(joint_names, joint_angles, servo_ids):
                 # Convert angle to servo position (assuming 0-4095 range for SCS servos)
                 # This is a basic conversion - you may need to adjust based on your servo configuration
-                servo_position = int((angle + 180) * 4095 / 360)  # Convert -180 to 180 degrees to 0-4095
-                servo_position = max(0, min(4095, servo_position))  # Clamp to valid range
                 
+                
+                servo_position = int(round((angle * 4096) / 360)) # Convert 0-360 to 0-4096
+                servo_position = min(4096, max(0, servo_position))
+
                 control_data["joint_commands"][joint_name] = {
                     "servo_id": servo_id,
                     "angle": angle,
