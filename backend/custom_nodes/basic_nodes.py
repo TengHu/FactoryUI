@@ -265,13 +265,13 @@ class HelloWorldNode(NodeBase):
         return "hello world"
 
 class PrintNode(NodeBase):
-    """A node that prints the input string and returns no output."""
+    """A node that prints the input value and returns no output."""
 
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "text": ("STRING", {})
+                "value": ("ANY", {})
             }
         }
 
@@ -293,10 +293,10 @@ class PrintNode(NodeBase):
 
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Prints the input string to the console."
+        return "Prints the input value to the console."
 
-    def execute(self, text: str):
-        print(text)
+    def execute(self, value: Any):
+        print(value)
 
 class ConcatNode(NodeBase):
     """Concatenate two strings with a '+' in between."""
