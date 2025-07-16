@@ -12,12 +12,15 @@ from typing import Dict, Any, List, Optional, Set
 import traceback
 import sys
 import os
+import hashlib
+import copy
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.node_registry import node_registry
 from core.workflow_executor import workflow_executor
+from core.node_cache import NodeCache  # Import NodeCache from new module
 
 class ContinuousExecutor:
     """Continuously executes workflows in a loop"""
@@ -31,6 +34,7 @@ class ContinuousExecutor:
         self.execution_count = 0
         self.last_execution_time = 0
         self.thread = None
+        self.node_cache = NodeCache()  # Add node cache
         
     def load_workflow(self, workflow_data: Dict[str, Any]) -> bool:
         """Load a workflow for continuous execution"""
@@ -182,17 +186,15 @@ class ContinuousExecutor:
     
     def _execute_node(self, node_id: str, nodes: List[Dict], edges: List[Dict], 
                      node_results: Dict[str, Any]) -> Any:
-        """Execute a single node"""
+        """Execute a single node, with input/output caching."""
         # Find node data
         node_data = None
         for node in nodes:
             if node["id"] == node_id:
                 node_data = node
                 break
-        
         if not node_data:
             raise ValueError(f"Node {node_id} not found")
-        
         try:
             # Get node type and class
             node_type = node_data.get("type") or node_data.get("data", {}).get("type")
@@ -200,42 +202,42 @@ class ContinuousExecutor:
                 # Try to get from nodeInfo
                 node_info = node_data.get("data", {}).get("nodeInfo", {})
                 node_type = node_info.get("name")
-            
             if not node_type:
                 raise ValueError(f"Node {node_id} has no type specified")
-            
             node_class = node_registry.get_node(node_type)
             if not node_class:
                 raise ValueError(f"Unknown node type: {node_type}")
-            
             # Prepare inputs from connected edges and node parameters
             inputs = self._prepare_node_inputs(node_id, node_data, edges, node_results)
+            # Check cache before execution
             
+            cached_output = self.node_cache.get_cache(node_id, inputs)
+            if cached_output is not None:
+                if self.execution_count % 50 == 0:
+                    self.log_message("debug", f"Node {node_id} ({node_type}) cache hit")
+                return copy.deepcopy(cached_output)
+
+
             # Create node instance and execute
             node_instance = node_class()
-            
             # Validate inputs
             try:
                 node_instance.validate_inputs(**inputs)
             except Exception as e:
-                # For nodes with no inputs (like HelloWorldNode), validation might fail
-                # but execution should still proceed
                 pass
-            
             # Get the function name and execute
             function_name = node_class.FUNCTION()
             if hasattr(node_instance, function_name):
                 execute_func = getattr(node_instance, function_name)
                 result = execute_func(**inputs)
-                
+                # Cache the result
+                # self.node_cache.set_cache(node_id, inputs, result)
                 # Log successful execution
-                if self.execution_count % 50 == 0:  # Log less frequently
+                if self.execution_count % 50 == 0:
                     self.log_message("debug", f"Node {node_id} ({node_type}) executed successfully")
-                
                 return result
             else:
                 raise ValueError(f"Node {node_type} does not have function {function_name}")
-        
         except Exception as e:
             self.log_message("error", f"Node {node_id} execution failed: {str(e)}")
             raise

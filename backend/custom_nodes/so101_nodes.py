@@ -331,9 +331,66 @@ Note: This operation may be required to establish proper communication with the 
             raise Exception(f"Failed to unlock remote control: {error_msg}")
 
 
+class DisconnectRobotNode(NodeBase):
+    """Node for disconnecting from the robot using ScsServoSDK"""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "sdk": ("ScsServoSDK", {}),
+            },
+            "optional": {}
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {}
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "disconnect_robot"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.ROBOT.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Disconnect Robot"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Disconnect from the robot using ScsServoSDK."
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return (
+            """
+            DisconnectRobotNode\n\n"
+            "Purpose: Disconnects from the robot by calling the disconnect() method on the provided ScsServoSDK instance.\n"
+            "Inputs:\n"
+            "  - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n"
+            "Outputs:\n"
+            "  - None (this node has no outputs)\n"
+            """
+        )
+
+    def disconnect_robot(self, sdk: ScsServoSDK) -> tuple:
+        import traceback
+        try:
+            sdk.disconnect()
+            return ()  # No outputs
+        except Exception as e:
+            error_msg = str(e) + "\n" + traceback.format_exc()
+            print(f"❌ Failed to disconnect robot: {error_msg}")
+            raise Exception(f"Failed to disconnect robot: {error_msg}")
+
+
 NODE_CLASS_MAPPINGS = {
     "RobotStatusReader": RobotStatusReader,
     "SO101JointAnglesToPositions": SO101JointAnglesToPositions,
     "So101WritePositionNode": So101WritePositionNode,
-    "UnlockRemoteNode": UnlockRemoteNode
+    "UnlockRemoteNode": UnlockRemoteNode,
+    "DisconnectRobotNode": DisconnectRobotNode
 }
