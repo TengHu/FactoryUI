@@ -41,9 +41,79 @@ const createCustomNodeWithContextMenu = (
   return (props: any) => <CustomNode {...props} onContextMenu={onContextMenu} onInputValueChange={onInputValueChange} />;
 };
 
+// Safe expression evaluator for sleep time calculations
+const evaluateExpression = (expression: string): { value: number; error: string | null } => {
+  try {
+    // Remove whitespace
+    const cleanExpr = expression.trim();
+    
+    // Return early for empty input
+    if (!cleanExpr) {
+      return { value: 0, error: 'Expression cannot be empty' };
+    }
+    
+    // Allow only safe mathematical characters and operations
+    const safePattern = /^[0-9+\-*/().\s]+$/;
+    if (!safePattern.test(cleanExpr)) {
+      return { value: 0, error: 'Invalid characters in expression' };
+    }
+    
+    // Evaluate the expression safely using Function constructor
+    // This is safer than eval() but still allows mathematical expressions
+    const result = Function(`"use strict"; return (${cleanExpr})`)();
+    
+    // Validate result
+    if (typeof result !== 'number' || isNaN(result) || !isFinite(result)) {
+      return { value: 0, error: 'Expression must evaluate to a valid number' };
+    }
+    
+    if (result <= 0) {
+      return { value: 0, error: 'Sleep time must be greater than 0' };
+    }
+    
+    return { value: result, error: null };
+  } catch (error) {
+    return { value: 0, error: 'Invalid mathematical expression' };
+  }
+};
+
 function App() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // 1. Multi-canvas state
+  const [canvases, setCanvases] = useState([
+    { id: 1, name: 'Canvas 1', nodes: initialNodes, edges: initialEdges }
+  ]);
+  const [activeCanvasId, setActiveCanvasId] = useState(1);
+
+  // 2. ReactFlow state for the active canvas
+  const activeCanvasIndex = canvases.findIndex(c => c.id === activeCanvasId);
+  const activeCanvas = canvases[activeCanvasIndex] || canvases[0];
+  const [nodes, setNodes, onNodesChange] = useNodesState(activeCanvas.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(activeCanvas.edges);
+
+  // 3. Sync ReactFlow state with canvases when switching tabs
+  useEffect(() => {
+    // When switching tabs, update the previous canvas's nodes/edges
+    setCanvases(prev => prev.map((c, i) =>
+      i === activeCanvasIndex ? { ...c, nodes, edges } : c
+    ));
+    // Then load the new canvas's nodes/edges
+    const newIndex = canvases.findIndex(c => c.id === activeCanvasId);
+    if (newIndex !== -1) {
+      setNodes(canvases[newIndex].nodes);
+      setEdges(canvases[newIndex].edges);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCanvasId]);
+
+  // 4. When nodes/edges change, update the canvases array
+  useEffect(() => {
+    setCanvases(prev => prev.map((c, i) =>
+      i === activeCanvasIndex ? { ...c, nodes, edges } : c
+    ));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges]);
+
+  // 5. Update all canvas-related state and actions to use the active canvas
   const [activeTab, setActiveTab] = useState<'canvas' | 'nodes'>('canvas');
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
@@ -67,6 +137,11 @@ function App() {
   
   // State for copy/paste functionality
   const [copiedNodeData, setCopiedNodeData] = useState<Node | null>(null);
+  
+  // State for continuous execution modal
+  const [showContinuousExecutionModal, setShowContinuousExecutionModal] = useState(false);
+  const [modalSleepTime, setModalSleepTime] = useState('1');
+  const [sleepTimeError, setSleepTimeError] = useState<string | null>(null);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => {
@@ -287,10 +362,10 @@ function App() {
 
   const saveWorkflow = useCallback(() => {
     const workflowData: WorkflowData = {
-      nodes,
-      edges,
+      nodes: activeCanvas.nodes,
+      edges: activeCanvas.edges,
       metadata: {
-        name: `workflow-${new Date().toISOString().split('T')[0]}`,
+        name: `${activeCanvas.name}-${new Date().toISOString().split('T')[0]}`,
         created: new Date().toISOString(),
         version: '1.0.0'
       }
@@ -309,7 +384,7 @@ function App() {
     URL.revokeObjectURL(url);
     
     console.log('Workflow saved:', workflowData.metadata.name);
-  }, [nodes, edges]);
+  }, [activeCanvas]);
 
   const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -492,6 +567,19 @@ function App() {
     }
   }, [nodes.length, prepareWorkflowData]);
 
+  const showContinuousModal = useCallback(() => {
+    setShowContinuousExecutionModal(true);
+    setSleepTimeError(null); // Reset error when opening modal
+  }, []);
+
+  const handleSleepTimeChange = useCallback((value: string) => {
+    setModalSleepTime(value);
+    
+    // Validate the expression
+    const evaluation = evaluateExpression(value);
+    setSleepTimeError(evaluation.error);
+  }, []);
+
   const startContinuousExecution = useCallback(async () => {
     if (nodes.length === 0) {
       alert('No nodes to execute. Please add some nodes to the canvas first.');
@@ -507,12 +595,26 @@ function App() {
         return;
       }
       
-      console.log('Starting continuous execution:', workflowData);
+      // Evaluate the sleep time expression
+      const evaluation = evaluateExpression(modalSleepTime);
+      if (evaluation.error) {
+        alert(`Invalid sleep time: ${evaluation.error}`);
+        return;
+      }
       
-      const result = await apiService.startContinuousExecution(workflowData);
+      // Add sleep_time to workflow data
+      const workflowWithSleepTime = {
+        ...workflowData,
+        sleep_time: evaluation.value
+      };
+      
+      console.log('Starting continuous execution:', workflowWithSleepTime);
+      
+      const result = await apiService.startContinuousExecution(workflowWithSleepTime);
       
       if (result.success) {
         setIsContinuousRunning(true);
+        setShowContinuousExecutionModal(false);
         console.log('Continuous execution started:', result);
         alert('Continuous execution started! The workflow will run repeatedly.');
         
@@ -525,7 +627,7 @@ function App() {
       console.error('Error starting continuous execution:', error);
       alert('Failed to start continuous execution. Please check the backend server.');
     }
-  }, [nodes.length, prepareWorkflowData]);
+  }, [nodes.length, prepareWorkflowData, modalSleepTime]);
 
   const stopContinuousExecution = useCallback(async () => {
     try {
@@ -910,17 +1012,44 @@ function App() {
     <div className="app">
       <div className="app-tabs">
         <div className="tab-group">
-          <button 
-            className={`tab ${activeTab === 'canvas' ? 'active' : ''}`}
-            onClick={() => setActiveTab('canvas')}
+          {canvases.map((canvas, idx) => (
+            <button
+              key={canvas.id}
+              className={`tab${activeCanvasId === canvas.id ? ' active' : ''}`}
+              onClick={() => setActiveCanvasId(canvas.id)}
+            >
+              {canvas.name}
+              {canvases.length > 1 && (
+                <span
+                  className="tab-close"
+                  onClick={e => {
+                    e.stopPropagation();
+                    if (canvases.length > 1) {
+                      const newCanvases = canvases.filter(c => c.id !== canvas.id);
+                      setCanvases(newCanvases);
+                      if (activeCanvasId === canvas.id) {
+                        setActiveCanvasId(newCanvases[0].id);
+                      }
+                    }
+                  }}
+                  title="Close tab"
+                  style={{ marginLeft: 8, cursor: 'pointer' }}
+                >
+                  ×
+                </span>
+              )}
+            </button>
+          ))}
+          <button
+            className="tab add-tab"
+            onClick={() => {
+              const nextId = Math.max(...canvases.map(c => c.id)) + 1;
+              setCanvases(cs => [...cs, { id: nextId, name: `Canvas ${nextId}`, nodes: [], edges: [] }]);
+              setActiveCanvasId(nextId);
+            }}
+            title="Add new canvas"
           >
-            Canvas
-          </button>
-          <button 
-            className={`tab ${activeTab === 'nodes' ? 'active' : ''}`}
-            onClick={() => setActiveTab('nodes')}
-          >
-            Available Nodes
+            +
           </button>
         </div>
         <div className="tab-controls">
@@ -1000,7 +1129,7 @@ function App() {
           {!isContinuousRunning ? (
             <button 
               className="toolbar-btn continuous-btn" 
-              onClick={startContinuousExecution}
+              onClick={showContinuousModal}
               disabled={nodes.length === 0 || isExecuting}
               title="Start continuous execution"
             >
@@ -1060,6 +1189,59 @@ function App() {
         items={contextMenuItems}
         onClose={closeContextMenu}
       />
+      
+      {/* Continuous Execution Modal */}
+      {showContinuousExecutionModal && (
+        <div className="modal-overlay" onClick={() => setShowContinuousExecutionModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Start Continuous Execution</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowContinuousExecutionModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="sleep-interval">Sleep interval in seconds between iteration:</label>
+                <input
+                  id="sleep-interval"
+                  type="text"
+                  value={modalSleepTime}
+                  onChange={(e) => handleSleepTimeChange(e.target.value)}
+                  className={`modal-input ${sleepTimeError ? 'error' : ''}`}
+                  placeholder="1.0 or 1/30"
+                />
+                {sleepTimeError && (
+                  <div className="error-message">{sleepTimeError}</div>
+                )}
+                {!sleepTimeError && modalSleepTime && (
+                  <div className="success-message">
+                    = {evaluateExpression(modalSleepTime).value.toFixed(3)} seconds
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="modal-btn cancel-btn"
+                onClick={() => setShowContinuousExecutionModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="modal-btn start-btn"
+                onClick={startContinuousExecution}
+                disabled={!modalSleepTime || sleepTimeError !== null}
+              >
+                Start
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -28,6 +28,7 @@ class WorkflowRequest(BaseModel):
     nodes: List[Dict[str, Any]]
     edges: List[Dict[str, Any]]
     metadata: Optional[Dict[str, Any]] = {}
+    sleep_time: Optional[float] = 1.0  # Sleep time between iterations for continuous execution
 
 class WorkflowResponse(BaseModel):
     success: bool
@@ -203,12 +204,15 @@ async def start_continuous_execution(workflow: WorkflowRequest):
             "metadata": workflow.metadata
         }
         
+        # Set the sleep time for continuous execution
+        continuous_executor.set_loop_interval(workflow.sleep_time)
+        
         # Load workflow into continuous executor
         if continuous_executor.load_workflow(workflow_data):
             continuous_executor.start_continuous_execution()
             return {
                 "success": True,
-                "message": "Continuous execution started"
+                "message": f"Continuous execution started with {workflow.sleep_time}s sleep interval"
             }
         else:
             return {
