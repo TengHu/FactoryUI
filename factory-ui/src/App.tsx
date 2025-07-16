@@ -78,8 +78,42 @@ const evaluateExpression = (expression: string): { value: number; error: string 
 };
 
 function App() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // 1. Multi-canvas state
+  const [canvases, setCanvases] = useState([
+    { id: 1, name: 'Canvas 1', nodes: initialNodes, edges: initialEdges }
+  ]);
+  const [activeCanvasId, setActiveCanvasId] = useState(1);
+
+  // 2. ReactFlow state for the active canvas
+  const activeCanvasIndex = canvases.findIndex(c => c.id === activeCanvasId);
+  const activeCanvas = canvases[activeCanvasIndex] || canvases[0];
+  const [nodes, setNodes, onNodesChange] = useNodesState(activeCanvas.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(activeCanvas.edges);
+
+  // 3. Sync ReactFlow state with canvases when switching tabs
+  useEffect(() => {
+    // When switching tabs, update the previous canvas's nodes/edges
+    setCanvases(prev => prev.map((c, i) =>
+      i === activeCanvasIndex ? { ...c, nodes, edges } : c
+    ));
+    // Then load the new canvas's nodes/edges
+    const newIndex = canvases.findIndex(c => c.id === activeCanvasId);
+    if (newIndex !== -1) {
+      setNodes(canvases[newIndex].nodes);
+      setEdges(canvases[newIndex].edges);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCanvasId]);
+
+  // 4. When nodes/edges change, update the canvases array
+  useEffect(() => {
+    setCanvases(prev => prev.map((c, i) =>
+      i === activeCanvasIndex ? { ...c, nodes, edges } : c
+    ));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges]);
+
+  // 5. Update all canvas-related state and actions to use the active canvas
   const [activeTab, setActiveTab] = useState<'canvas' | 'nodes'>('canvas');
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
@@ -328,10 +362,10 @@ function App() {
 
   const saveWorkflow = useCallback(() => {
     const workflowData: WorkflowData = {
-      nodes,
-      edges,
+      nodes: activeCanvas.nodes,
+      edges: activeCanvas.edges,
       metadata: {
-        name: `workflow-${new Date().toISOString().split('T')[0]}`,
+        name: `${activeCanvas.name}-${new Date().toISOString().split('T')[0]}`,
         created: new Date().toISOString(),
         version: '1.0.0'
       }
@@ -350,7 +384,7 @@ function App() {
     URL.revokeObjectURL(url);
     
     console.log('Workflow saved:', workflowData.metadata.name);
-  }, [nodes, edges]);
+  }, [activeCanvas]);
 
   const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -978,17 +1012,44 @@ function App() {
     <div className="app">
       <div className="app-tabs">
         <div className="tab-group">
-          <button 
-            className={`tab ${activeTab === 'canvas' ? 'active' : ''}`}
-            onClick={() => setActiveTab('canvas')}
+          {canvases.map((canvas, idx) => (
+            <button
+              key={canvas.id}
+              className={`tab${activeCanvasId === canvas.id ? ' active' : ''}`}
+              onClick={() => setActiveCanvasId(canvas.id)}
+            >
+              {canvas.name}
+              {canvases.length > 1 && (
+                <span
+                  className="tab-close"
+                  onClick={e => {
+                    e.stopPropagation();
+                    if (canvases.length > 1) {
+                      const newCanvases = canvases.filter(c => c.id !== canvas.id);
+                      setCanvases(newCanvases);
+                      if (activeCanvasId === canvas.id) {
+                        setActiveCanvasId(newCanvases[0].id);
+                      }
+                    }
+                  }}
+                  title="Close tab"
+                  style={{ marginLeft: 8, cursor: 'pointer' }}
+                >
+                  ×
+                </span>
+              )}
+            </button>
+          ))}
+          <button
+            className="tab add-tab"
+            onClick={() => {
+              const nextId = Math.max(...canvases.map(c => c.id)) + 1;
+              setCanvases(cs => [...cs, { id: nextId, name: `Canvas ${nextId}`, nodes: [], edges: [] }]);
+              setActiveCanvasId(nextId);
+            }}
+            title="Add new canvas"
           >
-            Canvas
-          </button>
-          <button 
-            className={`tab ${activeTab === 'nodes' ? 'active' : ''}`}
-            onClick={() => setActiveTab('nodes')}
-          >
-            Available Nodes
+            +
           </button>
         </div>
         <div className="tab-controls">
