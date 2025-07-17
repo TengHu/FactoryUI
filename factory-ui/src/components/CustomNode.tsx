@@ -1,5 +1,5 @@
-import { memo, useState } from 'react';
-import { Handle, Position, NodeProps, NodeResizer } from '@xyflow/react';
+import { memo, useState, useRef, useCallback } from 'react';
+import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeInfo } from '../services/api';
 import './CustomNode.css';
 
@@ -47,6 +47,67 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
+  
+  // Custom resize functionality
+  const nodeRef = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDirection, setResizeDirection] = useState<string>('');
+  
+  const handleResizeStart = useCallback((direction: string) => (e: React.MouseEvent) => {
+    // Completely prevent all event propagation
+    e.preventDefault();
+    e.stopPropagation();
+    e.nativeEvent.preventDefault();
+    e.nativeEvent.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation();
+    
+    setIsResizing(true);
+    setResizeDirection(direction);
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const node = nodeRef.current;
+    if (!node) return;
+    
+    const startWidth = node.offsetWidth;
+    const startHeight = node.offsetHeight;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!node) return;
+      
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+      
+      if (direction.includes('e')) {
+        newWidth = Math.max(200, startWidth + deltaX);
+      }
+      if (direction.includes('w')) {
+        newWidth = Math.max(200, startWidth - deltaX);
+      }
+      if (direction.includes('s')) {
+        newHeight = Math.max(100, startHeight + deltaY);
+      }
+      if (direction.includes('n')) {
+        newHeight = Math.max(100, startHeight - deltaY);
+      }
+      
+      node.style.width = `${newWidth}px`;
+      node.style.height = `${newHeight}px`;
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      setResizeDirection('');
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
 
   // Parse inputs from nodeInfo
   const requiredInputs = Object.keys(nodeInfo.input_types.required || {});
@@ -103,19 +164,10 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   };
 
   return (
-    <>
-      <NodeResizer 
-        minWidth={200}
-        minHeight={100}
-        isVisible={selected || false}
-        lineClassName="resize-line"
-        handleClassName="resize-handle"
-        shouldResize={() => true}
-        onResizeStart={() => {}}
-        onResizeEnd={() => {}}
-      />
+    <div className="node-container">
       <div 
-        className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} ${nodeState?.state ? `node-${nodeState.state}` : ''} node-${category}`}
+        ref={nodeRef}
+        className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} ${nodeState?.state ? `node-${nodeState.state}` : ''} node-${category} ${isResizing ? `resizing resizing-${resizeDirection}` : ''}`}
         onContextMenu={handleContextMenu}
       >
       {/* Node header */}
@@ -345,7 +397,56 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
         </div>
       )}
       </div>
-    </>
+      
+      {/* Custom resize handles - outside main node */}
+      {(selected || false) && (
+        <>
+          {/* Corner handles */}
+          <div 
+            className="resize-handle nw" 
+            onMouseDownCapture={handleResizeStart('nw')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle ne" 
+            onMouseDownCapture={handleResizeStart('ne')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle sw" 
+            onMouseDownCapture={handleResizeStart('sw')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle se" 
+            onMouseDownCapture={handleResizeStart('se')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          
+          {/* Edge handles */}
+          <div 
+            className="resize-handle n" 
+            onMouseDownCapture={handleResizeStart('n')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle s" 
+            onMouseDownCapture={handleResizeStart('s')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle e" 
+            onMouseDownCapture={handleResizeStart('e')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle w" 
+            onMouseDownCapture={handleResizeStart('w')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+        </>
+      )}
+    </div>
   );
 };
 

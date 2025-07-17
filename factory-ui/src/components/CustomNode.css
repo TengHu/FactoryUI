@@ -720,20 +720,112 @@
   opacity: 0.5;
 }
 
-/* React Flow NodeResizer Styling */
-.resize-line {
-  border-color: #0969da !important;
-  border-width: 2px !important;
+/* Custom resize handles */
+.node-container {
+  position: relative;
+  display: inline-block;
+}
+
+.custom-node {
+  position: relative;
+}
+
+.custom-node.resizing {
+  cursor: grabbing;
+  user-select: none;
+  outline: 2px dashed #0969da;
+  outline-offset: 2px;
 }
 
 .resize-handle {
-  background: #0969da !important;
-  border: 2px solid #ffffff !important;
-  border-radius: 3px !important;
-  width: 10px !important;
-  height: 10px !important;
+  position: absolute;
+  background: #0969da;
+  border: 2px solid #ffffff;
+  border-radius: 3px;
+  width: 10px;
+  height: 10px;
+  z-index: 1000;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  pointer-events: auto !important;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  
+  /* Ensure handles are always on top and interactive */
+  cursor: pointer;
 }
 
 .resize-handle:hover {
-  background: #0550ae !important;
+  background: #0550ae;
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+/* Corner handles */
+.resize-handle.nw {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+
+.resize-handle.ne {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+
+.resize-handle.sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+
+.resize-handle.se {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}
+
+/* Edge handles */
+.resize-handle.n {
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: n-resize;
+}
+
+.resize-handle.s {
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: s-resize;
+}
+
+.resize-handle.e {
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: e-resize;
+}
+
+.resize-handle.w {
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: w-resize;
+}
+
+/* Handle hover effects with correct transforms */
+.resize-handle.n:hover,
+.resize-handle.s:hover {
+  transform: translateX(-50%) scale(1.2);
+}
+
+.resize-handle.e:hover,
+.resize-handle.w:hover {
+  transform: translateY(-50%) scale(1.2);
 }
