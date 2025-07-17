@@ -21,7 +21,7 @@ import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
 import ThemeToggle from './components/ThemeToggle';
 import { NodeInfo, apiService } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
-import { websocketService } from './services/websocket';
+import { websocketService, ConnectionState } from './services/websocket';
 
 interface WorkflowData {
   nodes: Node[];
@@ -147,7 +147,13 @@ function App() {
   const [isContinuousRunning, setIsContinuousRunning] = useState(false);
   const [continuousStatus, setContinuousStatus] = useState<any>(null);
   const [nodeStates, setNodeStates] = useState<Record<string, any>>({});
-  const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>({
+    isConnected: false,
+    isConnecting: false,
+    reconnectAttempts: 0,
+    lastError: null,
+    connectionTime: null
+  });
   
   // Add debouncing to prevent rapid re-renders
   const [debouncedNodeStates, setDebouncedNodeStates] = useState(nodeStates);
@@ -711,7 +717,6 @@ function App() {
     const connectWebSocket = async () => {
       try {
         await websocketService.connect();
-        setIsWebSocketConnected(true);
         console.log('WebSocket connected');
         
         // Start heartbeat
@@ -722,11 +727,13 @@ function App() {
         
       } catch (error) {
         console.error('Failed to connect WebSocket:', error);
-        setIsWebSocketConnected(false);
       }
     };
 
     connectWebSocket();
+
+    // Set up connection state listener
+    const unsubscribeConnectionState = websocketService.onConnectionStateChange(setConnectionState);
 
     // Set up event handlers, each returns a function to unsubscribe
     const unsubscribeHandlers = [
@@ -796,17 +803,17 @@ function App() {
     // Cleanup on unmount
     return () => {
       unsubscribeHandlers.forEach(unsub => unsub());
+      unsubscribeConnectionState();
       websocketService.disconnect();
-      setIsWebSocketConnected(false);
     };
   }, []);
 
   // Start polling when continuous execution begins (fallback for WebSocket failures)
   React.useEffect(() => {
-    if (isContinuousRunning && !isWebSocketConnected) {
+    if (isContinuousRunning && !connectionState.isConnected) {
       // pollContinuousStatus(); // This function is removed
     }
-  }, [isContinuousRunning, isWebSocketConnected]);
+  }, [isContinuousRunning, connectionState.isConnected]);
 
   // Animate edges when continuous execution starts/stops
   React.useEffect(() => {
@@ -1167,10 +1174,10 @@ function App() {
     );
     
     // Send real-time input update via WebSocket
-    if (isWebSocketConnected) {
+    if (connectionState.isConnected) {
       websocketService.sendInputUpdate(nodeId, inputName, value);
     }
-  }, [setNodes, isWebSocketConnected]);
+  }, [setNodes, connectionState.isConnected]);
 
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
@@ -1350,9 +1357,21 @@ function App() {
           <span className="node-count">Nodes: {nodes.length}</span>
           <span className="edge-count">Connections: {edges.length}</span>
           
-          {isWebSocketConnected && (
+          {connectionState.isConnected && (
             <span className="websocket-status">
               🔗 Live
+            </span>
+          )}
+          
+          {connectionState.isConnecting && (
+            <span className="websocket-status">
+              🔄 Connecting...
+            </span>
+          )}
+          
+          {connectionState.lastError && !connectionState.isConnected && (
+            <span className="websocket-status error" title={connectionState.lastError.message}>
+              ⚠️ Disconnected
             </span>
           )}
           

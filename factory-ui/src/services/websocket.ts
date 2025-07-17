@@ -9,6 +9,14 @@ interface WebSocketEventHandler {
   (data: any): void;
 }
 
+interface ConnectionState {
+  isConnected: boolean;
+  isConnecting: boolean;
+  reconnectAttempts: number;
+  lastError: Error | null;
+  connectionTime: number | null;
+}
+
 class WebSocketService {
   private ws: WebSocket | null = null;
   private eventHandlers: Map<string, WebSocketEventHandler[]> = new Map();
@@ -17,9 +25,51 @@ class WebSocketService {
   private reconnectInterval = 3000; // 3 seconds
   private isConnecting = false;
   private url: string;
+  private connectionState: ConnectionState = {
+    isConnected: false,
+    isConnecting: false,
+    reconnectAttempts: 0,
+    lastError: null,
+    connectionTime: null
+  };
+  private connectionStateListeners: ((state: ConnectionState) => void)[] = [];
 
   constructor(url: string = 'ws://localhost:8000/ws') {
     this.url = url;
+  }
+
+  private updateConnectionState(updates: Partial<ConnectionState>) {
+    this.connectionState = { ...this.connectionState, ...updates };
+    this.isConnecting = this.connectionState.isConnecting;
+    this.reconnectAttempts = this.connectionState.reconnectAttempts;
+    
+    // Notify all listeners
+    this.connectionStateListeners.forEach(listener => {
+      try {
+        listener(this.connectionState);
+      } catch (error) {
+        console.error('Error in connection state listener:', error);
+      }
+    });
+  }
+
+  onConnectionStateChange(listener: (state: ConnectionState) => void): () => void {
+    this.connectionStateListeners.push(listener);
+    
+    // Immediately call with current state
+    listener(this.connectionState);
+    
+    // Return unsubscribe function
+    return () => {
+      const index = this.connectionStateListeners.indexOf(listener);
+      if (index > -1) {
+        this.connectionStateListeners.splice(index, 1);
+      }
+    };
+  }
+
+  getConnectionState(): ConnectionState {
+    return { ...this.connectionState };
   }
 
   connect(): Promise<void> {
@@ -29,20 +79,28 @@ class WebSocketService {
         return;
       }
 
-      if (this.isConnecting) {
+      if (this.connectionState.isConnecting) {
         reject(new Error('Already connecting'));
         return;
       }
 
-      this.isConnecting = true;
+      this.updateConnectionState({ 
+        isConnecting: true, 
+        lastError: null 
+      });
 
       try {
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = () => {
           console.log('WebSocket connected');
-          this.isConnecting = false;
-          this.reconnectAttempts = 0;
+          this.updateConnectionState({
+            isConnected: true,
+            isConnecting: false,
+            reconnectAttempts: 0,
+            lastError: null,
+            connectionTime: Date.now()
+          });
           
           // Send initial ping
           this.send('ping', { timestamp: Date.now() });
@@ -61,21 +119,34 @@ class WebSocketService {
 
         this.ws.onclose = (event) => {
           console.log('WebSocket disconnected:', event.code, event.reason);
-          this.isConnecting = false;
+          this.updateConnectionState({
+            isConnected: false,
+            isConnecting: false,
+            connectionTime: null
+          });
           this.attemptReconnect();
         };
 
         this.ws.onerror = (error) => {
           console.error('WebSocket error:', error);
-          this.isConnecting = false;
-          if (this.reconnectAttempts === 0) {
-            reject(error);
+          const wsError = error instanceof Error ? error : new Error('WebSocket error');
+          this.updateConnectionState({
+            isConnected: false,
+            isConnecting: false,
+            lastError: wsError
+          });
+          if (this.connectionState.reconnectAttempts === 0) {
+            reject(wsError);
           }
         };
 
       } catch (error) {
-        this.isConnecting = false;
-        reject(error);
+        const wsError = error instanceof Error ? error : new Error('Failed to create WebSocket');
+        this.updateConnectionState({
+          isConnecting: false,
+          lastError: wsError
+        });
+        reject(wsError);
       }
     });
   }
@@ -99,17 +170,27 @@ class WebSocketService {
   }
 
   private attemptReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+    if (this.connectionState.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error('Max reconnection attempts reached');
+      this.updateConnectionState({
+        lastError: new Error('Max reconnection attempts reached')
+      });
       return;
     }
 
-    this.reconnectAttempts++;
-    console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+    const newAttempts = this.connectionState.reconnectAttempts + 1;
+    this.updateConnectionState({
+      reconnectAttempts: newAttempts
+    });
+    
+    console.log(`Attempting to reconnect (${newAttempts}/${this.maxReconnectAttempts})...`);
 
     setTimeout(() => {
       this.connect().catch(error => {
         console.error('Reconnection failed:', error);
+        this.updateConnectionState({
+          lastError: error instanceof Error ? error : new Error('Reconnection failed')
+        });
       });
     }, this.reconnectInterval);
   }
@@ -180,7 +261,7 @@ class WebSocketService {
 
   // Connection status
   isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN;
+    return this.connectionState.isConnected && this.ws?.readyState === WebSocket.OPEN;
   }
 
   disconnect() {
@@ -189,7 +270,13 @@ class WebSocketService {
       this.ws = null;
     }
     this.eventHandlers.clear();
-    this.reconnectAttempts = 0;
+    this.updateConnectionState({
+      isConnected: false,
+      isConnecting: false,
+      reconnectAttempts: 0,
+      lastError: null,
+      connectionTime: null
+    });
   }
 
   // Ping to keep connection alive
@@ -210,5 +297,5 @@ class WebSocketService {
 export const websocketService = new WebSocketService();
 
 // Export types for use in components
-export type { WebSocketMessage, WebSocketEventHandler };
+export type { WebSocketMessage, WebSocketEventHandler, ConnectionState };
 export default WebSocketService;
