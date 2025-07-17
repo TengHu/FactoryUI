@@ -1174,6 +1174,7 @@ function App() {
     );
     
     // Send real-time input update via WebSocket
+    // TODO: send input only when backend is running 
     if (connectionState.isConnected) {
       websocketService.sendInputUpdate(nodeId, inputName, value);
     }

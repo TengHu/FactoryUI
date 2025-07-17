@@ -37,6 +37,13 @@ class ContinuousExecutor:
         self.node_cache = NodeCache()  # Add node cache
         self.websocket_manager = websocket_manager
         
+        # Pre-computed execution data for performance optimization
+        self._execution_order = []
+        self._node_instances = {}
+        self._node_data_map = {}
+        self._edges = []
+        self._is_setup = False
+        
     def _broadcast_sync(self, coro):
         """Helper method to run async WebSocket broadcasts from sync thread"""
         try:
@@ -67,6 +74,7 @@ class ContinuousExecutor:
                 raise ValueError("Workflow must contain an 'edges' list")
             
             self.current_workflow = workflow_data
+            self._is_setup = False  # Mark for re-setup
             self.log_message("info", f"Loaded workflow with {len(workflow_data['nodes'])} nodes and {len(workflow_data['edges'])} edges")
             return True
             
@@ -108,9 +116,67 @@ class ContinuousExecutor:
         self.loop_interval = interval
         self.log_message("info", f"Set loop interval to {interval} seconds")
     
+    def _setup_execution(self):
+        """Setup execution data structures for optimal performance"""
+        if not self.current_workflow or self._is_setup:
+            return
+            
+        try:
+            nodes = self.current_workflow["nodes"]
+            edges = self.current_workflow["edges"]
+            
+            # Store edges for quick access
+            self._edges = edges
+            
+            # Perform topological sort once
+            self._execution_order = self._topological_sort(nodes, edges)
+            
+            # Pre-create node data map for quick lookup
+            self._node_data_map = {node["id"]: node for node in nodes}
+            
+            # Pre-instantiate node classes and instances
+            self._node_instances = {}
+            for node_id in self._execution_order:
+                node_data = self._node_data_map[node_id]
+                
+                # Get node type and class
+                node_type = node_data.get("type") or node_data.get("data", {}).get("type")
+                if not node_type:
+                    node_info = node_data.get("data", {}).get("nodeInfo", {})
+                    node_type = node_info.get("name")
+                    
+                if not node_type:
+                    raise ValueError(f"Node {node_id} has no type specified")
+                    
+                node_class = node_registry.get_node(node_type)
+                if not node_class:
+                    raise ValueError(f"Unknown node type: {node_type}")
+                    
+                # Create and configure node instance
+                node_instance = node_class()
+                if self.websocket_manager:
+                    node_instance._websocket_manager = self.websocket_manager
+                    node_instance._node_id = node_id
+                    
+                self._node_instances[node_id] = {
+                    "instance": node_instance,
+                    "class": node_class,
+                    "function_name": node_class.FUNCTION()
+                }
+            
+            self._is_setup = True
+            self.log_message("info", f"Setup completed for {len(self._execution_order)} nodes")
+            
+        except Exception as e:
+            self.log_message("error", f"Setup failed: {str(e)}")
+            raise
+    
     def _execution_loop(self):
         """Main execution loop that runs continuously"""
         self.log_message("info", "Continuous execution loop started")
+        
+        # Setup execution data structures once
+        self._setup_execution()
         
         # Broadcast workflow started event
         if self.websocket_manager:
@@ -129,8 +195,8 @@ class ContinuousExecutor:
                         self.count_of_iterations + 1, "executing", {"start_time": start_time}
                     ))
                 
-                # Execute the workflow
-                self._execute_workflow_once()
+                # Execute the workflow (optimized version)
+                self._execute_workflow_once_optimized()
                 
                 # Update timing
                 self.last_execution_time = time.time() - start_time
@@ -165,8 +231,44 @@ class ContinuousExecutor:
                 
                 time.sleep(self.loop_interval)  # Continue after error
     
+    def _execute_workflow_once_optimized(self):
+        """Execute the workflow once using pre-computed data structures for maximum performance"""
+        if not self._is_setup:
+            self._setup_execution()
+            
+        # Execute nodes in pre-computed order
+        node_results = {}
+        for node_id in self._execution_order:
+            # Broadcast node execution start
+            if self.websocket_manager:
+                self._broadcast_sync(self.websocket_manager.broadcast_node_state(
+                    node_id, "executing", {"start_time": time.time()}
+                ))
+            
+            try:
+                node_result, rt_update = self._execute_node_optimized(node_id, node_results)
+                if node_result is not None:
+                    node_results[node_id] = node_result
+                
+                # Broadcast node execution completed
+                if self.websocket_manager:
+                    self._broadcast_sync(self.websocket_manager.broadcast_node_state(
+                        node_id, "completed", {"rt_update": rt_update}
+                    ))
+                    
+            except Exception as e:
+                # Broadcast node error
+                if self.websocket_manager:
+                    self._broadcast_sync(self.websocket_manager.broadcast_node_state(
+                        node_id, "error", {"error": str(e)}
+                    ))
+                raise
+        
+        # Store results
+        self.execution_results = node_results
+    
     def _execute_workflow_once(self):
-        """Execute the workflow once"""
+        """Execute the workflow once (fallback to original implementation)"""
         if not self.current_workflow:
             return
         
@@ -254,9 +356,57 @@ class ContinuousExecutor:
         
         return result
     
+    def _execute_node_optimized(self, node_id: str, node_results: Dict[str, Any]) -> Any:
+        """Execute a single node using pre-computed instance data for maximum performance"""
+        try:
+            # Get pre-instantiated node data
+            node_instance_data = self._node_instances[node_id]
+            node_instance = node_instance_data["instance"]
+            function_name = node_instance_data["function_name"]
+            
+            # Get node data for input preparation
+            node_data = self._node_data_map[node_id]
+            
+            # Prepare inputs from connected edges and node parameters
+            inputs = self._prepare_node_inputs_optimized(node_id, node_data, node_results)
+            
+            # Check cache before execution
+            cached_output = self.node_cache.get_cache(node_id, inputs)
+            if cached_output is not None:
+                if self.count_of_iterations % 50 == 0:
+                    self.log_message("debug", f"Node {node_id} cache hit")
+                return copy.deepcopy(cached_output)
+            
+            # Validate inputs
+            try:
+                node_instance.validate_inputs(**inputs)
+            except Exception as e:
+                pass
+                
+            # Execute using pre-cached function
+            execute_func = getattr(node_instance, function_name)
+            result = execute_func(**inputs)
+            
+            # If result is a 2-tuple, use the second element for websocket broadcast
+            rt_update = None
+            node_result = None
+            if isinstance(result, tuple) and len(result) == 2:
+                node_result, rt_update = result
+            else:
+                node_result = result
+                
+            # Log successful execution
+            if self.count_of_iterations % 50 == 0:
+                self.log_message("debug", f"Node {node_id} executed successfully")
+            return node_result, rt_update
+            
+        except Exception as e:
+            self.log_message("error", f"Node {node_id} execution failed: {str(e)}")
+            raise
+    
     def _execute_node(self, node_id: str, nodes: List[Dict], edges: List[Dict], 
                      node_results: Dict[str, Any]) -> Any:
-        """Execute a single node, with input/output caching."""
+        """Execute a single node, with input/output caching (original implementation)."""
         # Find node data
         node_data = None
         for node in nodes:
@@ -325,9 +475,67 @@ class ContinuousExecutor:
             self.log_message("error", f"Node {node_id} execution failed: {str(e)}")
             raise
     
+    def _prepare_node_inputs_optimized(self, node_id: str, node_data: Dict, 
+                                     node_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Prepare inputs for a node using pre-stored edges for maximum performance"""
+        inputs = {}
+        
+        # Get inputs from connected edges using pre-stored edge data
+        for edge in self._edges:
+            if edge["target"] == node_id:
+                source_id = edge["source"]
+                source_handle = edge.get("sourceHandle", "output")
+                target_handle = edge.get("targetHandle", "input")
+                
+                # Get result from source node
+                if source_id in node_results:
+                    source_result = node_results[source_id]
+                    
+                    # Handle different output formats
+                    if isinstance(source_result, tuple):
+                        # Multiple outputs - extract by index
+                        if source_handle.startswith("output-"):
+                            index = int(source_handle.split("-")[1])
+                            if index < len(source_result):
+                                inputs[target_handle] = source_result[index]
+                        elif len(source_result) == 1:
+                            # Single output in tuple
+                            inputs[target_handle] = source_result[0]
+                        else:
+                            # Default to first output
+                            inputs[target_handle] = source_result[0] if source_result else None
+                    elif isinstance(source_result, dict) and source_handle in source_result:
+                        inputs[target_handle] = source_result[source_handle]
+                    else:
+                        # Single output
+                        inputs[target_handle] = source_result
+        
+        # Get inputs from node data (default values, parameters)
+        node_params = node_data.get("data", {}).get("parameters", {})
+        inputs.update(node_params)
+        
+        # Get inputs from nodeInfo if available
+        node_info = node_data.get("data", {}).get("nodeInfo", {})
+        if node_info:
+            # Check for default values in input types
+            required_inputs = node_info.get("input_types", {}).get("required", {})
+            optional_inputs = node_info.get("input_types", {}).get("optional", {})
+            
+            for input_name, input_spec in required_inputs.items():
+                if input_name not in inputs and isinstance(input_spec, list) and len(input_spec) > 1:
+                    if isinstance(input_spec[1], dict) and "default" in input_spec[1]:
+                        inputs[input_name] = input_spec[1]["default"]
+            
+            for input_name, input_spec in optional_inputs.items():
+                if input_name not in inputs and isinstance(input_spec, list) and len(input_spec) > 1:
+                    if isinstance(input_spec[1], dict) and "default" in input_spec[1]:
+                        inputs[input_name] = input_spec[1]["default"]
+        
+        return inputs
+    
     def _prepare_node_inputs(self, node_id: str, node_data: Dict, edges: List[Dict], 
                            node_results: Dict[str, Any]) -> Dict[str, Any]:
-        """Prepare inputs for a node from connected edges and node data"""
+        """Prepare inputs for a node from connected edges and node data (original implementation)"""
         inputs = {}
         
         # Get inputs from connected edges
@@ -432,7 +640,13 @@ class ContinuousExecutor:
                     "timestamp": start_time
                 }))
             
-            self._execute_workflow_once()
+            # Setup and use optimized execution if possible
+            try:
+                self._setup_execution()
+                self._execute_workflow_once_optimized()
+            except Exception:
+                # Fallback to original method if setup fails
+                self._execute_workflow_once()
             
             execution_time = time.time() - start_time
             
