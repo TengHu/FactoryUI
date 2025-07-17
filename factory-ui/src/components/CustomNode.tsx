@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useCallback } from 'react';
+import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeInfo } from '../services/api';
 import './CustomNode.css';
@@ -47,6 +47,75 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
+
+  // CAMERA input video streams state
+  const [cameraStreams, setCameraStreams] = useState<Record<string, MediaStream | null>>({});
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  // Remove capturedImages state
+
+  // Clean up camera streams on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(cameraStreams).forEach((stream) => {
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+      });
+    };
+  }, [cameraStreams]);
+
+  // Parse inputs from nodeInfo
+  const requiredInputs = Object.keys(nodeInfo.input_types.required || {});
+  const optionalInputs = Object.keys(nodeInfo.input_types.optional || {});
+  const allInputs = [...requiredInputs, ...optionalInputs];
+  
+  // Set video srcObject for all CAMERA inputs
+  useEffect(() => {
+    allInputs.forEach((input) => {
+      const typeInfo =
+        (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
+        (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
+        ['unknown'];
+      const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+      if (typeName === 'CAMERA' && cameraStreams[input] && videoRefs.current[input]) {
+        videoRefs.current[input]!.srcObject = cameraStreams[input]!;
+      }
+    });
+  }, [allInputs, nodeInfo.input_types, cameraStreams]);
+  
+  // Automatically capture camera image and call onInputValueChange
+  useEffect(() => {
+    const intervals: Record<string, NodeJS.Timeout> = {};
+    allInputs.forEach((input) => {
+      const typeInfo =
+        (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
+        (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
+        ['unknown'];
+      const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+      if (typeName === 'CAMERA' && cameraStreams[input] && videoRefs.current[input]) {
+        // Start interval to capture image every 500ms
+        intervals[input] = setInterval(() => {
+          const video = videoRefs.current[input];
+          if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const imageDataUrl = canvas.toDataURL('image/png');
+              if (onInputValueChange) {
+                onInputValueChange(id, input, imageDataUrl);
+              }
+            }
+          }
+        }, 500);
+      }
+    });
+    return () => {
+      Object.values(intervals).forEach(clearInterval);
+    };
+  }, [allInputs, nodeInfo.input_types, cameraStreams, onInputValueChange, id]);
   
   // Custom resize functionality
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -109,11 +178,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     document.addEventListener('mouseup', handleMouseUp);
   }, []);
 
-  // Parse inputs from nodeInfo
-  const requiredInputs = Object.keys(nodeInfo.input_types.required || {});
-  const optionalInputs = Object.keys(nodeInfo.input_types.optional || {});
-  const allInputs = [...requiredInputs, ...optionalInputs];
-  
   // Parse outputs from nodeInfo - handle both old format (string[]) and new format (dict)
   let outputs: Array<{name: string, type: string, required?: boolean}> = [];
   if (Array.isArray(nodeInfo.return_types)) {
@@ -201,10 +265,30 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
               ['unknown'];
             const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
             // Default to manual mode for STRING and FLOAT inputs, connection mode for others
-            const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
+            // For CAMERA, always manual
+            const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
             const inputMode = inputModes[input] || defaultMode;
             const inputValue = inputValues[input] || '';
             
+            // CAMERA input handler
+            const handleSelectCamera = async () => {
+              try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                setCameraStreams((prev) => {
+                  // Stop previous stream if exists
+                  if (prev[input]) {
+                    prev[input]?.getTracks().forEach((track) => track.stop());
+                  }
+                  return { ...prev, [input]: stream };
+                });
+                if (onInputValueChange) {
+                  onInputValueChange(id, input, 'CAMERA_FEED'); // You may want to pass something more meaningful
+                }
+              } catch (err) {
+                alert('Could not access camera: ' + (err instanceof Error ? err.message : err));
+              }
+            };
+
             return (
               <div key={`input-${input}`} className="io-item input-item">
                 {inputMode === 'connection' && (
@@ -223,23 +307,47 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                     title={`${input} (${typeName}) - ${isRequired ? 'required' : 'optional'}`}
                   />
                 )}
-                
                 {inputMode === 'manual' ? (
-                  <div className="manual-input-container">
-                    <span className="input-label">{input}:</span>
-                    <input
-                      type="text"
-                      className="manual-input"
-                      value={inputValue}
-                      placeholder={`Enter ${typeName.toLowerCase()}`}
-                      onChange={(e) => {
-                        if (onInputValueChange) {
-                          onInputValueChange(id, input, e.target.value);
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
+                  typeName === 'CAMERA' ? (
+                    <div className="manual-input-container camera-input-container">
+                      <span className="input-label">{input}:</span>
+                      <button
+                        type="button"
+                        className="camera-select-button"
+                        onClick={handleSelectCamera}
+                        style={{ marginRight: '8px' }}
+                      >
+                        {cameraStreams[input] ? 'Change Camera' : 'Select Camera Feed'}
+                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        {cameraStreams[input] && (
+                          <video
+                            ref={el => { videoRefs.current[input] = el; }}
+                            autoPlay
+                            playsInline
+                            muted
+                            style={{ width: 120, height: 90, border: '1px solid #ccc', marginTop: 4 }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="manual-input-container">
+                      <span className="input-label">{input}:</span>
+                      <input
+                        type="text"
+                        className="manual-input"
+                        value={inputValue}
+                        placeholder={`Enter ${typeName.toLowerCase()}`}
+                        onChange={(e) => {
+                          if (onInputValueChange) {
+                            onInputValueChange(id, input, e.target.value);
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  )
                 ) : (
                   <span className={`connection-label ${isRequired ? 'required' : 'optional'}`}>
                     {`${input} (${typeName})`}

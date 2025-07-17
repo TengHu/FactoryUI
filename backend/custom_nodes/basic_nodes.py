@@ -752,7 +752,11 @@ class CameraNode(NodeBase):
 
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
-        return {}
+        return {
+            "required": {
+                "camera": ("CAMERA", {})
+            }
+        }
 
     @classmethod
     def RETURN_TYPES(cls) -> Dict[str, Any]:
@@ -781,25 +785,12 @@ class CameraNode(NodeBase):
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
-CameraNode
-
-Purpose: Prompts the user to open their camera and outputs an image (as bytes or base64 string).
-
-Inputs:
-  - None
-
-Outputs:
-  - image (IMAGE): The captured image (bytes or base64 string)
-
-Usage: Use this node to capture an image from the user's camera for use in the workflow.
         """
 
-    def open_camera(self):
-        # This is a placeholder for UI integration. Backend cannot open camera directly.
-        print("[CameraNode] Please open your camera in the UI to capture an image.")
-        # In a real implementation, the frontend would handle camera capture and send image bytes/base64 to backend.
-        # Here, we return None or a dummy image for testing.
-        return (None,)
+    def open_camera(self, camera):
+        
+        print(f"[CameraNode] Captured image: {camera}")
+        return (camera,)
 
 class DisplayNode(NodeBase):
     """A node that takes ANY input and returns nothing, for display/debugging purposes."""
