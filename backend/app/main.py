@@ -287,6 +287,8 @@ async def websocket_endpoint(websocket: WebSocket):
 async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]):
     """Handle incoming WebSocket messages from client"""
     message_type = message.get("type")
+
+    print(f"📨 Received message type: {message_type}")
     
     if message_type == "ping":
         # Respond to ping with pong

@@ -280,7 +280,7 @@ class WebSocketService {
   }
 
   // Ping to keep connection alive
-  startHeartbeat(intervalMs: number = 30000) {
+  startHeartbeat(intervalMs: number = 10000) {
     const interval = setInterval(() => {
       if (this.isConnected()) {
         this.send('ping', { timestamp: Date.now() });
