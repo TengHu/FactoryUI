@@ -105,6 +105,14 @@ class ContinuousExecutor:
             return
         
         self.is_running = False
+        
+        # Broadcast workflow stopped event
+        if self.websocket_manager:
+            self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("continuous_stopped", {
+                "workflow_id": id(self.current_workflow) if self.current_workflow else None,
+                "total_iterations": self.count_of_iterations
+            }))
+        
         if self.thread:
             self.thread.join(timeout=5.0)
         self.log_message("info", "Stopped continuous execution")
