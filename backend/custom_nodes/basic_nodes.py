@@ -754,7 +754,8 @@ class CameraNode(NodeBase):
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "image_stream": ("CAMERA", {})
+                "image_stream": ("CAMERA", {}),
+                "frame_rate": ("INT", {"default": 5})
             }
         }
 
@@ -787,7 +788,7 @@ class CameraNode(NodeBase):
         return """
         """
 
-    def open_camera(self, image_stream):
+    def open_camera(self, image_stream, frame_rate):
         
         print(f"[CameraNode] Captured image: {len(image_stream)}")
         return (image_stream,)

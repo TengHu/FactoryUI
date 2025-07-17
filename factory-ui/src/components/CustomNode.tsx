@@ -53,6 +53,9 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
   const [showCameraMenu, setShowCameraMenu] = useState<Record<string, boolean>>({});
   const cameraRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const overlayCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
+  const frameBufferRefs = useRef<Record<string, string>>({});
+  const lastSentFrameRefs = useRef<Record<string, number>>({});
   
   // Camera utility functions
   const enumerateDevices = useCallback(async () => {
@@ -68,6 +71,23 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       return [];
     }
   }, []);
+
+  // Debounced frame sender to reduce re-renders
+  const sendFrameToBackend = useCallback((inputName: string, frameData: string) => {
+    const now = Date.now();
+    const lastSent = lastSentFrameRefs.current[inputName] || 0;
+    
+    // Only send frames every 500ms (2 FPS) to reduce re-renders
+    if (now - lastSent >= 500) {
+      lastSentFrameRefs.current[inputName] = now;
+      if (onInputValueChange) {
+        onInputValueChange(id, inputName, frameData);
+      }
+    } else {
+      // Buffer the frame for next send
+      frameBufferRefs.current[inputName] = frameData;
+    }
+  }, [id, onInputValueChange]);
 
   const startCamera = useCallback(async (inputName: string, deviceId?: string) => {
     try {
@@ -93,40 +113,71 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       canvas.width = 320; // Reduced resolution for better performance
       canvas.height = 240;
       
-      const captureFrame = () => {
+      const updateDisplay = () => {
         const video = cameraRefs.current[inputName];
-        if (video && ctx && onInputValueChange && video.readyState === 4) {
-          // Use requestAnimationFrame for smoother operation
+        const overlayCanvas = overlayCanvasRefs.current[inputName];
+        
+        if (video && video.readyState === 4 && overlayCanvas) {
           requestAnimationFrame(() => {
             try {
-              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              const frameData = canvas.toDataURL('image/jpeg', 0.7); // Lower quality for smaller size
-              onInputValueChange(id, inputName, frameData);
+              // Update display canvas at high frequency for smooth video
+              const overlayCtx = overlayCanvas.getContext('2d');
+              if (overlayCtx) {
+                overlayCtx.drawImage(video, 0, 0, overlayCanvas.width, overlayCanvas.height);
+              }
             } catch (error) {
-              console.warn('Frame capture error:', error);
+              console.warn('Display update error:', error);
             }
           });
         }
       };
+
+      const captureFrame = () => {
+        const video = cameraRefs.current[inputName];
+        
+        if (video && ctx && video.readyState === 4) {
+          try {
+            // Capture frame for backend (less frequent)
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const frameData = canvas.toDataURL('image/jpeg', 0.7);
+            
+            // Send to backend with debouncing
+            sendFrameToBackend(inputName, frameData);
+            
+            // Store last frame locally (no state update to prevent re-render)
+            frameBufferRefs.current[inputName] = frameData;
+            
+          } catch (error) {
+            console.warn('Frame capture error:', error);
+          }
+        }
+      };
       
-      // Capture frames at x FPS
-      const intervalId = setInterval(captureFrame, 200);
+      // Update display at 30 FPS for smooth video
+      const displayIntervalId = setInterval(updateDisplay, 33);
       
-      // Store interval ID for cleanup
-      (stream as any).intervalId = intervalId;
+      // Capture frames for backend at 5 FPS
+      const captureIntervalId = setInterval(captureFrame, 200);
+      
+      // Store interval IDs for cleanup
+      (stream as any).displayIntervalId = displayIntervalId;
+      (stream as any).captureIntervalId = captureIntervalId;
       
     } catch (error) {
       console.error('Error accessing camera:', error);
       alert('Could not access camera. Please check permissions.');
     }
-  }, [id, onInputValueChange]);
+  }, [id, sendFrameToBackend]);
 
   const stopCamera = useCallback((inputName: string) => {
     const stream = cameraStreams[inputName];
     if (stream) {
-      // Clear frame capture interval
-      if ((stream as any).intervalId) {
-        clearInterval((stream as any).intervalId);
+      // Clear both intervals
+      if ((stream as any).displayIntervalId) {
+        clearInterval((stream as any).displayIntervalId);
+      }
+      if ((stream as any).captureIntervalId) {
+        clearInterval((stream as any).captureIntervalId);
       }
       
       // Stop all tracks
@@ -138,6 +189,19 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       if (video) {
         video.srcObject = null;
       }
+      
+      // Clear overlay canvas and buffers
+      const overlayCanvas = overlayCanvasRefs.current[inputName];
+      if (overlayCanvas) {
+        const overlayCtx = overlayCanvas.getContext('2d');
+        if (overlayCtx) {
+          overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+      }
+      
+      // Clear buffers without state updates
+      frameBufferRefs.current[inputName] = '';
+      lastSentFrameRefs.current[inputName] = 0;
     }
   }, [cameraStreams]);
 
@@ -158,6 +222,27 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     setShowCameraMenu(prev => ({ ...prev, [inputName]: false }));
     await startCamera(inputName, deviceId);
   }, [startCamera]);
+
+  // Send buffered frames periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Object.entries(frameBufferRefs.current).forEach(([inputName, frameData]) => {
+        if (frameData && cameraStreams[inputName]) {
+          const now = Date.now();
+          const lastSent = lastSentFrameRefs.current[inputName] || 0;
+          if (now - lastSent >= 500) {
+            lastSentFrameRefs.current[inputName] = now;
+            if (onInputValueChange) {
+              onInputValueChange(id, inputName, frameData);
+            }
+            frameBufferRefs.current[inputName] = '';
+          }
+        }
+      });
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [cameraStreams, onInputValueChange, id]);
   
   // Cleanup camera streams on unmount
   useEffect(() => {
@@ -412,29 +497,57 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                           <div className="camera-feed-container" style={{ minHeight: cameraStreams[input] ? '150px' : '0px' }}>
                             {cameraStreams[input] && (
                               <div className="camera-feed">
-                                <video
-                                  ref={(el) => {
-                                    cameraRefs.current[input] = el;
-                                    if (el && cameraStreams[input]) {
-                                      el.srcObject = cameraStreams[input];
-                                      // Add event listeners for better handling
-                                      el.onloadedmetadata = () => {
-                                        el.play().catch(console.error);
-                                      };
-                                    }
-                                  }}
-                                  autoPlay
-                                  muted
-                                  playsInline
-                                  style={{
-                                    width: '100%',
-                                    maxWidth: '200px',
-                                    height: '150px',
-                                    objectFit: 'cover',
-                                    borderRadius: '4px',
-                                    backgroundColor: '#000'
-                                  }}
-                                />
+                                <div className="camera-display">
+                                  {/* Hidden video element for stream processing */}
+                                  <video
+                                    ref={(el) => {
+                                      cameraRefs.current[input] = el;
+                                      if (el && cameraStreams[input]) {
+                                        el.srcObject = cameraStreams[input];
+                                        // Add event listeners for better handling
+                                        el.onloadedmetadata = () => {
+                                          el.play().catch(console.error);
+                                        };
+                                      }
+                                    }}
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                    style={{
+                                      position: 'absolute',
+                                      top: '-9999px',
+                                      left: '-9999px',
+                                      width: '1px',
+                                      height: '1px'
+                                    }}
+                                  />
+                                  
+                                  {/* Visible canvas overlay for smooth display */}
+                                  <canvas
+                                    ref={(el) => {
+                                      overlayCanvasRefs.current[input] = el;
+                                      if (el) {
+                                        el.width = 200;
+                                        el.height = 150;
+                                        
+                                        // Initialize with black background
+                                        const ctx = el.getContext('2d');
+                                        if (ctx) {
+                                          ctx.fillStyle = '#000';
+                                          ctx.fillRect(0, 0, el.width, el.height);
+                                        }
+                                      }
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      maxWidth: '200px',
+                                      height: '150px',
+                                      objectFit: 'cover',
+                                      borderRadius: '4px',
+                                      backgroundColor: '#000'
+                                    }}
+                                  />
+                                </div>
                               </div>
                             )}
                           </div>
