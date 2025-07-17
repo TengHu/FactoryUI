@@ -530,7 +530,7 @@ class ContinuousExecutor:
                     node_data["data"]["parameters"] = {}
                 node_data["data"]["parameters"][parameter_name] = parameter_value
                 
-                self.log_message("info", f"Updated node {node_id} parameter {parameter_name} = {parameter_value}")
+                self.log_message("info", f"Updated node {node_id} parameter {parameter_name}")
                 return True
             else:
                 self.log_message("warning", f"Node {node_id} not found in setup data, parameter update may not take effect until next setup")

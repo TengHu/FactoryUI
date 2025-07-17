@@ -841,7 +841,9 @@
 .camera-controls {
   display: flex;
   gap: 4px;
-  align-items: center;
+  align-items: flex-start;
+  flex-direction: column;
+  position: relative;
 }
 
 .camera-button {
@@ -889,4 +891,67 @@
   display: block;
   width: 100%;
   border-radius: 3px;
+}
+
+/* Camera menu styles */
+.camera-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #d1d5da;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 200px;
+  max-width: 300px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.camera-menu-header {
+  padding: 8px 12px;
+  background: #f6f8fa;
+  border-bottom: 1px solid #d1d5da;
+  font-size: 11px;
+  font-weight: 600;
+  color: #586069;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.camera-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: white;
+  color: #24292e;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.camera-menu-item:last-child {
+  border-bottom: none;
+}
+
+.camera-menu-item:hover {
+  background: #f6f8fa;
+}
+
+.camera-menu-item:active {
+  background: #e1e4e8;
+}
+
+.camera-menu-item.loading {
+  color: #586069;
+  cursor: default;
+  font-style: italic;
+}
+
+.camera-menu-item.loading:hover {
+  background: white;
 }

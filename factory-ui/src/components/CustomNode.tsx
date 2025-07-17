@@ -50,18 +50,40 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   
   // Camera state for CAMERA input types
   const [cameraStreams, setCameraStreams] = useState<Record<string, MediaStream | null>>({});
+  const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
+  const [showCameraMenu, setShowCameraMenu] = useState<Record<string, boolean>>({});
   const cameraRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   
   // Camera utility functions
-  const startCamera = useCallback(async (inputName: string) => {
+  const enumerateDevices = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      setAvailableDevices(videoDevices);
+      return videoDevices;
+    } catch (error) {
+      console.error('Error enumerating devices:', error);
+      alert('Could not access camera devices. Please check permissions.');
+      return [];
+    }
+  }, []);
+
+  const startCamera = useCallback(async (inputName: string, deviceId?: string) => {
+    try {
+      const constraints: MediaStreamConstraints = {
         video: { 
           width: { ideal: 640 },
           height: { ideal: 480 },
           frameRate: { ideal: 30 }
-        } 
-      });
+        }
+      };
+      
+      if (deviceId) {
+        (constraints.video as MediaTrackConstraints).deviceId = { exact: deviceId };
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       setCameraStreams(prev => ({ ...prev, [inputName]: stream }));
       
@@ -91,7 +113,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       alert('Could not access camera. Please check permissions.');
     }
   }, [id, onInputValueChange]);
-  
+
   const stopCamera = useCallback((inputName: string) => {
     const stream = cameraStreams[inputName];
     if (stream) {
@@ -111,6 +133,24 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       }
     }
   }, [cameraStreams]);
+
+  const handleCameraMenuClick = useCallback(async (inputName: string) => {
+    if (cameraStreams[inputName]) {
+      stopCamera(inputName);
+      return;
+    }
+    
+    if (availableDevices.length === 0) {
+      await enumerateDevices();
+    }
+    
+    setShowCameraMenu(prev => ({ ...prev, [inputName]: !prev[inputName] }));
+  }, [cameraStreams, availableDevices, enumerateDevices, stopCamera]);
+
+  const handleDeviceSelect = useCallback(async (inputName: string, deviceId: string) => {
+    setShowCameraMenu(prev => ({ ...prev, [inputName]: false }));
+    await startCamera(inputName, deviceId);
+  }, [startCamera]);
   
   // Cleanup camera streams on unmount
   useEffect(() => {
@@ -133,6 +173,19 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
 
     window.addEventListener('error', handleResizeObserverError);
     return () => window.removeEventListener('error', handleResizeObserverError);
+  }, []);
+
+  // Handle clicks outside camera menu to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.camera-controls')) {
+        setShowCameraMenu({});
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   
   // Custom resize functionality
@@ -322,16 +375,32 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                               className="camera-button"
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                const stream = cameraStreams[input];
-                                if (stream) {
-                                  stopCamera(input);
-                                } else {
-                                  await startCamera(input);
-                                }
+                                await handleCameraMenuClick(input);
                               }}
                             >
                               {cameraStreams[input] ? '⏹️ Stop' : '📹 Camera'}
                             </button>
+                            {showCameraMenu[input] && !cameraStreams[input] && (
+                              <div className="camera-menu">
+                                <div className="camera-menu-header">Select Camera:</div>
+                                {availableDevices.length === 0 ? (
+                                  <div className="camera-menu-item loading">Loading devices...</div>
+                                ) : (
+                                  availableDevices.map((device, index) => (
+                                    <button
+                                      key={device.deviceId}
+                                      className="camera-menu-item"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeviceSelect(input, device.deviceId);
+                                      }}
+                                    >
+                                      {device.label || `Camera ${index + 1}`}
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            )}
                           </div>
                           <div className="camera-feed-container" style={{ minHeight: cameraStreams[input] ? '150px' : '0px' }}>
                             {cameraStreams[input] && (
