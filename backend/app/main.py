@@ -326,6 +326,8 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
         # Update the node parameter in real-time
         success = executor.update_node_parameter(node_id, input_name, input_value)
         
+        print ("Updated node parameter", node_id, input_name, input_value, success)
+
         if success:
             # Broadcast the parameter update to all connected clients
             await websocket_manager.broadcast({

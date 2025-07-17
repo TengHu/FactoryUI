@@ -1175,7 +1175,8 @@ function App() {
     
     // Send real-time input update via WebSocket
     // Only send if continuous execution is running
-    if (isContinuousRunning && connectionState.isConnected) {
+    if (connectionState.isConnected) {
+    // if (isContinuousRunning && connectionState.isConnected) {
       websocketService.sendInputUpdate(nodeId, inputName, value);
     }
   }, [setNodes, connectionState.isConnected]);
