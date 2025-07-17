@@ -1,5 +1,5 @@
 import { memo, useState } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position, NodeProps, NodeResizer } from 'reactflow';
 import { NodeInfo } from '../services/api';
 import './CustomNode.css';
 
@@ -102,10 +102,21 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   };
 
   return (
-    <div 
-      className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} ${nodeState?.state ? `node-${nodeState.state}` : ''} node-${category}`}
-      onContextMenu={handleContextMenu}
-    >
+    <>
+      <NodeResizer 
+        minWidth={200}
+        minHeight={100}
+        isVisible={selected}
+        lineClassName="resize-line"
+        handleClassName="resize-handle"
+        shouldResize={() => true}
+        onResizeStart={() => {}}
+        onResizeEnd={() => {}}
+      />
+      <div 
+        className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} ${nodeState?.state ? `node-${nodeState.state}` : ''} node-${category}`}
+        onContextMenu={handleContextMenu}
+      >
       {/* Node header */}
       <div className="node-header">
         <div className="node-title">{nodeInfo.display_name}</div>
@@ -332,7 +343,8 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

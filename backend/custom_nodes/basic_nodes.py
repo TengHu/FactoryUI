@@ -567,8 +567,8 @@ class ConnectRobotNode(NodeBase):
     
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Connect to a robot using ScsServoSDK.connect() and return SDK instance"
-    
+        return """Connect to a robot using ScsServoSDK.connect() and return SDK instance."""
+
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
@@ -577,7 +577,7 @@ ConnectRobotNode
 Purpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.
 
 Inputs:
-  - port_name (STRING): The serial port name to connect to (leave empty for auto-detection)
+  - port_name (STRING): port name to connect the robot, e.g. /dev/tty.usbmodem5A7A0573841
 
 Outputs:
   - sdk (ScsServoSDK): The connected SDK instance that can be used by other robot control nodes

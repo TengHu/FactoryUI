@@ -79,6 +79,21 @@ const evaluateExpression = (expression: string): { value: number; error: string 
 };
 
 function App() {
+  // Suppress harmless ResizeObserver errors
+  useEffect(() => {
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (args[0]?.includes?.('ResizeObserver loop completed')) {
+        return; // Suppress this specific error
+      }
+      originalError.apply(console, args);
+    };
+    
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
+
   // 1. Multi-canvas state
   const [canvases, setCanvases] = useState([
     { id: 1, name: 'Canvas 1', nodes: initialNodes, edges: initialEdges }
@@ -1205,6 +1220,16 @@ function App() {
                   nodeTypes={nodeTypes}
                   isValidConnection={isValidConnection}
                   connectionMode={ConnectionMode.Loose}
+                  nodesDraggable={true}
+                  nodesConnectable={true}
+                  elementsSelectable={true}
+                  onError={(id, message) => {
+                    // Suppress ResizeObserver errors which are harmless
+                    if (message.includes('ResizeObserver')) {
+                      return;
+                    }
+                    console.error('ReactFlow error:', id, message);
+                  }}
                   fitView
                 >
                   <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
