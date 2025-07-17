@@ -124,9 +124,15 @@ function App() {
 
   // 4. When nodes/edges change, update the canvases array
   useEffect(() => {
-    setCanvases(prev => prev.map((c, i) =>
-      i === activeCanvasIndex ? { ...c, nodes, edges } : c
-    ));
+    console.log('Canvas sync effect triggered. Nodes count:', nodes.length, 'Edges count:', edges.length);
+    console.log('Active canvas index:', activeCanvasIndex);
+    setCanvases(prev => {
+      const updated = prev.map((c, i) =>
+        i === activeCanvasIndex ? { ...c, nodes, edges } : c
+      );
+      console.log('Updated canvases:', updated);
+      return updated;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges]);
 
@@ -339,7 +345,8 @@ function App() {
       }
       
       if (!reactFlowInstance) {
-        console.log('Missing reactFlowInstance');
+        console.log('Missing reactFlowInstance - this is likely the problem!');
+        console.log('ReactFlow instance state:', reactFlowInstance);
         return;
       }
 
@@ -355,9 +362,9 @@ function App() {
         const nodeInfo: NodeInfo = JSON.parse(nodeData);
         console.log('Parsed node info:', nodeInfo);
         
-        const position = reactFlowInstance.project({
-          x: event.clientX - reactFlowBounds.left,
-          y: event.clientY - reactFlowBounds.top,
+        const position = reactFlowInstance.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
         });
         console.log('Calculated position:', position);
 
@@ -373,10 +380,16 @@ function App() {
         };
 
         console.log('Adding new node:', newNode);
+        console.log('Current canvases state:', canvases);
+        console.log('Active canvas ID:', activeCanvasId);
+        console.log('Active canvas index:', activeCanvasIndex);
+        
         setNodes((nds) => {
           console.log('Previous nodes:', nds);
+          console.log('Previous nodes length:', nds.length);
           const updated = [...nds, newNode];
           console.log('Updated nodes:', updated);
+          console.log('Updated nodes length:', updated.length);
           return updated;
         });
       } catch (error) {
@@ -1216,6 +1229,8 @@ function App() {
                   onConnect={onConnect}
                   onInit={(instance) => {
                     console.log('ReactFlow instance initialized:', instance);
+                    console.log('Instance type:', typeof instance);
+                    console.log('Instance screenToFlowPosition method:', typeof instance?.screenToFlowPosition);
                     setReactFlowInstance(instance);
                   }}
                   nodeTypes={nodeTypes}
