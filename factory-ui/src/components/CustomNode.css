@@ -111,8 +111,8 @@
   font-size: 11px;
   max-width: 100%;
   min-height: 60px;  /* Prevent height changes */
-  max-height: 120px; /* Limit maximum height */
-  overflow-y: auto;  /* Allow scrolling instead of resizing */
+  /* max-height: 120px;  Limit maximum height */
+  /* overflow-y: auto;   Allow scrolling instead of resizing */
 }
 
 .rt-update-header {
@@ -156,8 +156,8 @@
   line-height: 1.4;
   overflow-x: auto;
   white-space: pre-wrap;
-  max-height: 150px;
-  overflow-y: auto;
+  /* max-height: 150px; */
+  /* overflow-y: auto; */
 }
 
 .rt-update-text {
