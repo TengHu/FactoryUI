@@ -267,54 +267,6 @@ class ContinuousExecutor:
         # Store results
         self.execution_results = node_results
     
-    def _execute_workflow_once(self):
-        """Execute the workflow once (fallback to original implementation)"""
-        if not self.current_workflow:
-            return
-        
-        try:
-            # Get nodes and edges
-            nodes = self.current_workflow["nodes"]
-            edges = self.current_workflow["edges"]
-            
-            # Perform topological sort to get execution order
-            execution_order = self._topological_sort(nodes, edges)
-            
-            # Execute nodes in order
-            node_results = {}
-            for node_id in execution_order:
-                # Broadcast node execution start
-                if self.websocket_manager:
-                    self._broadcast_sync(self.websocket_manager.broadcast_node_state(
-                        node_id, "executing", {"start_time": time.time()}
-                    ))
-                
-                try:
-                    node_result, rt_update = self._execute_node(node_id, nodes, edges, node_results)
-                    if node_result is not None:
-                        node_results[node_id] = node_result
-                    
-                    # Broadcast node execution completed
-                    if self.websocket_manager:
-                        self._broadcast_sync(self.websocket_manager.broadcast_node_state(
-                            node_id, "completed", {"rt_update": rt_update}
-                        ))
-                        
-                except Exception as e:
-                    # Broadcast node error
-                    if self.websocket_manager:
-                        self._broadcast_sync(self.websocket_manager.broadcast_node_state(
-                            node_id, "error", {"error": str(e)}
-                        ))
-                    raise
-            
-            # Store results
-            self.execution_results = node_results
-            
-        except Exception as e:
-            self.log_message("error", f"Workflow execution failed: {str(e)}")
-            self.log_message("error", f"Traceback: {traceback.format_exc()}")
-    
     def _topological_sort(self, nodes: List[Dict], edges: List[Dict]) -> List[str]:
         """Perform topological sort to determine execution order"""
         # Build adjacency list and in-degree count
@@ -400,77 +352,6 @@ class ContinuousExecutor:
                 self.log_message("debug", f"Node {node_id} executed successfully")
             return node_result, rt_update
             
-        except Exception as e:
-            self.log_message("error", f"Node {node_id} execution failed: {str(e)}")
-            raise
-    
-    def _execute_node(self, node_id: str, nodes: List[Dict], edges: List[Dict], 
-                     node_results: Dict[str, Any]) -> Any:
-        """Execute a single node, with input/output caching (original implementation)."""
-        # Find node data
-        node_data = None
-        for node in nodes:
-            if node["id"] == node_id:
-                node_data = node
-                break
-        if not node_data:
-            raise ValueError(f"Node {node_id} not found")
-        try:
-            # Get node type and class
-            node_type = node_data.get("type") or node_data.get("data", {}).get("type")
-            if not node_type:
-                # Try to get from nodeInfo
-                node_info = node_data.get("data", {}).get("nodeInfo", {})
-                node_type = node_info.get("name")
-            if not node_type:
-                raise ValueError(f"Node {node_id} has no type specified")
-            node_class = node_registry.get_node(node_type)
-            if not node_class:
-                raise ValueError(f"Unknown node type: {node_type}")
-            # Prepare inputs from connected edges and node parameters
-            inputs = self._prepare_node_inputs(node_id, node_data, edges, node_results)
-            # Check cache before execution
-            
-            cached_output = self.node_cache.get_cache(node_id, inputs)
-            if cached_output is not None:
-                if self.count_of_iterations % 50 == 0:
-                    self.log_message("debug", f"Node {node_id} ({node_type}) cache hit")
-                return copy.deepcopy(cached_output)
-
-
-            # Create node instance and execute
-            node_instance = node_class()
-            
-            # Pass websocket manager and node ID to the node instance for streaming
-            if self.websocket_manager:
-                node_instance._websocket_manager = self.websocket_manager
-                node_instance._node_id = node_id
-            
-            # Validate inputs
-            try:
-                node_instance.validate_inputs(**inputs)
-            except Exception as e:
-                pass
-            # Get the function name and execute
-            function_name = node_class.FUNCTION()
-            if hasattr(node_instance, function_name):
-                execute_func = getattr(node_instance, function_name)
-                result = execute_func(**inputs)
-                # If result is a 2-tuple, use the second element for websocket broadcast
-                rt_update = None
-                node_result = None
-                if isinstance(result, tuple) and len(result) == 2:
-                    node_result, rt_update = result
-                else:
-                    node_result = result
-                # Cache the result
-                # self.node_cache.set_cache(node_id, inputs, node_result)
-                # Log successful execution
-                if self.count_of_iterations % 50 == 0:
-                    self.log_message("debug", f"Node {node_id} ({node_type}) executed successfully")
-                return node_result, rt_update
-            else:
-                raise ValueError(f"Node {node_type} does not have function {function_name}")
         except Exception as e:
             self.log_message("error", f"Node {node_id} execution failed: {str(e)}")
             raise
@@ -641,12 +522,8 @@ class ContinuousExecutor:
                 }))
             
             # Setup and use optimized execution if possible
-            try:
-                self._setup_execution()
-                self._execute_workflow_once_optimized()
-            except Exception:
-                # Fallback to original method if setup fails
-                self._execute_workflow_once()
+            self._setup_execution()
+            self._execute_workflow_once_optimized()
             
             execution_time = time.time() - start_time
             
