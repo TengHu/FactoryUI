@@ -96,14 +96,21 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       const captureFrame = () => {
         const video = cameraRefs.current[inputName];
         if (video && ctx && onInputValueChange && video.readyState === 4) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const frameData = canvas.toDataURL('image/jpeg', 0.8);
-          onInputValueChange(id, inputName, frameData);
+          // Use requestAnimationFrame for smoother operation
+          requestAnimationFrame(() => {
+            try {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const frameData = canvas.toDataURL('image/jpeg', 0.7); // Lower quality for smaller size
+              onInputValueChange(id, inputName, frameData);
+            } catch (error) {
+              console.warn('Frame capture error:', error);
+            }
+          });
         }
       };
       
-      // Capture frames at 10 FPS
-      const intervalId = setInterval(captureFrame, 100);
+      // Capture frames at 2 FPS for better stability
+      const intervalId = setInterval(captureFrame, 500);
       
       // Store interval ID for cleanup
       (stream as any).intervalId = intervalId;
@@ -410,17 +417,22 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                                     cameraRefs.current[input] = el;
                                     if (el && cameraStreams[input]) {
                                       el.srcObject = cameraStreams[input];
-                                      el.play().catch(console.error);
+                                      // Add event listeners for better handling
+                                      el.onloadedmetadata = () => {
+                                        el.play().catch(console.error);
+                                      };
                                     }
                                   }}
                                   autoPlay
                                   muted
+                                  playsInline
                                   style={{
                                     width: '100%',
                                     maxWidth: '200px',
                                     height: '150px',
                                     objectFit: 'cover',
-                                    borderRadius: '4px'
+                                    borderRadius: '4px',
+                                    backgroundColor: '#000'
                                   }}
                                 />
                               </div>
