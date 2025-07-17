@@ -20,7 +20,6 @@ import asyncio
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.node_registry import node_registry
-from core.node_cache import NodeCache  # Import NodeCache from new module
 
 class ContinuousExecutor:
     """Continuously executes workflows in a loop"""
@@ -34,7 +33,6 @@ class ContinuousExecutor:
         self.count_of_iterations = 0
         self.last_execution_time = 0
         self.thread = None
-        self.node_cache = NodeCache()  # Add node cache
         self.websocket_manager = websocket_manager
         
         # Pre-computed execution data for performance optimization
@@ -336,12 +334,6 @@ class ContinuousExecutor:
             # Prepare inputs from connected edges and node parameters
             inputs = self._prepare_node_inputs_optimized(node_id, node_data, node_results)
             
-            # Check cache before execution
-            cached_output = self.node_cache.get_cache(node_id, inputs)
-            if cached_output is not None:
-                if self.count_of_iterations % 50 == 0:
-                    self.log_message("debug", f"Node {node_id} cache hit")
-                return copy.deepcopy(cached_output)
             
             # Validate inputs
             try:
