@@ -354,14 +354,20 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       
       {/* Real-Time Update Display */}
       {nodeState?.data?.rt_update && (
-        <div className="rt-update-display">
-          <div className="rt-update-header">
+        <div className="rt-update-display" style={{ borderWidth: '1px', padding: '1px 1px' }}>
+          {/* <div className="rt-update-header">
             <span className="rt-update-title">Real-Time Update</span>
             <span className="rt-update-state">{nodeState.state}</span>
-          </div>
+          </div> */}
           <div className="rt-update-content">
-            {typeof nodeState.data.rt_update === 'object' ? (
-              <pre className="rt-update-json">
+            {typeof nodeState.data.rt_update === 'object' && nodeState.data.rt_update.image_base64 && nodeState.data.rt_update.image_format ? (
+              <img
+                src={`data:image/${nodeState.data.rt_update.image_format};base64,${nodeState.data.rt_update.image_base64}`}
+                alt={nodeState.data.rt_update.filename || 'Real-Time Update Image'}
+                style={{ maxWidth: '100%', maxHeight: 200, display: 'block', margin: '0 auto', borderWidth: '1px' }}
+              />
+            ) : typeof nodeState.data.rt_update === 'object' ? (
+              <pre className="rt-update-json" style={{ borderWidth: '1px' }}>
                 {JSON.stringify(nodeState.data.rt_update, null, 2)}
               </pre>
             ) : (

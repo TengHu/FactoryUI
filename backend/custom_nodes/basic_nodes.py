@@ -13,6 +13,7 @@ from feetech_servo import ScsServoSDK
 
 import http.client
 import json
+import base64
 
 class InputNode(NodeBase):
     """Basic input node for providing data to the workflow"""
@@ -688,11 +689,180 @@ class Grok4Node(NodeBase):
         except Exception as e:
             return ({"error": str(e)},)
 
+class ShowImageNode(NodeBase):
+    """A node that shows an image (takes image input, no output)."""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "image": ("IMAGE", {})  # Accepts bytes or base64 string
+            }
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {}
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "show_image"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Show Image"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Show an image in the UI (takes image input, no output)."
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+ShowImageNode
+
+Purpose: Shows an image in the UI. This node takes an image input (bytes or base64 string) and produces no output. Intended for UI demonstration or static image display in workflows.
+
+Inputs:
+  - image (IMAGE): The image to display (bytes or base64 string)
+
+Outputs:
+  - None
+
+Usage: Use this node to display an image in your workflow. The backend will print a message, and the frontend can render the image.
+        """
+
+    def show_image(self, image):
+        print("[ShowImageNode] Displaying provided image (read by backend)")
+        # Pass through the image for UI rendering (if needed)
+        rt_update = {}
+        if isinstance(image, bytes):
+            image_b64 = base64.b64encode(image).decode("utf-8")
+            rt_update = {"image_base64": image_b64, "image_format": "jpg"}
+        elif isinstance(image, str):
+            # Assume already base64
+            rt_update = {"image_base64": image, "image_format": "jpg"}
+        else:
+            rt_update = {"error": "Invalid image format"}
+        return (None, rt_update)
+
+class CameraNode(NodeBase):
+    """A node that prompts the user to open their camera and outputs an image."""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {}
+
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "image": ("IMAGE", {})
+            }
+        }
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "open_camera"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Camera"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Prompt the user to open their camera and output an image."
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+CameraNode
+
+Purpose: Prompts the user to open their camera and outputs an image (as bytes or base64 string).
+
+Inputs:
+  - None
+
+Outputs:
+  - image (IMAGE): The captured image (bytes or base64 string)
+
+Usage: Use this node to capture an image from the user's camera for use in the workflow.
+        """
+
+    def open_camera(self):
+        # This is a placeholder for UI integration. Backend cannot open camera directly.
+        print("[CameraNode] Please open your camera in the UI to capture an image.")
+        # In a real implementation, the frontend would handle camera capture and send image bytes/base64 to backend.
+        # Here, we return None or a dummy image for testing.
+        return (None,)
+
+class DisplayNode(NodeBase):
+    """A node that takes ANY input and returns nothing, for display/debugging purposes."""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "value": ("ANY", {})
+            }
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {}
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "display"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Display"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Display the input value (ANY type) for debugging or monitoring."
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+DisplayNode
+
+Purpose: Takes any input value and displays it (prints to console). Useful for debugging or monitoring workflow data.
+
+Inputs:
+  - value (ANY): Any value to display
+
+Outputs:
+  - None
+
+Usage: Use this node to inspect values in your workflow. It prints the value to the backend console.
+        """
+
+    def display(self, value: Any):
+        print(f"[DisplayNode] Value: {value}")
+        return (None,value)
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
     "PrintToConsoleNode": PrintToConsoleNode,
     # "ConcatNode": ConcatNode,
     "ConnectRobotNode": ConnectRobotNode,
-    "Grok4Node": Grok4Node
+    "Grok4Node": Grok4Node,
+    "ShowImageNode": ShowImageNode,
+    "CameraNode": CameraNode,
+    "DisplayNode": DisplayNode
 }
