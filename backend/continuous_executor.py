@@ -37,6 +37,13 @@ class ContinuousExecutor:
         self.node_cache = NodeCache()  # Add node cache
         self.websocket_manager = websocket_manager
         
+        # Pre-computed execution data for performance optimization
+        self._execution_order = []
+        self._node_instances = {}
+        self._node_data_map = {}
+        self._edges = []
+        self._is_setup = False
+        
     def _broadcast_sync(self, coro):
         """Helper method to run async WebSocket broadcasts from sync thread"""
         try:
@@ -45,13 +52,16 @@ class ContinuousExecutor:
             if loop.is_running():
                 # If we're already in an event loop, schedule the coroutine
                 asyncio.create_task(coro)
+                self.log_message("debug", "WebSocket message scheduled as task")
             else:
                 # If no event loop is running, run the coroutine
                 asyncio.run(coro)
+                self.log_message("debug", "WebSocket message sent via asyncio.run")
         except RuntimeError:
             # If there's no event loop, create one and run the coroutine
             try:
                 asyncio.run(coro)
+                # self.log_message("debug", "WebSocket message sent via new event loop")
             except Exception as e:
                 # If all else fails, just log the error and continue
                 self.log_message("warning", f"Failed to broadcast WebSocket message: {str(e)}")
@@ -67,6 +77,7 @@ class ContinuousExecutor:
                 raise ValueError("Workflow must contain an 'edges' list")
             
             self.current_workflow = workflow_data
+            self._is_setup = False  # Mark for re-setup
             self.log_message("info", f"Loaded workflow with {len(workflow_data['nodes'])} nodes and {len(workflow_data['edges'])} edges")
             return True
             
@@ -97,6 +108,17 @@ class ContinuousExecutor:
             return
         
         self.is_running = False
+        
+        # Broadcast workflow stopped event
+        if self.websocket_manager:
+            self.log_message("info", "Broadcasting continuous_stopped event")
+            self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("continuous_stopped", {
+                "workflow_id": id(self.current_workflow) if self.current_workflow else None,
+                "total_iterations": self.count_of_iterations
+            }))
+        else:
+            self.log_message("warning", "No websocket_manager available for broadcasting stop event")
+        
         if self.thread:
             self.thread.join(timeout=5.0)
         self.log_message("info", "Stopped continuous execution")
@@ -108,9 +130,67 @@ class ContinuousExecutor:
         self.loop_interval = interval
         self.log_message("info", f"Set loop interval to {interval} seconds")
     
+    def _setup_execution(self):
+        """Setup execution data structures for optimal performance"""
+        if not self.current_workflow or self._is_setup:
+            return
+            
+        try:
+            nodes = self.current_workflow["nodes"]
+            edges = self.current_workflow["edges"]
+            
+            # Store edges for quick access
+            self._edges = edges
+            
+            # Perform topological sort once
+            self._execution_order = self._topological_sort(nodes, edges)
+            
+            # Pre-create node data map for quick lookup
+            self._node_data_map = {node["id"]: node for node in nodes}
+            
+            # Pre-instantiate node classes and instances
+            self._node_instances = {}
+            for node_id in self._execution_order:
+                node_data = self._node_data_map[node_id]
+                
+                # Get node type and class
+                node_type = node_data.get("type") or node_data.get("data", {}).get("type")
+                if not node_type:
+                    node_info = node_data.get("data", {}).get("nodeInfo", {})
+                    node_type = node_info.get("name")
+                    
+                if not node_type:
+                    raise ValueError(f"Node {node_id} has no type specified")
+                    
+                node_class = node_registry.get_node(node_type)
+                if not node_class:
+                    raise ValueError(f"Unknown node type: {node_type}")
+                    
+                # Create and configure node instance
+                node_instance = node_class()
+                if self.websocket_manager:
+                    node_instance._websocket_manager = self.websocket_manager
+                    node_instance._node_id = node_id
+                    
+                self._node_instances[node_id] = {
+                    "instance": node_instance,
+                    "class": node_class,
+                    "function_name": node_class.FUNCTION()
+                }
+            
+            self._is_setup = True
+            self.log_message("info", f"Setup completed for {len(self._execution_order)} nodes")
+            
+        except Exception as e:
+            self.log_message("error", f"Setup failed: {str(e)}")
+            raise
+    
     def _execution_loop(self):
         """Main execution loop that runs continuously"""
         self.log_message("info", "Continuous execution loop started")
+        
+        # Setup execution data structures once
+        self._setup_execution()
         
         # Broadcast workflow started event
         if self.websocket_manager:
@@ -129,8 +209,8 @@ class ContinuousExecutor:
                         self.count_of_iterations + 1, "executing", {"start_time": start_time}
                     ))
                 
-                # Execute the workflow
-                self._execute_workflow_once()
+                # Execute the workflow (optimized version)
+                self._execute_workflow_once_optimized()
                 
                 # Update timing
                 self.last_execution_time = time.time() - start_time
@@ -165,53 +245,41 @@ class ContinuousExecutor:
                 
                 time.sleep(self.loop_interval)  # Continue after error
     
-    def _execute_workflow_once(self):
-        """Execute the workflow once"""
-        if not self.current_workflow:
-            return
-        
-        try:
-            # Get nodes and edges
-            nodes = self.current_workflow["nodes"]
-            edges = self.current_workflow["edges"]
+    def _execute_workflow_once_optimized(self):
+        """Execute the workflow once using pre-computed data structures for maximum performance"""
+        if not self._is_setup:
+            self._setup_execution()
             
-            # Perform topological sort to get execution order
-            execution_order = self._topological_sort(nodes, edges)
+        # Execute nodes in pre-computed order
+        node_results = {}
+        for node_id in self._execution_order:
+            # Broadcast node execution start
+            if self.websocket_manager:
+                self._broadcast_sync(self.websocket_manager.broadcast_node_state(
+                    node_id, "executing", {"start_time": time.time()}
+                ))
             
-            # Execute nodes in order
-            node_results = {}
-            for node_id in execution_order:
-                # Broadcast node execution start
+            try:
+                node_result, rt_update = self._execute_node_optimized(node_id, node_results)
+                if node_result is not None:
+                    node_results[node_id] = node_result
+                
+                # Broadcast node execution completed
                 if self.websocket_manager:
                     self._broadcast_sync(self.websocket_manager.broadcast_node_state(
-                        node_id, "executing", {"start_time": time.time()}
+                        node_id, "completed", {"rt_update": rt_update}
                     ))
-                
-                try:
-                    node_result, rt_update = self._execute_node(node_id, nodes, edges, node_results)
-                    if node_result is not None:
-                        node_results[node_id] = node_result
                     
-                    # Broadcast node execution completed
-                    if self.websocket_manager:
-                        self._broadcast_sync(self.websocket_manager.broadcast_node_state(
-                            node_id, "completed", {"rt_update": rt_update}
-                        ))
-                        
-                except Exception as e:
-                    # Broadcast node error
-                    if self.websocket_manager:
-                        self._broadcast_sync(self.websocket_manager.broadcast_node_state(
-                            node_id, "error", {"error": str(e)}
-                        ))
-                    raise
-            
-            # Store results
-            self.execution_results = node_results
-            
-        except Exception as e:
-            self.log_message("error", f"Workflow execution failed: {str(e)}")
-            self.log_message("error", f"Traceback: {traceback.format_exc()}")
+            except Exception as e:
+                # Broadcast node error
+                if self.websocket_manager:
+                    self._broadcast_sync(self.websocket_manager.broadcast_node_state(
+                        node_id, "error", {"error": str(e)}
+                    ))
+                raise
+        
+        # Store results
+        self.execution_results = node_results
     
     def _topological_sort(self, nodes: List[Dict], edges: List[Dict]) -> List[str]:
         """Perform topological sort to determine execution order"""
@@ -254,84 +322,61 @@ class ContinuousExecutor:
         
         return result
     
-    def _execute_node(self, node_id: str, nodes: List[Dict], edges: List[Dict], 
-                     node_results: Dict[str, Any]) -> Any:
-        """Execute a single node, with input/output caching."""
-        # Find node data
-        node_data = None
-        for node in nodes:
-            if node["id"] == node_id:
-                node_data = node
-                break
-        if not node_data:
-            raise ValueError(f"Node {node_id} not found")
+    def _execute_node_optimized(self, node_id: str, node_results: Dict[str, Any]) -> Any:
+        """Execute a single node using pre-computed instance data for maximum performance"""
         try:
-            # Get node type and class
-            node_type = node_data.get("type") or node_data.get("data", {}).get("type")
-            if not node_type:
-                # Try to get from nodeInfo
-                node_info = node_data.get("data", {}).get("nodeInfo", {})
-                node_type = node_info.get("name")
-            if not node_type:
-                raise ValueError(f"Node {node_id} has no type specified")
-            node_class = node_registry.get_node(node_type)
-            if not node_class:
-                raise ValueError(f"Unknown node type: {node_type}")
-            # Prepare inputs from connected edges and node parameters
-            inputs = self._prepare_node_inputs(node_id, node_data, edges, node_results)
-            # Check cache before execution
+            # Get pre-instantiated node data
+            node_instance_data = self._node_instances[node_id]
+            node_instance = node_instance_data["instance"]
+            function_name = node_instance_data["function_name"]
             
+            # Get node data for input preparation
+            node_data = self._node_data_map[node_id]
+            
+            # Prepare inputs from connected edges and node parameters
+            inputs = self._prepare_node_inputs_optimized(node_id, node_data, node_results)
+            
+            # Check cache before execution
             cached_output = self.node_cache.get_cache(node_id, inputs)
             if cached_output is not None:
                 if self.count_of_iterations % 50 == 0:
-                    self.log_message("debug", f"Node {node_id} ({node_type}) cache hit")
+                    self.log_message("debug", f"Node {node_id} cache hit")
                 return copy.deepcopy(cached_output)
-
-
-            # Create node instance and execute
-            node_instance = node_class()
-            
-            # Pass websocket manager and node ID to the node instance for streaming
-            if self.websocket_manager:
-                node_instance._websocket_manager = self.websocket_manager
-                node_instance._node_id = node_id
             
             # Validate inputs
             try:
                 node_instance.validate_inputs(**inputs)
             except Exception as e:
                 pass
-            # Get the function name and execute
-            function_name = node_class.FUNCTION()
-            if hasattr(node_instance, function_name):
-                execute_func = getattr(node_instance, function_name)
-                result = execute_func(**inputs)
-                # If result is a 2-tuple, use the second element for websocket broadcast
-                rt_update = None
-                node_result = None
-                if isinstance(result, tuple) and len(result) == 2:
-                    node_result, rt_update = result
-                else:
-                    node_result = result
-                # Cache the result
-                # self.node_cache.set_cache(node_id, inputs, node_result)
-                # Log successful execution
-                if self.count_of_iterations % 50 == 0:
-                    self.log_message("debug", f"Node {node_id} ({node_type}) executed successfully")
-                return node_result, rt_update
+                
+            # Execute using pre-cached function
+            execute_func = getattr(node_instance, function_name)
+            result = execute_func(**inputs)
+            
+            # If result is a 2-tuple, use the second element for websocket broadcast
+            rt_update = None
+            node_result = None
+            if isinstance(result, tuple) and len(result) == 2:
+                node_result, rt_update = result
             else:
-                raise ValueError(f"Node {node_type} does not have function {function_name}")
+                node_result = result
+                
+            # Log successful execution
+            if self.count_of_iterations % 50 == 0:
+                self.log_message("debug", f"Node {node_id} executed successfully")
+            return node_result, rt_update
+            
         except Exception as e:
             self.log_message("error", f"Node {node_id} execution failed: {str(e)}")
             raise
     
-    def _prepare_node_inputs(self, node_id: str, node_data: Dict, edges: List[Dict], 
-                           node_results: Dict[str, Any]) -> Dict[str, Any]:
-        """Prepare inputs for a node from connected edges and node data"""
+    def _prepare_node_inputs_optimized(self, node_id: str, node_data: Dict, 
+                                     node_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Prepare inputs for a node using pre-stored edges for maximum performance"""
         inputs = {}
         
-        # Get inputs from connected edges
-        for edge in edges:
+        # Get inputs from connected edges using pre-stored edge data
+        for edge in self._edges:
             if edge["target"] == node_id:
                 source_id = edge["source"]
                 source_handle = edge.get("sourceHandle", "output")
@@ -382,7 +427,7 @@ class ContinuousExecutor:
                         inputs[input_name] = input_spec[1]["default"]
         
         return inputs
-    
+   
     def log_message(self, level: str, message: str):
         """Add a log message"""
         log_entry = {
@@ -432,7 +477,9 @@ class ContinuousExecutor:
                     "timestamp": start_time
                 }))
             
-            self._execute_workflow_once()
+            # Setup and use optimized execution if possible
+            self._setup_execution()
+            self._execute_workflow_once_optimized()
             
             execution_time = time.time() - start_time
             
@@ -478,6 +525,30 @@ class ContinuousExecutor:
         # This is mainly for API compatibility
         return not self.is_running
     
+    def update_node_parameter(self, node_id: str, parameter_name: str, parameter_value: Any) -> bool:
+        """Update a node parameter in real-time during execution"""
+        try:
+            
+            # Update in cached node data map if setup is complete
+            if self._is_setup and node_id in self._node_data_map:
+                node_data = self._node_data_map[node_id]
+                if "data" not in node_data:
+                    node_data["data"] = {}
+                if "parameters" not in node_data["data"]:
+                    node_data["data"]["parameters"] = {}
+                node_data["data"]["parameters"][parameter_name] = parameter_value
+                
+                self.log_message("info", f"Updated node {node_id} parameter {parameter_name} = {parameter_value}")
+                return True
+            else:
+                self.log_message("warning", f"Node {node_id} not found in setup data, parameter update may not take effect until next setup")
+                return False
+                
+        except Exception as e:
+            self.log_message("error", f"Failed to update node parameter: {str(e)}")
+            return False
+    
+    
     def get_status(self) -> Dict[str, Any]:
         """Get current execution status"""
         return {
@@ -487,7 +558,8 @@ class ContinuousExecutor:
             "last_execution_time": self.last_execution_time,
             "loop_interval": self.loop_interval,
             "results": self.execution_results,
-            "logs": self.execution_logs[-10:]  # Last 10 logs
+            "logs": self.execution_logs[-10:],  # Last 10 logs
+            "is_setup": self._is_setup
         }
 
 def main():

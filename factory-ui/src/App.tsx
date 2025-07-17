@@ -678,11 +678,18 @@ function App() {
       const result = await apiService.startContinuousExecution(workflowWithSleepTime);
       
       if (result.success) {
-        setIsContinuousRunning(true);
+        // Don't set isContinuousRunning here - wait for WebSocket confirmation
         setShowContinuousExecutionModal(false);
-        console.log('Continuous execution started:', result);
-        alert('Continuous execution started! The workflow will run repeatedly.');
+        console.log('Continuous execution start requested:', result);
         
+        // Show user feedback that we're waiting for confirmation
+        if (connectionState.isConnected) {
+          console.log('⏳ Waiting for WebSocket confirmation of continuous execution start...');
+        } else {
+          console.log('⚠️ WebSocket not connected - may need to refresh for accurate state');
+        }
+        
+        // The WebSocket 'workflow_event' with 'continuous_started' will update the state
         // Start polling for status updates
         // pollContinuousStatus(); // This function is removed
       } else {
@@ -699,10 +706,44 @@ function App() {
       const result = await apiService.stopContinuousExecution();
       
       if (result.success) {
-        setIsContinuousRunning(false);
-        setContinuousStatus(null);
-        console.log('Continuous execution stopped:', result);
-        alert('Continuous execution stopped.');
+        console.log('Continuous execution stop requested:', result);
+        
+        // Show user feedback that we're waiting for confirmation
+        if (connectionState.isConnected) {
+          console.log('⏳ Waiting for WebSocket confirmation of continuous execution stop...');
+          
+        
+          // poll backend every 500ms for up to 2s, update state as soon as not running
+          let attempts = 0;
+          const maxAttempts = 4; // 4 * 500ms = 2s
+          const poll = async () => {
+            if (!isContinuousRunning) return;
+            try {
+              const status = await apiService.getContinuousStatus();
+              if (!status.is_running) {
+                setIsContinuousRunning(false);
+                setContinuousStatus(null);
+                return;
+              }
+            } catch (e) {
+              console.error('Failed to poll backend status:', e);
+            }
+            attempts += 1;
+            if (isContinuousRunning && attempts < maxAttempts) {
+              setTimeout(poll, 500);
+            } else if (attempts >= maxAttempts) {
+              websocketService.send('get_status', {});
+            }
+          };
+          poll();
+        } else {
+          console.log('⚠️ WebSocket not connected - forcing state update');
+          // If WebSocket is not connected, update state immediately
+          setIsContinuousRunning(false);
+          setContinuousStatus(null);
+        }
+        
+        // The WebSocket 'workflow_event' with 'continuous_stopped' will update the state
       } else {
         alert(`Failed to stop continuous execution: ${result.message}`);
       }
@@ -710,7 +751,7 @@ function App() {
       console.error('Error stopping continuous execution:', error);
       alert('Failed to stop continuous execution. Please check the backend server.');
     }
-  }, []);
+  }, [isContinuousRunning, connectionState.isConnected, websocketService]);
 
   // WebSocket connection and event handlers
   useEffect(() => {
@@ -724,6 +765,9 @@ function App() {
         
         // Subscribe to events
         websocketService.subscribe(['execution_status', 'node_state', 'workflow_event', 'continuous_update', 'robot_status']);
+        
+        // Request current status to sync state on connection
+        websocketService.send('get_status', {});
         
       } catch (error) {
         console.error('Failed to connect WebSocket:', error);
@@ -741,6 +785,29 @@ function App() {
         console.log('Execution status update:', data);
         setExecutionResults(data);
       }),
+      
+      websocketService.on('status_response', (data) => {
+        console.log('Status response received:', data);
+        // Sync continuous execution state on connection
+        if (data.execution) {
+          const backendIsRunning = data.execution.is_running;
+          setIsContinuousRunning(backendIsRunning);
+          
+          if (backendIsRunning) {
+            setContinuousStatus({
+              is_running: backendIsRunning,
+              execution_count: data.execution.count_of_iterations || 0,
+              last_execution_time: data.execution.last_execution_time || 0,
+              results: data.execution.results || {},
+              status: 'running'
+            });
+          } else {
+            setContinuousStatus(null);
+          }
+          
+          console.log(`♾️ Synced continuous running state from backend: ${backendIsRunning}`);
+        }
+      }),
 
       websocketService.on('node_state', (data) => {
         console.log('Node state update:', data);
@@ -756,22 +823,46 @@ function App() {
       }),
 
       websocketService.on('workflow_event', (data) => {
-        console.log('Workflow event:', data);
+        console.log('Workflow event received:', data);
         if (data.event === 'continuous_started') {
           setIsContinuousRunning(true);
+          console.log('✅ Continuous execution started (confirmed by WebSocket)');
         } else if (data.event === 'continuous_stopped') {
           setIsContinuousRunning(false);
+          setContinuousStatus(null);
+          console.log('✅ Continuous execution stopped (confirmed by WebSocket)');
+          
+          // User feedback
+          alert('Continuous execution stopped successfully.');
+          
+          // Clear any pending fallback timeouts since we got confirmation
+          console.log('✅ WebSocket stop confirmation received - state updated');
+        } else {
+          console.log('🔄 Unknown workflow event:', data.event);
         }
       }),
 
       websocketService.on('continuous_update', (data) => {
         console.log('Continuous update:', data);
+        
+        const isRunning = data.status === 'executing' || data.status === 'completed';
+        
         setContinuousStatus({
-          is_running: data.status === 'executing' || data.status === 'completed',
+          is_running: isRunning,
           execution_count: data.execution_count,
           last_execution_time: data.data?.execution_time || 0,
           results: data.data?.results || {},
           status: data.status
+        });
+        
+        // Fallback: sync isContinuousRunning state if it gets out of sync
+        // This handles cases where workflow_event might be missed
+        setIsContinuousRunning(prev => {
+          if (prev !== isRunning) {
+            console.log(`♾️ Syncing continuous running state: ${prev} -> ${isRunning}`);
+            return isRunning;
+          }
+          return prev;
         });
       }),
 

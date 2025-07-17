@@ -48,6 +48,7 @@ class RobotConnectionRequest(BaseModel):
     baudrate: int = 115200
     device_type: str = "serial"
 
+
 # Robot connection state
 robot_state = {
     "connected": False,
@@ -249,21 +250,6 @@ async def get_continuous_status():
     """Get continuous execution status"""
     return executor.get_status()
 
-@app.post("/continuous/set-interval")
-async def set_continuous_interval(interval: float):
-    """Set the execution interval for continuous mode"""
-    try:
-        if interval < 0.1:
-            raise HTTPException(status_code=400, detail="Interval must be at least 0.1 seconds")
-        
-        executor.loop_interval = interval
-        return {
-            "success": True,
-            "message": f"Execution interval set to {interval} seconds"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to set interval: {str(e)}")
-
 # WebSocket endpoint for real-time communication
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -288,7 +274,7 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
     """Handle incoming WebSocket messages from client"""
     message_type = message.get("type")
 
-    print(f"📨 Received message type: {message_type}")
+    print(f"📨 Received WebSocket message type: {message_type}")
     
     if message_type == "ping":
         # Respond to ping with pong
@@ -313,10 +299,77 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
         await websocket_manager.send_personal_message({
             "type": "status_response",
             "data": {
-                "execution": execution_status,
-                "robot": robot_state
             }
         }, websocket)
+
+
+    elif message_type == "input_update":
+        # Only allow parameter updates when executor is running
+        if not executor.is_running:
+            return
+
+        # Handle real-time parameter updates
+        data = message.get("data", {})
+        node_id = data.get("node_id")
+        input_name = data.get("input_name")
+        input_value = data.get("input_value")
+        
+        if not all([node_id, input_name is not None]):
+            await websocket_manager.send_personal_message({
+                "type": "error",
+                "message": "Missing required fields: node_id, input_name"
+            }, websocket)
+            return
+        
+        # Update the node parameter in real-time
+        success = executor.update_node_parameter(node_id, input_name, input_value)
+        
+        print ("Updated node parameter", node_id, input_name, input_value, success)
+
+        if success:
+            # Broadcast the parameter update to all connected clients
+            await websocket_manager.broadcast({
+                "type": "parameter_updated",
+                "timestamp": message.get("timestamp"),
+                "data": {
+                    "node_id": node_id,
+                    "parameter_name": input_name,
+                    "parameter_value": input_value,
+                    "success": True
+                }
+            })
+            
+            # Send confirmation to the requesting client
+            await websocket_manager.send_personal_message({
+                "type": "input_update_response",
+                "data": {
+                    "node_id": node_id,
+                    "input_name": input_name,
+                    "input_value": input_value,
+                    "success": True,
+                    "message": "Parameter updated successfully"
+                }
+            }, websocket)
+        else:
+            # Send error response
+            await websocket_manager.send_personal_message({
+                "type": "input_update_response",
+                "data": {
+                    "node_id": node_id,
+                    "input_name": input_name,
+                    "input_value": input_value,
+                    "success": False,
+                    "message": "Failed to update parameter"
+                }
+            }, websocket)
+    
+    else:
+        # Unknown message type
+        await websocket_manager.send_personal_message({
+            "type": "error",
+            "message": f"Unknown message type: {message_type}"
+        }, websocket)
+            
 
 if __name__ == "__main__":
     import uvicorn
