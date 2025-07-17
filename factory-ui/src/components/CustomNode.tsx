@@ -87,11 +87,11 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       
       setCameraStreams(prev => ({ ...prev, [inputName]: stream }));
       
-      // Set up frame capture interval
+      // Set up frame capture interval - optimized to 5 FPS for better balance
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = 640;
-      canvas.height = 480;
+      canvas.width = 320; // Reduced resolution for better performance
+      canvas.height = 240;
       
       const captureFrame = () => {
         const video = cameraRefs.current[inputName];
@@ -109,8 +109,8 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
         }
       };
       
-      // Capture frames at 2 FPS for better stability
-      const intervalId = setInterval(captureFrame, 500);
+      // Capture frames at x FPS
+      const intervalId = setInterval(captureFrame, 200);
       
       // Store interval ID for cleanup
       (stream as any).intervalId = intervalId;
