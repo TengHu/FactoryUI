@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
-import ReactFlow, {
+import {
+  ReactFlow,
   Node,
   Edge,
   addEdge,
@@ -11,8 +12,8 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   NodeTypes,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import './App.css';
 import NodePanel from './components/NodePanel';
 import CustomNode from './components/CustomNode';
@@ -20,6 +21,7 @@ import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
 import ThemeToggle from './components/ThemeToggle';
 import { NodeInfo, apiService } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
+import { websocketService } from './services/websocket';
 
 interface WorkflowData {
   nodes: Node[];
@@ -78,6 +80,21 @@ const evaluateExpression = (expression: string): { value: number; error: string 
 };
 
 function App() {
+  // Suppress harmless ResizeObserver errors
+  useEffect(() => {
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (args[0]?.includes?.('ResizeObserver loop completed')) {
+        return; // Suppress this specific error
+      }
+      originalError.apply(console, args);
+    };
+    
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
+
   // 1. Multi-canvas state
   const [canvases, setCanvases] = useState([
     { id: 1, name: 'Canvas 1', nodes: initialNodes, edges: initialEdges }
@@ -107,9 +124,15 @@ function App() {
 
   // 4. When nodes/edges change, update the canvases array
   useEffect(() => {
-    setCanvases(prev => prev.map((c, i) =>
-      i === activeCanvasIndex ? { ...c, nodes, edges } : c
-    ));
+    console.log('Canvas sync effect triggered. Nodes count:', nodes.length, 'Edges count:', edges.length);
+    console.log('Active canvas index:', activeCanvasIndex);
+    setCanvases(prev => {
+      const updated = prev.map((c, i) =>
+        i === activeCanvasIndex ? { ...c, nodes, edges } : c
+      );
+      console.log('Updated canvases:', updated);
+      return updated;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges]);
 
@@ -123,6 +146,27 @@ function App() {
   const [executionResults, setExecutionResults] = useState<any>(null);
   const [isContinuousRunning, setIsContinuousRunning] = useState(false);
   const [continuousStatus, setContinuousStatus] = useState<any>(null);
+  const [nodeStates, setNodeStates] = useState<Record<string, any>>({});
+  const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
+  
+  // Add debouncing to prevent rapid re-renders
+  const [debouncedNodeStates, setDebouncedNodeStates] = useState(nodeStates);
+  
+  // Throttled state updater
+  const throttledSetNodeStates = useCallback((updateFn: (prev: Record<string, any>) => Record<string, any>) => {
+    // Use requestAnimationFrame to batch DOM updates
+    requestAnimationFrame(() => {
+      setNodeStates(updateFn);
+    });
+  }, []);
+  
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedNodeStates(nodeStates);
+    }, 50); // 50ms debounce
+    
+    return () => clearTimeout(timeout);
+  }, [nodeStates]);
   const [contextMenu, setContextMenu] = useState<{
     isVisible: boolean;
     position: { x: number; y: number };
@@ -221,9 +265,17 @@ function App() {
       
       // Connection is valid, proceed
       console.log(`Valid connection: ${outputType} → ${inputType}`);
-      setEdges((eds) => addEdge(params, eds));
+      setEdges((eds) => {
+        const newEdge = addEdge(params, eds);
+        // If continuous execution is running, add animation to new edges
+        if (isContinuousRunning && newEdge.length > eds.length) {
+          const latestEdge = newEdge[newEdge.length - 1];
+          latestEdge.className = 'animated';
+        }
+        return newEdge;
+      });
     },
-    [setEdges, nodes]
+    [setEdges, nodes, isContinuousRunning]
   );
 
   const handleFileLoad = useCallback((file: File) => {
@@ -301,7 +353,8 @@ function App() {
       }
       
       if (!reactFlowInstance) {
-        console.log('Missing reactFlowInstance');
+        console.log('Missing reactFlowInstance - this is likely the problem!');
+        console.log('ReactFlow instance state:', reactFlowInstance);
         return;
       }
 
@@ -317,9 +370,9 @@ function App() {
         const nodeInfo: NodeInfo = JSON.parse(nodeData);
         console.log('Parsed node info:', nodeInfo);
         
-        const position = reactFlowInstance.project({
-          x: event.clientX - reactFlowBounds.left,
-          y: event.clientY - reactFlowBounds.top,
+        const position = reactFlowInstance.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
         });
         console.log('Calculated position:', position);
 
@@ -335,10 +388,16 @@ function App() {
         };
 
         console.log('Adding new node:', newNode);
+        console.log('Current canvases state:', canvases);
+        console.log('Active canvas ID:', activeCanvasId);
+        console.log('Active canvas index:', activeCanvasIndex);
+        
         setNodes((nds) => {
           console.log('Previous nodes:', nds);
+          console.log('Previous nodes length:', nds.length);
           const updated = [...nds, newNode];
           console.log('Updated nodes:', updated);
+          console.log('Updated nodes length:', updated.length);
           return updated;
         });
       } catch (error) {
@@ -410,7 +469,7 @@ function App() {
     }
   }, [nodes.length, edges.length, setNodes, setEdges]);
 
-  const isValidConnection = useCallback((connection: Connection) => {
+  const isValidConnection = useCallback((connection: Connection | Edge) => {
     // Find source and target nodes to get type information
     const sourceNode = nodes.find(node => node.id === connection.source);
     const targetNode = nodes.find(node => node.id === connection.target);
@@ -495,20 +554,20 @@ function App() {
     );
     
     // Log bypassed nodes for user feedback
-    const bypassedNodes = nodes.filter(node => node.data.bypassed);
+    const bypassedNodes = nodes.filter(node => (node.data as any).bypassed);
     if (bypassedNodes.length > 0) {
       console.log(`⚫ Skipping ${bypassedNodes.length} bypassed node(s):`, 
-        bypassedNodes.map(n => n.data.nodeInfo.display_name).join(', ')
+        bypassedNodes.map(n => (n.data as any).nodeInfo.display_name).join(', ')
       );
     }
     
     return {
       nodes: activeNodes.map(node => ({
         id: node.id,
-        type: node.data.nodeInfo?.name || node.data.type || node.type,
+        type: (node.data as any).nodeInfo?.name || (node.data as any).type || node.type,
         data: {
           ...node.data,
-          parameters: node.data.inputValues || {}
+          parameters: (node.data as any).inputValues || {}
         },
         position: node.position
       })),
@@ -619,7 +678,7 @@ function App() {
         alert('Continuous execution started! The workflow will run repeatedly.');
         
         // Start polling for status updates
-        pollContinuousStatus();
+        // pollContinuousStatus(); // This function is removed
       } else {
         alert(`Failed to start continuous execution: ${result.message}`);
       }
@@ -647,35 +706,117 @@ function App() {
     }
   }, []);
 
-  const pollContinuousStatus = useCallback(async () => {
-    if (!isContinuousRunning) return;
-    
-    try {
-      const status = await apiService.getContinuousStatus();
-      setContinuousStatus(status);
-      
-      if (status.is_running) {
-        // Continue polling every 2 seconds
-        setTimeout(pollContinuousStatus, 2000);
-      } else {
-        // Execution stopped
-        setIsContinuousRunning(false);
+  // WebSocket connection and event handlers
+  useEffect(() => {
+    const connectWebSocket = async () => {
+      try {
+        await websocketService.connect();
+        setIsWebSocketConnected(true);
+        console.log('WebSocket connected');
+        
+        // Start heartbeat
+        websocketService.startHeartbeat();
+        
+        // Subscribe to events
+        websocketService.subscribe(['execution_status', 'node_state', 'workflow_event', 'continuous_update', 'robot_status']);
+        
+      } catch (error) {
+        console.error('Failed to connect WebSocket:', error);
+        setIsWebSocketConnected(false);
       }
-    } catch (error) {
-      console.error('Error polling continuous status:', error);
-      // Continue polling even if there's an error
-      if (isContinuousRunning) {
-        setTimeout(pollContinuousStatus, 5000);
-      }
-    }
-  }, [isContinuousRunning]);
+    };
 
-  // Start polling when continuous execution begins
+    connectWebSocket();
+
+    // Set up event handlers, each returns a function to unsubscribe
+    const unsubscribeHandlers = [
+      websocketService.on('execution_status', (data) => {
+        console.log('Execution status update:', data);
+        setExecutionResults(data);
+      }),
+
+      websocketService.on('node_state', (data) => {
+        console.log('Node state update:', data);
+
+        throttledSetNodeStates(prev => ({
+          ...prev,
+          [data.node_id]: {
+            state: data.state,
+            data: data.data,
+            timestamp: data.timestamp
+          }
+        }));
+      }),
+
+      websocketService.on('workflow_event', (data) => {
+        console.log('Workflow event:', data);
+        if (data.event === 'continuous_started') {
+          setIsContinuousRunning(true);
+        } else if (data.event === 'continuous_stopped') {
+          setIsContinuousRunning(false);
+        }
+      }),
+
+      websocketService.on('continuous_update', (data) => {
+        console.log('Continuous update:', data);
+        setContinuousStatus({
+          is_running: data.status === 'executing' || data.status === 'completed',
+          execution_count: data.execution_count,
+          last_execution_time: data.data?.execution_time || 0,
+          results: data.data?.results || {},
+          status: data.status
+        });
+      }),
+
+      websocketService.on('robot_status', (data) => {
+        console.log('Robot status update:', data);
+        // Handle robot status updates
+      }),
+
+      websocketService.on('robot_status_stream', (data) => {
+        console.log('Robot status stream:', data);
+        
+        // Update node state with streaming robot status data
+        if (data.node_id) {
+          throttledSetNodeStates(prev => ({
+            ...prev,
+            [data.node_id]: {
+              ...prev[data.node_id],
+              robotStatus: data.status,
+              streamUpdate: data.stream_update,
+              streamComplete: data.stream_complete,
+              streamError: data.stream_error,
+              timestamp: data.timestamp
+            }
+          }));
+        }
+      })
+    ];
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribeHandlers.forEach(unsub => unsub());
+      websocketService.disconnect();
+      setIsWebSocketConnected(false);
+    };
+  }, []);
+
+  // Start polling when continuous execution begins (fallback for WebSocket failures)
   React.useEffect(() => {
-    if (isContinuousRunning) {
-      pollContinuousStatus();
+    if (isContinuousRunning && !isWebSocketConnected) {
+      // pollContinuousStatus(); // This function is removed
     }
-  }, [isContinuousRunning, pollContinuousStatus]);
+  }, [isContinuousRunning, isWebSocketConnected]);
+
+  // Animate edges when continuous execution starts/stops
+  React.useEffect(() => {
+    setEdges(currentEdges =>
+      currentEdges.map(edge => ({
+        ...edge,
+        className: isContinuousRunning ? 'animated' : ''
+      }))
+    );
+  }, [isContinuousRunning, setEdges]);
 
   const handleNodeContextMenu = useCallback((event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => {
     setContextMenu({
@@ -729,7 +870,7 @@ function App() {
       const nodeToCopy = nodes.find(node => node.id === contextMenu.nodeId);
       if (nodeToCopy) {
         setCopiedNodeData(nodeToCopy);
-        console.log('✓ Node copied:', nodeToCopy.data.nodeInfo.display_name);
+        console.log('✓ Node copied:', (nodeToCopy.data as any).nodeInfo.display_name);
       }
     }
   }, [contextMenu.nodeId, nodes]);
@@ -739,7 +880,7 @@ function App() {
     const selectedNode = nodes.find(node => node.selected);
     if (selectedNode) {
       setCopiedNodeData(selectedNode);
-      console.log('✓ Node copied:', selectedNode.data.nodeInfo.display_name);
+      console.log('✓ Node copied:', (selectedNode.data as any).nodeInfo.display_name);
     } else {
       console.log('⚠ No node selected to copy');
     }
@@ -770,13 +911,13 @@ function App() {
       // Create new node with unique ID
       const newNode: Node = {
         ...copiedNodeData,
-        id: `${copiedNodeData.data.nodeInfo.name}-${Date.now()}`,
+        id: `${(copiedNodeData.data as any).nodeInfo.name}-${Date.now()}`,
         position: pastePosition,
         selected: false, // Don't select the pasted node by default
       };
 
       setNodes(nodes => [...nodes, newNode]);
-      console.log('✓ Node pasted:', newNode.data.nodeInfo.display_name);
+      console.log('✓ Node pasted:', (newNode.data as any).nodeInfo.display_name);
     } else {
       console.log('⚠ No node copied to paste');
     }
@@ -788,8 +929,8 @@ function App() {
       setNodes(nodes => 
         nodes.map(node => {
           if (node.id === contextMenu.nodeId) {
-            const newBypassed = !node.data.bypassed;
-            console.log(`${newBypassed ? '⚫' : '✓'} Node ${newBypassed ? 'bypassed' : 'activated'}:`, node.data.nodeInfo.display_name);
+            const newBypassed = !(node.data as any).bypassed;
+            console.log(`${newBypassed ? '⚫' : '✓'} Node ${newBypassed ? 'bypassed' : 'activated'}:`, (node.data as any).nodeInfo.display_name);
             return {
               ...node,
               data: {
@@ -847,26 +988,6 @@ function App() {
     };
   }, [handleKeyDown]);
 
-  const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
-    setNodes(nodes => 
-      nodes.map(node => {
-        if (node.id === nodeId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              inputValues: {
-                ...node.data.inputValues,
-                [inputName]: value
-              }
-            }
-          };
-        }
-        return node;
-      })
-    );
-  }, [setNodes]);
-
   const toggleInputMode = useCallback((inputName: string) => {
     if (!contextMenu.nodeId) return;
     
@@ -874,14 +995,14 @@ function App() {
       nodes.map(node => {
         if (node.id === contextMenu.nodeId) {
           // Get the type information to determine default mode
-          const nodeInfo = node.data.nodeInfo as NodeInfo;
+          const nodeInfo = (node.data as any).nodeInfo as NodeInfo;
           const typeInfo = 
             nodeInfo.input_types.required?.[inputName] ||
             nodeInfo.input_types.optional?.[inputName];
           const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
           const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
           
-          const currentMode = node.data.inputModes?.[inputName] || defaultMode;
+          const currentMode = (node.data as any).inputModes?.[inputName] || defaultMode;
           const newMode = currentMode === 'connection' ? 'manual' : 'connection';
           
           // If switching to connection mode, remove any edges for this input
@@ -898,7 +1019,7 @@ function App() {
             data: {
               ...node.data,
               inputModes: {
-                ...node.data.inputModes,
+                ...(node.data as any).inputModes,
                 [inputName]: newMode
               }
             }
@@ -912,7 +1033,7 @@ function App() {
   const contextMenuItems: ContextMenuItem[] = React.useMemo(() => {
     // Check if current node is bypassed
     const currentNode = contextMenu.nodeId ? nodes.find(n => n.id === contextMenu.nodeId) : null;
-    const isBypassed = currentNode?.data?.bypassed || false;
+    const isBypassed = (currentNode?.data as any)?.bypassed || false;
     
     const baseItems: ContextMenuItem[] = [
       {
@@ -988,7 +1109,7 @@ function App() {
           const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
           const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
           
-          const currentMode = node?.data.inputModes?.[inputName] || defaultMode;
+          const currentMode = (node?.data as any).inputModes?.[inputName] || defaultMode;
           const isManual = currentMode === 'manual';
           
           baseItems.splice(-1, 0, {
@@ -1004,15 +1125,63 @@ function App() {
     return baseItems;
   }, [toggleBypass, copyNode, pasteNode, copiedNodeData, copyNodeId, duplicateNode, deleteNode, contextMenu.nodeInfo, contextMenu.nodeId, nodes, toggleInputMode]);
 
+  // Update nodes with real-time state information (using debounced state)
+  const nodesWithState = React.useMemo(() => {
+    return nodes.map(node => {
+      const nodeState = debouncedNodeStates[node.id];
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          nodeState: nodeState ? {
+            state: nodeState.state,
+            data: nodeState.data,
+            timestamp: nodeState.timestamp
+          } : undefined,
+          robotStatus: nodeState?.robotStatus,
+          streamUpdate: nodeState?.streamUpdate,
+          streamComplete: nodeState?.streamComplete,
+          streamError: nodeState?.streamError
+        }
+      };
+    });
+  }, [nodes, debouncedNodeStates]);
+
+  const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
+    setNodes(nodes => 
+      nodes.map(node => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              inputValues: {
+                ...(node.data as any).inputValues,
+                [inputName]: value
+              }
+            }
+          };
+        }
+        return node;
+      })
+    );
+    
+    // Send real-time input update via WebSocket
+    if (isWebSocketConnected) {
+      websocketService.sendInputUpdate(nodeId, inputName, value);
+    }
+  }, [setNodes, isWebSocketConnected]);
+
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
   }), [handleNodeContextMenu, handleInputValueChange]);
+
 
   return (
     <div className="app">
       <div className="app-tabs">
         <div className="tab-group">
-          {canvases.map((canvas, idx) => (
+          {canvases.map((canvas) => (
             <button
               key={canvas.id}
               className={`tab${activeCanvasId === canvas.id ? ' active' : ''}`}
@@ -1071,18 +1240,30 @@ function App() {
                 onDragLeave={onDragLeave}
               >
                 <ReactFlow
-                  nodes={nodes}
+                  nodes={nodesWithState}
                   edges={edges}
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
                   onConnect={onConnect}
                   onInit={(instance) => {
                     console.log('ReactFlow instance initialized:', instance);
+                    console.log('Instance type:', typeof instance);
+                    console.log('Instance screenToFlowPosition method:', typeof instance?.screenToFlowPosition);
                     setReactFlowInstance(instance);
                   }}
                   nodeTypes={nodeTypes}
                   isValidConnection={isValidConnection}
                   connectionMode={ConnectionMode.Loose}
+                  nodesDraggable={true}
+                  nodesConnectable={true}
+                  elementsSelectable={true}
+                  onError={(id, message) => {
+                    // Suppress ResizeObserver errors which are harmless
+                    if (message.includes('ResizeObserver')) {
+                      return;
+                    }
+                    console.error('ReactFlow error:', id, message);
+                  }}
                   fitView
                 >
                   <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
@@ -1169,9 +1350,15 @@ function App() {
           <span className="node-count">Nodes: {nodes.length}</span>
           <span className="edge-count">Connections: {edges.length}</span>
           
+          {isWebSocketConnected && (
+            <span className="websocket-status">
+              🔗 Live
+            </span>
+          )}
+          
           {isContinuousRunning && continuousStatus && (
             <span className="continuous-status">
-              🔄 Continuous: {continuousStatus.execution_count} runs
+              🔄 Number of iterations: {continuousStatus.execution_count}
             </span>
           )}
           

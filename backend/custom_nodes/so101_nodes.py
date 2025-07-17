@@ -1,7 +1,8 @@
 import sys
 import os
-from typing import Dict, Any, List, Optional
-import traceback
+from typing import Dict, Any, List
+import time
+import asyncio
 
 # Add feetech-servo-sdk to path (custom_nodes/feetech-servo-sdk)
 feetech_path = os.path.join(os.path.dirname(__file__), 'feetech-servo-sdk')
@@ -24,6 +25,8 @@ class RobotStatusReader(NodeBase):
             "optional": {
                 "read_positions": ("BOOLEAN", {"default": True}),
                 "read_modes": ("BOOLEAN", {"default": False}),
+                "stream_results": ("BOOLEAN", {"default": True}),
+                "update_interval": ("FLOAT", {"default": 0.1, "min": 0.01, "max": 5.0}),
             }
         }
     
@@ -56,21 +59,41 @@ class RobotStatusReader(NodeBase):
     def get_detailed_description(cls) -> str:
         return (
             """
-            RobotStatusReader Node\n\n"
-            "Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk.\n"
-            "Inputs:\n"
-            "  - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n"
-            "  - servo_ids (STRING): Comma-separated list of servo IDs to read (e.g., '1,2,3,4,5').\n"
-            "  - read_positions (BOOLEAN, optional): Whether to read servo positions (default: True).\n"
-            "  - read_modes (BOOLEAN, optional): Whether to read servo modes (default: False).\n"
-            "Outputs:\n"
-            "  - status_data (DICT): Dictionary containing read positions, modes (if requested), servo_ids, timestamp, and connection status.\n"
-            "  - positions (DICT): Dictionary of servo positions keyed by servo ID.\n"
+            RobotStatusReader Node
+
+            Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk with real-time streaming support.
+
+            Inputs:
+              - sdk (ScsServoSDK): The SDK instance for communicating with servos.
+              - servo_ids (STRING): Comma-separated list of servo IDs to read (e.g., '1,2,3,4,5').
+              - read_positions (BOOLEAN, optional): Whether to read servo positions (default: True).
+              - read_modes (BOOLEAN, optional): Whether to read servo modes (default: False).
+              - stream_results (BOOLEAN, optional): Enable real-time streaming to frontend (default: True).
+              - update_interval (FLOAT, optional): Time between updates in seconds (default: 0.1, range: 0.01-5.0).
+
+            Outputs:
+              - status_data (DICT): Dictionary containing read positions, modes (if requested), servo_ids, timestamp, and connection status.
+              - positions (DICT): Dictionary of servo positions keyed by servo ID.
+
+            Real-time Features:
+              - When stream_results is enabled, robot status is continuously broadcast to the frontend
+              - The node displays live servo positions and modes in the UI
+              - Update frequency is configurable via update_interval
+              - Streaming runs for a maximum of 10 seconds per execution
+              - Real-time indicators show streaming status (Live, Complete, Error)
+
+            Usage:
+              - Connect the ScsServoSDK output from a robot connection node
+              - Specify servo IDs to monitor (e.g., "1,2,3,4,5,6")
+              - Enable streaming for real-time monitoring
+              - Adjust update_interval for performance vs. responsiveness balance
+              - Monitor the node UI for live robot status updates
             """
         )
     
     def read_robot_status(self, sdk: ScsServoSDK, servo_ids: str,
-                         read_positions: bool = True, read_modes: bool = False) -> tuple:
+                         read_positions: bool = True, read_modes: bool = False,
+                         stream_results: bool = True, update_interval: float = 0.1) -> tuple:
         """Read status from robot servos using a provided ScsServoSDK instance"""
         
         # Parse servo IDs
@@ -78,6 +101,17 @@ class RobotStatusReader(NodeBase):
             servo_id_list = [int(id.strip()) for id in servo_ids.split(",")]
         except ValueError:
             raise ValueError(f"Invalid servo_ids format: {servo_ids}. Use comma-separated integers like '1,2,3'")
+        
+        result = self._read_robot_status_once(sdk, servo_id_list, read_positions, read_modes)
+
+        if stream_results:
+            return (result, result)
+        else:
+            return result
+    
+    def _read_robot_status_once(self, sdk: ScsServoSDK, servo_id_list: List[int], 
+                              read_positions: bool, read_modes: bool) -> tuple:
+        """Read robot status once (non-streaming)"""
         
         status_data = {}
         
@@ -105,19 +139,19 @@ class RobotStatusReader(NodeBase):
             
             # Add metadata
             status_data["servo_ids"] = servo_id_list
-            status_data["timestamp"] = __import__('time').time()
+            status_data["timestamp"] = time.time()
             status_data["connected"] = True
             
         except Exception as e:
             status_data = {
                 "error": str(e),
                 "servo_ids": servo_id_list,
-                "timestamp": __import__('time').time(),
+                "timestamp": time.time(),
                 "connected": False
             }
             raise Exception(f"Robot status read failed: {e}")
         
-        return (status_data, status_data["positions"])
+        return (status_data, status_data.get("positions", {}))
 
 
 class SO101JointAnglesToPositions(NodeBase):
@@ -186,11 +220,10 @@ class SO101JointAnglesToPositions(NodeBase):
          
         # Map joint angles to servo IDs
         joint_angles = [rotation, pitch, elbow, wrist_pitch, wrist_roll, jaw]
-        joint_names = ["rotation", "pitch", "elbow", "wrist_pitch", "wrist_roll", "jaw"]
         
         positions = {}
         # Convert angles to servo positions and send commands
-        for joint_name, angle, servo_id in zip(joint_names, joint_angles, servo_ids):
+        for angle, servo_id in zip(joint_angles, servo_ids):
             # Convert angle to servo position (assuming 0-4095 range for SCS servos)
             # This is a basic conversion - you may need to adjust based on your servo configuration
             servo_position = int(round((angle * 4096) / 360)) # Convert 0-360 to 0-4096

@@ -14,27 +14,47 @@ import sys
 import os
 import hashlib
 import copy
+import asyncio
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.node_registry import node_registry
-from core.workflow_executor import workflow_executor
 from core.node_cache import NodeCache  # Import NodeCache from new module
 
 class ContinuousExecutor:
     """Continuously executes workflows in a loop"""
     
-    def __init__(self, loop_interval: float = 1.0):
+    def __init__(self, loop_interval: float = 1.0, websocket_manager=None):
         self.loop_interval = loop_interval
         self.is_running = False
         self.current_workflow = None
         self.execution_results = {}
         self.execution_logs = []
-        self.execution_count = 0
+        self.count_of_iterations = 0
         self.last_execution_time = 0
         self.thread = None
         self.node_cache = NodeCache()  # Add node cache
+        self.websocket_manager = websocket_manager
+        
+    def _broadcast_sync(self, coro):
+        """Helper method to run async WebSocket broadcasts from sync thread"""
+        try:
+            # Try to get the current event loop
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If we're already in an event loop, schedule the coroutine
+                asyncio.create_task(coro)
+            else:
+                # If no event loop is running, run the coroutine
+                asyncio.run(coro)
+        except RuntimeError:
+            # If there's no event loop, create one and run the coroutine
+            try:
+                asyncio.run(coro)
+            except Exception as e:
+                # If all else fails, just log the error and continue
+                self.log_message("warning", f"Failed to broadcast WebSocket message: {str(e)}")
         
     def load_workflow(self, workflow_data: Dict[str, Any]) -> bool:
         """Load a workflow for continuous execution"""
@@ -65,6 +85,7 @@ class ContinuousExecutor:
             return
         
         self.is_running = True
+        self.count_of_iterations = 0
         self.thread = threading.Thread(target=self._execution_loop, daemon=True)
         self.thread.start()
         self.log_message("info", "Started continuous execution")
@@ -91,21 +112,42 @@ class ContinuousExecutor:
         """Main execution loop that runs continuously"""
         self.log_message("info", "Continuous execution loop started")
         
+        # Broadcast workflow started event
+        if self.websocket_manager:
+            self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("continuous_started", {
+                "workflow_id": id(self.current_workflow),
+                "node_count": len(self.current_workflow.get("nodes", []))
+            }))
+        
         while self.is_running:
             try:
                 start_time = time.time()
+                
+                # Broadcast execution start
+                if self.websocket_manager:
+                    self._broadcast_sync(self.websocket_manager.broadcast_continuous_update(
+                        self.count_of_iterations + 1, "executing", {"start_time": start_time}
+                    ))
                 
                 # Execute the workflow
                 self._execute_workflow_once()
                 
                 # Update timing
                 self.last_execution_time = time.time() - start_time
-                self.execution_count += 1
+                self.count_of_iterations += 1
+                
+                # Broadcast execution completed
+                if self.websocket_manager:
+                    self._broadcast_sync(self.websocket_manager.broadcast_continuous_update(
+                        self.count_of_iterations, "completed", {
+                            "execution_time": self.last_execution_time,
+                        }
+                    ))
                 
                 # Log execution stats periodically
-                if self.execution_count % 10 == 0:
+                if self.count_of_iterations % 10 == 0:
                     self.log_message("info", 
-                        f"Completed {self.execution_count} executions. "
+                        f"Completed {self.count_of_iterations} executions. "
                         f"Last execution took {self.last_execution_time:.3f}s")
                 
                 # Sleep for the specified interval
@@ -114,6 +156,13 @@ class ContinuousExecutor:
             except Exception as e:
                 self.log_message("error", f"Error in execution loop: {str(e)}")
                 self.log_message("error", f"Traceback: {traceback.format_exc()}")
+                
+                # Broadcast error
+                if self.websocket_manager:
+                    self._broadcast_sync(self.websocket_manager.broadcast_continuous_update(
+                        self.count_of_iterations, "error", {"error": str(e)}
+                    ))
+                
                 time.sleep(self.loop_interval)  # Continue after error
     
     def _execute_workflow_once(self):
@@ -132,9 +181,30 @@ class ContinuousExecutor:
             # Execute nodes in order
             node_results = {}
             for node_id in execution_order:
-                node_result = self._execute_node(node_id, nodes, edges, node_results)
-                if node_result is not None:
-                    node_results[node_id] = node_result
+                # Broadcast node execution start
+                if self.websocket_manager:
+                    self._broadcast_sync(self.websocket_manager.broadcast_node_state(
+                        node_id, "executing", {"start_time": time.time()}
+                    ))
+                
+                try:
+                    node_result, rt_update = self._execute_node(node_id, nodes, edges, node_results)
+                    if node_result is not None:
+                        node_results[node_id] = node_result
+                    
+                    # Broadcast node execution completed
+                    if self.websocket_manager:
+                        self._broadcast_sync(self.websocket_manager.broadcast_node_state(
+                            node_id, "completed", {"rt_update": rt_update}
+                        ))
+                        
+                except Exception as e:
+                    # Broadcast node error
+                    if self.websocket_manager:
+                        self._broadcast_sync(self.websocket_manager.broadcast_node_state(
+                            node_id, "error", {"error": str(e)}
+                        ))
+                    raise
             
             # Store results
             self.execution_results = node_results
@@ -213,13 +283,19 @@ class ContinuousExecutor:
             
             cached_output = self.node_cache.get_cache(node_id, inputs)
             if cached_output is not None:
-                if self.execution_count % 50 == 0:
+                if self.count_of_iterations % 50 == 0:
                     self.log_message("debug", f"Node {node_id} ({node_type}) cache hit")
                 return copy.deepcopy(cached_output)
 
 
             # Create node instance and execute
             node_instance = node_class()
+            
+            # Pass websocket manager and node ID to the node instance for streaming
+            if self.websocket_manager:
+                node_instance._websocket_manager = self.websocket_manager
+                node_instance._node_id = node_id
+            
             # Validate inputs
             try:
                 node_instance.validate_inputs(**inputs)
@@ -230,12 +306,19 @@ class ContinuousExecutor:
             if hasattr(node_instance, function_name):
                 execute_func = getattr(node_instance, function_name)
                 result = execute_func(**inputs)
+                # If result is a 2-tuple, use the second element for websocket broadcast
+                rt_update = None
+                node_result = None
+                if isinstance(result, tuple) and len(result) == 2:
+                    node_result, rt_update = result
+                else:
+                    node_result = result
                 # Cache the result
-                # self.node_cache.set_cache(node_id, inputs, result)
+                # self.node_cache.set_cache(node_id, inputs, node_result)
                 # Log successful execution
-                if self.execution_count % 50 == 0:
+                if self.count_of_iterations % 50 == 0:
                     self.log_message("debug", f"Node {node_id} ({node_type}) executed successfully")
-                return result
+                return node_result, rt_update
             else:
                 raise ValueError(f"Node {node_type} does not have function {function_name}")
         except Exception as e:
@@ -317,12 +400,90 @@ class ContinuousExecutor:
         timestamp = time.strftime("%H:%M:%S", time.localtime(log_entry["timestamp"]))
         print(f"[{timestamp}] {level.upper()}: {message}")
     
+    def execute_workflow_once(self, workflow_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a workflow once (single execution, not continuous)"""
+        if self.is_running:
+            raise ValueError("Cannot execute single workflow while continuous execution is running")
+        
+        # Load the workflow
+        if not self.load_workflow(workflow_data):
+            return {
+                "success": False,
+                "error": "Failed to load workflow",
+                "logs": self.execution_logs
+            }
+        
+        # Broadcast workflow started event
+        if self.websocket_manager:
+            self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("workflow_started", {
+                "workflow_id": id(workflow_data),
+                "node_count": len(workflow_data.get("nodes", []))
+            }))
+        
+        try:
+            # Execute the workflow once
+            start_time = time.time()
+            
+            # Broadcast execution start
+            if self.websocket_manager:
+                self._broadcast_sync(self.websocket_manager.broadcast_execution_status({
+                    "is_running": True,
+                    "workflow_id": id(workflow_data),
+                    "timestamp": start_time
+                }))
+            
+            self._execute_workflow_once()
+            
+            execution_time = time.time() - start_time
+            
+            # Broadcast workflow completed event
+            if self.websocket_manager:
+                self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("workflow_completed", {
+                    "workflow_id": id(workflow_data),
+                    "execution_time": execution_time,
+                }))
+            
+            return {
+                "success": True,
+            }
+            
+        except Exception as e:
+            self.log_message("error", f"Single workflow execution failed: {str(e)}")
+            
+            # Broadcast workflow error event
+            if self.websocket_manager:
+                self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("workflow_error", {
+                    "workflow_id": id(workflow_data),
+                    "error": str(e)
+                }))
+            
+            return {
+                "success": False,
+                "error": str(e),
+                "logs": self.execution_logs
+            }
+        
+        finally:
+            # Broadcast execution status update
+            if self.websocket_manager:
+                self._broadcast_sync(self.websocket_manager.broadcast_execution_status({
+                    "is_running": False,
+                    "workflow_id": id(workflow_data),
+                    "timestamp": time.time()
+                }))
+    
+    def stop_single_execution(self) -> bool:
+        """Stop single workflow execution (for compatibility with workflow_executor interface)"""
+        # For single execution, we don't have a separate stop mechanism
+        # This is mainly for API compatibility
+        return not self.is_running
+    
     def get_status(self) -> Dict[str, Any]:
         """Get current execution status"""
         return {
             "is_running": self.is_running,
             "has_workflow": self.current_workflow is not None,
-            "execution_count": self.execution_count,
+            "count_of_iterations": self.count_of_iterations,
             "last_execution_time": self.last_execution_time,
             "loop_interval": self.loop_interval,
             "results": self.execution_results,
@@ -389,7 +550,7 @@ def main():
             while True:
                 time.sleep(5)
                 status = executor.get_status()
-                print(f"Status: {status['execution_count']} executions, "
+                print(f"Status: {status['count_of_iterations']} executions, "
                       f"last took {status['last_execution_time']:.3f}s")
         
         except KeyboardInterrupt:

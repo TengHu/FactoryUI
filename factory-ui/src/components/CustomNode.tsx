@@ -1,9 +1,9 @@
-import { memo, useState } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { memo, useState, useRef, useCallback } from 'react';
+import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeInfo } from '../services/api';
 import './CustomNode.css';
 
-export interface CustomNodeProps extends NodeProps<CustomNodeData> {
+export interface CustomNodeProps extends NodeProps {
   onContextMenu?: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void;
   onInputValueChange?: (nodeId: string, inputName: string, value: string) => void;
 }
@@ -15,15 +15,99 @@ interface CustomNodeData {
   inputModes?: Record<string, 'connection' | 'manual'>;
   inputValues?: Record<string, string>;
   bypassed?: boolean;
+  nodeState?: {
+    state: 'idle' | 'executing' | 'completed' | 'error';
+    data?: any;
+    timestamp?: number;
+  };
+  robotStatus?: {
+    positions?: Record<string, number>;
+    modes?: Record<string, any>;
+    servo_ids?: number[];
+    timestamp?: number;
+    connected?: boolean;
+    stream_count?: number;
+    error?: string;
+  };
+  streamUpdate?: boolean;
+  streamComplete?: boolean;
+  streamError?: boolean;
 }
 
 const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
-  const { nodeInfo, inputModes = {}, inputValues = {}, bypassed = false } = data;
+  const nodeData = data as unknown as CustomNodeData;
+  const { nodeInfo, inputModes = {}, inputValues = {}, bypassed = false, nodeState, robotStatus, streamUpdate, streamComplete, streamError } = nodeData;
   const onContextMenu = (props as any).onContextMenu;
   const onInputValueChange = (props as any).onInputValueChange;
   
+  // Debug logging for node state
+  if (nodeState) {
+    console.log(`🔄 Node ${id} state:`, nodeState.state, nodeState);
+  }
+  
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
+  
+  // Custom resize functionality
+  const nodeRef = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDirection, setResizeDirection] = useState<string>('');
+  
+  const handleResizeStart = useCallback((direction: string) => (e: React.MouseEvent) => {
+    // Completely prevent all event propagation
+    e.preventDefault();
+    e.stopPropagation();
+    e.nativeEvent.preventDefault();
+    e.nativeEvent.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation();
+    
+    setIsResizing(true);
+    setResizeDirection(direction);
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const node = nodeRef.current;
+    if (!node) return;
+    
+    const startWidth = node.offsetWidth;
+    const startHeight = node.offsetHeight;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!node) return;
+      
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+      
+      if (direction.includes('e')) {
+        newWidth = Math.max(200, startWidth + deltaX);
+      }
+      if (direction.includes('w')) {
+        newWidth = Math.max(200, startWidth - deltaX);
+      }
+      if (direction.includes('s')) {
+        newHeight = Math.max(100, startHeight + deltaY);
+      }
+      if (direction.includes('n')) {
+        newHeight = Math.max(100, startHeight - deltaY);
+      }
+      
+      node.style.width = `${newWidth}px`;
+      node.style.height = `${newHeight}px`;
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      setResizeDirection('');
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
 
   // Parse inputs from nodeInfo
   const requiredInputs = Object.keys(nodeInfo.input_types.required || {});
@@ -80,10 +164,12 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   };
 
   return (
-    <div 
-      className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} node-${category}`}
-      onContextMenu={handleContextMenu}
-    >
+    <div className="node-container">
+      <div 
+        ref={nodeRef}
+        className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} ${nodeState?.state ? `node-${nodeState.state}` : ''} node-${category} ${isResizing ? `resizing resizing-${resizeDirection}` : ''}`}
+        onContextMenu={handleContextMenu}
+      >
       {/* Node header */}
       <div className="node-header">
         <div className="node-title">{nodeInfo.display_name}</div>
@@ -195,6 +281,109 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
         </div>
       </div>
       
+      {/* Robot Status Display */}
+      {robotStatus && nodeInfo.name === 'RobotStatusReader' && (
+        <div className="robot-status-display">
+          <div className="robot-status-header">
+            <span className="robot-status-title">Robot Status</span>
+            {streamUpdate && <span className="stream-indicator">🔄 Live</span>}
+            {streamComplete && <span className="stream-indicator">✅ Complete</span>}
+            {streamError && <span className="stream-indicator">❌ Error</span>}
+          </div>
+          
+          {robotStatus.error ? (
+            <div className="robot-status-error">
+              Error: {robotStatus.error}
+            </div>
+          ) : (
+            <div className="robot-status-content">
+              {robotStatus.positions && (
+                <div className="robot-positions">
+                  <div className="robot-section-title">Positions:</div>
+                  <div className="robot-positions-grid">
+                    {Object.entries(robotStatus.positions).map(([servoId, position]) => (
+                      <div key={servoId} className="robot-position-item">
+                        <span className="servo-id">ID {servoId}:</span>
+                        <span className="servo-position">{position}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {robotStatus.modes && (
+                <div className="robot-modes">
+                  <div className="robot-section-title">Modes:</div>
+                  <div className="robot-modes-grid">
+                    {Object.entries(robotStatus.modes).map(([servoId, mode]) => (
+                      <div key={servoId} className="robot-mode-item">
+                        <span className="servo-id">ID {servoId}:</span>
+                        <span className="servo-mode">{mode || 'N/A'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="robot-metadata">
+                <div className="robot-meta-item">
+                  <span className="meta-label">Connected:</span>
+                  <span className={`meta-value ${robotStatus.connected ? 'connected' : 'disconnected'}`}>
+                    {robotStatus.connected ? '✅ Yes' : '❌ No'}
+                  </span>
+                </div>
+                {robotStatus.stream_count !== undefined && (
+                  <div className="robot-meta-item">
+                    <span className="meta-label">Updates:</span>
+                    <span className="meta-value">{robotStatus.stream_count}</span>
+                  </div>
+                )}
+                {robotStatus.timestamp && (
+                  <div className="robot-meta-item">
+                    <span className="meta-label">Last Update:</span>
+                    <span className="meta-value">
+                      {new Date(robotStatus.timestamp * 1000).toLocaleTimeString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Real-Time Update Display */}
+      {nodeState?.data?.rt_update && (
+        <div className="rt-update-display" style={{ borderWidth: '1px', padding: '1px 1px' }}>
+          {/* <div className="rt-update-header">
+            <span className="rt-update-title">Real-Time Update</span>
+            <span className="rt-update-state">{nodeState.state}</span>
+          </div> */}
+          <div className="rt-update-content">
+            {typeof nodeState.data.rt_update === 'object' && nodeState.data.rt_update.image_base64 && nodeState.data.rt_update.image_format ? (
+              <img
+                src={`data:image/${nodeState.data.rt_update.image_format};base64,${nodeState.data.rt_update.image_base64}`}
+                alt={nodeState.data.rt_update.filename || 'Real-Time Update Image'}
+                style={{ maxWidth: '100%', maxHeight: 200, display: 'block', margin: '0 auto', borderWidth: '1px' }}
+              />
+            ) : typeof nodeState.data.rt_update === 'object' ? (
+              <pre className="rt-update-json" style={{ borderWidth: '1px' }}>
+                {JSON.stringify(nodeState.data.rt_update, null, 2)}
+              </pre>
+            ) : (
+              <div className="rt-update-text">
+                {nodeState.data.rt_update}
+              </div>
+            )}
+          </div>
+          {nodeState.timestamp && (
+            <div className="rt-update-timestamp">
+              Updated: {new Date(nodeState.timestamp * 1000).toLocaleTimeString()}
+            </div>
+          )}
+        </div>
+      )}
+      
       {/* Detailed Description Modal */}
       {showDetailedDescription && (
         <div className="node-modal-overlay" onClick={handleModalClose}>
@@ -212,6 +401,56 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
             </div>
           </div>
         </div>
+      )}
+      </div>
+      
+      {/* Custom resize handles - outside main node */}
+      {(selected || false) && (
+        <>
+          {/* Corner handles */}
+          <div 
+            className="resize-handle nw" 
+            onMouseDownCapture={handleResizeStart('nw')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle ne" 
+            onMouseDownCapture={handleResizeStart('ne')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle sw" 
+            onMouseDownCapture={handleResizeStart('sw')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle se" 
+            onMouseDownCapture={handleResizeStart('se')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          
+          {/* Edge handles */}
+          <div 
+            className="resize-handle n" 
+            onMouseDownCapture={handleResizeStart('n')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle s" 
+            onMouseDownCapture={handleResizeStart('s')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle e" 
+            onMouseDownCapture={handleResizeStart('e')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <div 
+            className="resize-handle w" 
+            onMouseDownCapture={handleResizeStart('w')}
+            onDragStart={(e) => e.preventDefault()}
+          />
+        </>
       )}
     </div>
   );

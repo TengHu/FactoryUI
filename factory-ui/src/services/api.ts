@@ -117,22 +117,6 @@ export class ApiService {
     }
   }
 
-  async stopExecution(): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/stop`, {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Failed to stop execution:', error);
-      throw error;
-    }
-  }
 
   async getExecutionStatus(): Promise<{
     is_running: boolean;
