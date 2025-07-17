@@ -511,6 +511,30 @@ class ContinuousExecutor:
         # This is mainly for API compatibility
         return not self.is_running
     
+    def update_node_parameter(self, node_id: str, parameter_name: str, parameter_value: Any) -> bool:
+        """Update a node parameter in real-time during execution"""
+        try:
+            
+            # Update in cached node data map if setup is complete
+            if self._is_setup and node_id in self._node_data_map:
+                node_data = self._node_data_map[node_id]
+                if "data" not in node_data:
+                    node_data["data"] = {}
+                if "parameters" not in node_data["data"]:
+                    node_data["data"]["parameters"] = {}
+                node_data["data"]["parameters"][parameter_name] = parameter_value
+                
+                self.log_message("info", f"Updated node {node_id} parameter {parameter_name} = {parameter_value}")
+                return True
+            else:
+                self.log_message("warning", f"Node {node_id} not found in setup data, parameter update may not take effect until next setup")
+                return False
+                
+        except Exception as e:
+            self.log_message("error", f"Failed to update node parameter: {str(e)}")
+            return False
+    
+    
     def get_status(self) -> Dict[str, Any]:
         """Get current execution status"""
         return {
@@ -520,7 +544,8 @@ class ContinuousExecutor:
             "last_execution_time": self.last_execution_time,
             "loop_interval": self.loop_interval,
             "results": self.execution_results,
-            "logs": self.execution_logs[-10:]  # Last 10 logs
+            "logs": self.execution_logs[-10:],  # Last 10 logs
+            "is_setup": self._is_setup
         }
 
 def main():
