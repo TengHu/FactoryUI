@@ -829,3 +829,64 @@
 .resize-handle.w:hover {
   transform: translateY(-50%) scale(1.2);
 }
+
+/* Camera input styles */
+.camera-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.camera-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.camera-button {
+  padding: 6px 12px;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  background: #f6f8fa;
+  color: #24292e;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  outline: none;
+}
+
+.camera-button:hover {
+  background: #e1e4e8;
+  border-color: #586069;
+}
+
+.camera-button:active {
+  background: #d1d5da;
+  transform: scale(0.98);
+}
+
+.camera-feed-container {
+  transition: min-height 0.3s ease;
+  overflow: hidden;
+}
+
+.camera-feed {
+  margin-top: 4px;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000;
+  width: 100%;
+  max-width: 200px;
+}
+
+.camera-feed video {
+  display: block;
+  width: 100%;
+  border-radius: 3px;
+}

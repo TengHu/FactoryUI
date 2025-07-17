@@ -754,7 +754,7 @@ class CameraNode(NodeBase):
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "camera": ("CAMERA", {})
+                "image_stream": ("CAMERA", {})
             }
         }
 
@@ -787,10 +787,10 @@ class CameraNode(NodeBase):
         return """
         """
 
-    def open_camera(self, camera):
+    def open_camera(self, image_stream):
         
-        print(f"[CameraNode] Captured image: {camera}")
-        return (camera,)
+        print(f"[CameraNode] Captured image: {len(image_stream)}")
+        return (image_stream,)
 
 class DisplayNode(NodeBase):
     """A node that takes ANY input and returns nothing, for display/debugging purposes."""

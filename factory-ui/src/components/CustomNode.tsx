@@ -47,75 +47,94 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
-
-  // CAMERA input video streams state
+  
+  // Camera state for CAMERA input types
   const [cameraStreams, setCameraStreams] = useState<Record<string, MediaStream | null>>({});
-  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-  // Remove capturedImages state
-
-  // Clean up camera streams on unmount
+  const [cameraElements, setCameraElements] = useState<Record<string, HTMLVideoElement | null>>({});
+  const cameraRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  
+  // Camera utility functions
+  const startCamera = useCallback(async (inputName: string) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 30 }
+        } 
+      });
+      
+      setCameraStreams(prev => ({ ...prev, [inputName]: stream }));
+      
+      // Set up frame capture interval
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 640;
+      canvas.height = 480;
+      
+      const captureFrame = () => {
+        const video = cameraRefs.current[inputName];
+        if (video && ctx && onInputValueChange && video.readyState === 4) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const frameData = canvas.toDataURL('image/jpeg', 0.8);
+          onInputValueChange(id, inputName, frameData);
+        }
+      };
+      
+      // Capture frames at 10 FPS
+      const intervalId = setInterval(captureFrame, 100);
+      
+      // Store interval ID for cleanup
+      (stream as any).intervalId = intervalId;
+      
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('Could not access camera. Please check permissions.');
+    }
+  }, [id, onInputValueChange]);
+  
+  const stopCamera = useCallback((inputName: string) => {
+    const stream = cameraStreams[inputName];
+    if (stream) {
+      // Clear frame capture interval
+      if ((stream as any).intervalId) {
+        clearInterval((stream as any).intervalId);
+      }
+      
+      // Stop all tracks
+      stream.getTracks().forEach(track => track.stop());
+      setCameraStreams(prev => ({ ...prev, [inputName]: null }));
+      
+      // Clear video element
+      const video = cameraRefs.current[inputName];
+      if (video) {
+        video.srcObject = null;
+      }
+    }
+  }, [cameraStreams]);
+  
+  // Cleanup camera streams on unmount
   useEffect(() => {
     return () => {
-      Object.values(cameraStreams).forEach((stream) => {
-        if (stream) {
-          stream.getTracks().forEach((track) => track.stop());
-        }
+      Object.keys(cameraStreams).forEach(inputName => {
+        stopCamera(inputName);
       });
     };
-  }, [cameraStreams]);
+  }, [stopCamera, cameraStreams]);
 
-  // Parse inputs from nodeInfo
-  const requiredInputs = Object.keys(nodeInfo.input_types.required || {});
-  const optionalInputs = Object.keys(nodeInfo.input_types.optional || {});
-  const allInputs = [...requiredInputs, ...optionalInputs];
-  
-  // Set video srcObject for all CAMERA inputs
+  // Handle ResizeObserver errors
   useEffect(() => {
-    allInputs.forEach((input) => {
-      const typeInfo =
-        (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
-        (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
-        ['unknown'];
-      const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-      if (typeName === 'CAMERA' && cameraStreams[input] && videoRefs.current[input]) {
-        videoRefs.current[input]!.srcObject = cameraStreams[input]!;
+    const handleResizeObserverError = (e: ErrorEvent) => {
+      if (e.message.includes('ResizeObserver loop completed with undelivered notifications')) {
+        e.stopImmediatePropagation();
+        return false;
       }
-    });
-  }, [allInputs, nodeInfo.input_types, cameraStreams]);
-  
-  // Automatically capture camera image and call onInputValueChange
-  useEffect(() => {
-    const intervals: Record<string, NodeJS.Timeout> = {};
-    allInputs.forEach((input) => {
-      const typeInfo =
-        (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
-        (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
-        ['unknown'];
-      const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-      if (typeName === 'CAMERA' && cameraStreams[input] && videoRefs.current[input]) {
-        // Start interval to capture image every 500ms
-        intervals[input] = setInterval(() => {
-          const video = videoRefs.current[input];
-          if (video && video.videoWidth > 0 && video.videoHeight > 0) {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              const imageDataUrl = canvas.toDataURL('image/png');
-              if (onInputValueChange) {
-                onInputValueChange(id, input, imageDataUrl);
-              }
-            }
-          }
-        }, 500);
-      }
-    });
-    return () => {
-      Object.values(intervals).forEach(clearInterval);
+      return true;
     };
-  }, [allInputs, nodeInfo.input_types, cameraStreams, onInputValueChange, id]);
+
+    window.addEventListener('error', handleResizeObserverError);
+    return () => window.removeEventListener('error', handleResizeObserverError);
+  }, []);
   
   // Custom resize functionality
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -178,6 +197,11 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     document.addEventListener('mouseup', handleMouseUp);
   }, []);
 
+  // Parse inputs from nodeInfo
+  const requiredInputs = Object.keys(nodeInfo.input_types.required || {});
+  const optionalInputs = Object.keys(nodeInfo.input_types.optional || {});
+  const allInputs = [...requiredInputs, ...optionalInputs];
+  
   // Parse outputs from nodeInfo - handle both old format (string[]) and new format (dict)
   let outputs: Array<{name: string, type: string, required?: boolean}> = [];
   if (Array.isArray(nodeInfo.return_types)) {
@@ -264,31 +288,11 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
               (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
               ['unknown'];
             const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-            // Default to manual mode for STRING and FLOAT inputs, connection mode for others
-            // For CAMERA, always manual
+            // Default to manual mode for STRING, FLOAT, and CAMERA inputs, connection mode for others
             const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
             const inputMode = inputModes[input] || defaultMode;
             const inputValue = inputValues[input] || '';
             
-            // CAMERA input handler
-            const handleSelectCamera = async () => {
-              try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                setCameraStreams((prev) => {
-                  // Stop previous stream if exists
-                  if (prev[input]) {
-                    prev[input]?.getTracks().forEach((track) => track.stop());
-                  }
-                  return { ...prev, [input]: stream };
-                });
-                if (onInputValueChange) {
-                  onInputValueChange(id, input, 'CAMERA_FEED'); // You may want to pass something more meaningful
-                }
-              } catch (err) {
-                alert('Could not access camera: ' + (err instanceof Error ? err.message : err));
-              }
-            };
-
             return (
               <div key={`input-${input}`} className="io-item input-item">
                 {inputMode === 'connection' && (
@@ -307,27 +311,49 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                     title={`${input} (${typeName}) - ${isRequired ? 'required' : 'optional'}`}
                   />
                 )}
+                
                 {inputMode === 'manual' ? (
                   typeName === 'CAMERA' ? (
-                    <div className="manual-input-container camera-input-container">
+                    <div className="camera-input-container">
                       <span className="input-label">{input}:</span>
-                      <button
-                        type="button"
-                        className="camera-select-button"
-                        onClick={handleSelectCamera}
-                        style={{ marginRight: '8px' }}
-                      >
-                        {cameraStreams[input] ? 'Change Camera' : 'Select Camera Feed'}
-                      </button>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <div className="camera-controls">
+                        <button
+                          className="camera-button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const stream = cameraStreams[input];
+                            if (stream) {
+                              stopCamera(input);
+                            } else {
+                              await startCamera(input);
+                            }
+                          }}
+                        >
+                          {cameraStreams[input] ? '⏹️ Stop' : '📹 Camera'}
+                        </button>
+                      </div>
+                      <div className="camera-feed-container" style={{ minHeight: cameraStreams[input] ? '150px' : '0px' }}>
                         {cameraStreams[input] && (
-                          <video
-                            ref={el => { videoRefs.current[input] = el; }}
-                            autoPlay
-                            playsInline
-                            muted
-                            style={{ width: 120, height: 90, border: '1px solid #ccc', marginTop: 4 }}
-                          />
+                          <div className="camera-feed">
+                            <video
+                              ref={(el) => {
+                                cameraRefs.current[input] = el;
+                                if (el && cameraStreams[input]) {
+                                  el.srcObject = cameraStreams[input];
+                                  el.play().catch(console.error);
+                                }
+                              }}
+                              autoPlay
+                              muted
+                              style={{
+                                width: '100%',
+                                maxWidth: '200px',
+                                height: '150px',
+                                objectFit: 'cover',
+                                borderRadius: '4px'
+                              }}
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
