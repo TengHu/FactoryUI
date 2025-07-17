@@ -297,20 +297,6 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
             "events": events
         }, websocket)
         
-    elif message_type == "input_update":
-        # Real-time input value update from frontend
-        node_id = message.get("node_id")
-        input_name = message.get("input_name")
-        input_value = message.get("input_value")
-        
-        # Broadcast to other clients for collaborative editing
-        await websocket_manager.broadcast({
-            "type": "input_updated",
-            "node_id": node_id,
-            "input_name": input_name,
-            "input_value": input_value,
-            "sender": id(websocket)  # Don't echo back to sender
-        })
         
     elif message_type == "get_status":
         # Client requesting current status

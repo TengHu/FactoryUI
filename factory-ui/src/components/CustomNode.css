@@ -49,8 +49,8 @@
 
 /* Real-time execution states */
 .custom-node.node-executing {
-  border-color: #fd7e14;
-  background: linear-gradient(145deg, #fff3e0, #fff8f0);
+  border-color: #38b2ac; /* teal-400 */
+  background: linear-gradient(145deg, #e6fffa, #f0fff4); /* soft teal/green gradient */
   animation: pulse-executing 2s infinite;
 }
 

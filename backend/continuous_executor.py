@@ -32,7 +32,7 @@ class ContinuousExecutor:
         self.current_workflow = None
         self.execution_results = {}
         self.execution_logs = []
-        self.execution_count = 0
+        self.count_of_iterations = 0
         self.last_execution_time = 0
         self.thread = None
         self.node_cache = NodeCache()  # Add node cache
@@ -67,6 +67,7 @@ class ContinuousExecutor:
             return
         
         self.is_running = True
+        self.count_of_iterations = 0
         self.thread = threading.Thread(target=self._execution_loop, daemon=True)
         self.thread.start()
         self.log_message("info", "Started continuous execution")
@@ -107,7 +108,7 @@ class ContinuousExecutor:
                 # Broadcast execution start
                 if self.websocket_manager:
                     asyncio.run(self.websocket_manager.broadcast_continuous_update(
-                        self.execution_count + 1, "executing", {"start_time": start_time}
+                        self.count_of_iterations + 1, "executing", {"start_time": start_time}
                     ))
                 
                 # Execute the workflow
@@ -115,20 +116,20 @@ class ContinuousExecutor:
                 
                 # Update timing
                 self.last_execution_time = time.time() - start_time
-                self.execution_count += 1
+                self.count_of_iterations += 1
                 
                 # Broadcast execution completed
                 if self.websocket_manager:
                     asyncio.run(self.websocket_manager.broadcast_continuous_update(
-                        self.execution_count, "completed", {
+                        self.count_of_iterations, "completed", {
                             "execution_time": self.last_execution_time,
                         }
                     ))
                 
                 # Log execution stats periodically
-                if self.execution_count % 10 == 0:
+                if self.count_of_iterations % 10 == 0:
                     self.log_message("info", 
-                        f"Completed {self.execution_count} executions. "
+                        f"Completed {self.count_of_iterations} executions. "
                         f"Last execution took {self.last_execution_time:.3f}s")
                 
                 # Sleep for the specified interval
@@ -141,7 +142,7 @@ class ContinuousExecutor:
                 # Broadcast error
                 if self.websocket_manager:
                     asyncio.run(self.websocket_manager.broadcast_continuous_update(
-                        self.execution_count, "error", {"error": str(e)}
+                        self.count_of_iterations, "error", {"error": str(e)}
                     ))
                 
                 time.sleep(self.loop_interval)  # Continue after error
@@ -264,7 +265,7 @@ class ContinuousExecutor:
             
             cached_output = self.node_cache.get_cache(node_id, inputs)
             if cached_output is not None:
-                if self.execution_count % 50 == 0:
+                if self.count_of_iterations % 50 == 0:
                     self.log_message("debug", f"Node {node_id} ({node_type}) cache hit")
                 return copy.deepcopy(cached_output)
 
@@ -297,7 +298,7 @@ class ContinuousExecutor:
                 # Cache the result
                 # self.node_cache.set_cache(node_id, inputs, node_result)
                 # Log successful execution
-                if self.execution_count % 50 == 0:
+                if self.count_of_iterations % 50 == 0:
                     self.log_message("debug", f"Node {node_id} ({node_type}) executed successfully")
                 return node_result, rt_update
             else:
@@ -386,7 +387,7 @@ class ContinuousExecutor:
         return {
             "is_running": self.is_running,
             "has_workflow": self.current_workflow is not None,
-            "execution_count": self.execution_count,
+            "count_of_iterations": self.count_of_iterations,
             "last_execution_time": self.last_execution_time,
             "loop_interval": self.loop_interval,
             "results": self.execution_results,
@@ -453,7 +454,7 @@ def main():
             while True:
                 time.sleep(5)
                 status = executor.get_status()
-                print(f"Status: {status['execution_count']} executions, "
+                print(f"Status: {status['count_of_iterations']} executions, "
                       f"last took {status['last_execution_time']:.3f}s")
         
         except KeyboardInterrupt:

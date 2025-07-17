@@ -641,7 +641,7 @@ function App() {
         alert('Continuous execution started! The workflow will run repeatedly.');
         
         // Start polling for status updates
-        pollContinuousStatus();
+        // pollContinuousStatus(); // This function is removed
       } else {
         alert(`Failed to start continuous execution: ${result.message}`);
       }
@@ -669,54 +669,6 @@ function App() {
     }
   }, []);
 
-  const pollContinuousStatus = useCallback(async () => {
-    if (!isContinuousRunning) return;
-    
-    try {
-      const status = await apiService.getContinuousStatus();
-      setContinuousStatus(status);
-      
-      if (status.is_running) {
-        // Continue polling every 2 seconds
-        setTimeout(pollContinuousStatus, 2000);
-      } else {
-        // Execution stopped
-        setIsContinuousRunning(false);
-      }
-    } catch (error) {
-      console.error('Error polling continuous status:', error);
-      // Continue polling even if there's an error
-      if (isContinuousRunning) {
-        setTimeout(pollContinuousStatus, 5000);
-      }
-    }
-  }, [isContinuousRunning]);
-
-  const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
-    setNodes(nodes => 
-      nodes.map(node => {
-        if (node.id === nodeId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              inputValues: {
-                ...node.data.inputValues,
-                [inputName]: value
-              }
-            }
-          };
-        }
-        return node;
-      })
-    );
-    
-    // Send real-time input update via WebSocket
-    if (isWebSocketConnected) {
-      websocketService.sendInputUpdate(nodeId, inputName, value);
-    }
-  }, [setNodes, isWebSocketConnected]);
-
   // WebSocket connection and event handlers
   useEffect(() => {
     const connectWebSocket = async () => {
@@ -739,7 +691,7 @@ function App() {
 
     connectWebSocket();
 
-    // Set up event handlers
+    // Set up event handlers, each returns a function to unsubscribe
     const unsubscribeHandlers = [
       websocketService.on('execution_status', (data) => {
         console.log('Execution status update:', data);
@@ -779,13 +731,6 @@ function App() {
         });
       }),
 
-      websocketService.on('input_updated', (data) => {
-        // Handle real-time input updates from other clients
-        if (data.sender !== websocketService) { // Don't echo back our own changes
-          handleInputValueChange(data.node_id, data.input_name, data.input_value);
-        }
-      }),
-
       websocketService.on('robot_status', (data) => {
         console.log('Robot status update:', data);
         // Handle robot status updates
@@ -817,14 +762,14 @@ function App() {
       websocketService.disconnect();
       setIsWebSocketConnected(false);
     };
-  }, [handleInputValueChange]);
+  }, []);
 
   // Start polling when continuous execution begins (fallback for WebSocket failures)
   React.useEffect(() => {
     if (isContinuousRunning && !isWebSocketConnected) {
-      pollContinuousStatus();
+      // pollContinuousStatus(); // This function is removed
     }
-  }, [isContinuousRunning, isWebSocketConnected, pollContinuousStatus]);
+  }, [isContinuousRunning, isWebSocketConnected]);
 
   const handleNodeContextMenu = useCallback((event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => {
     setContextMenu({
@@ -1155,9 +1100,35 @@ function App() {
     });
   }, [nodes, debouncedNodeStates]);
 
+  const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
+    setNodes(nodes => 
+      nodes.map(node => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              inputValues: {
+                ...node.data.inputValues,
+                [inputName]: value
+              }
+            }
+          };
+        }
+        return node;
+      })
+    );
+    
+    // Send real-time input update via WebSocket
+    if (isWebSocketConnected) {
+      websocketService.sendInputUpdate(nodeId, inputName, value);
+    }
+  }, [setNodes, isWebSocketConnected]);
+
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
   }), [handleNodeContextMenu, handleInputValueChange]);
+
 
   return (
     <div className="app">
@@ -1328,7 +1299,7 @@ function App() {
           
           {isContinuousRunning && continuousStatus && (
             <span className="continuous-status">
-              🔄 Continuous: {continuousStatus.execution_count} runs
+              🔄 Number of iterations: {continuousStatus.execution_count}
             </span>
           )}
           
