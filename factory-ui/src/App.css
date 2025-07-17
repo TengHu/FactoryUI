@@ -423,3 +423,18 @@
   align-items: center;
   gap: 8px;
 }
+
+/* Animated edges for continuous execution */
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 8, 4;
+  animation: dash-flow 1s linear infinite;
+  stroke: #6b7280; /* gray-500 */
+  stroke-width: 3;
+  filter: drop-shadow(0 0 3px rgba(107, 114, 128, 0.4));
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}

@@ -265,9 +265,17 @@ function App() {
       
       // Connection is valid, proceed
       console.log(`Valid connection: ${outputType} → ${inputType}`);
-      setEdges((eds) => addEdge(params, eds));
+      setEdges((eds) => {
+        const newEdge = addEdge(params, eds);
+        // If continuous execution is running, add animation to new edges
+        if (isContinuousRunning && newEdge.length > eds.length) {
+          const latestEdge = newEdge[newEdge.length - 1];
+          latestEdge.className = 'animated';
+        }
+        return newEdge;
+      });
     },
-    [setEdges, nodes]
+    [setEdges, nodes, isContinuousRunning]
   );
 
   const handleFileLoad = useCallback((file: File) => {
@@ -799,6 +807,16 @@ function App() {
       // pollContinuousStatus(); // This function is removed
     }
   }, [isContinuousRunning, isWebSocketConnected]);
+
+  // Animate edges when continuous execution starts/stops
+  React.useEffect(() => {
+    setEdges(currentEdges =>
+      currentEdges.map(edge => ({
+        ...edge,
+        className: isContinuousRunning ? 'animated' : ''
+      }))
+    );
+  }, [isContinuousRunning, setEdges]);
 
   const handleNodeContextMenu = useCallback((event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => {
     setContextMenu({
