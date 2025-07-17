@@ -20,6 +20,7 @@ import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
 import ThemeToggle from './components/ThemeToggle';
 import { NodeInfo, apiService } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
+import { websocketService } from './services/websocket';
 
 interface WorkflowData {
   nodes: Node[];
@@ -123,6 +124,27 @@ function App() {
   const [executionResults, setExecutionResults] = useState<any>(null);
   const [isContinuousRunning, setIsContinuousRunning] = useState(false);
   const [continuousStatus, setContinuousStatus] = useState<any>(null);
+  const [nodeStates, setNodeStates] = useState<Record<string, any>>({});
+  const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
+  
+  // Add debouncing to prevent rapid re-renders
+  const [debouncedNodeStates, setDebouncedNodeStates] = useState(nodeStates);
+  
+  // Throttled state updater
+  const throttledSetNodeStates = useCallback((updateFn: (prev: Record<string, any>) => Record<string, any>) => {
+    // Use requestAnimationFrame to batch DOM updates
+    requestAnimationFrame(() => {
+      setNodeStates(updateFn);
+    });
+  }, []);
+  
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedNodeStates(nodeStates);
+    }, 50); // 50ms debounce
+    
+    return () => clearTimeout(timeout);
+  }, [nodeStates]);
   const [contextMenu, setContextMenu] = useState<{
     isVisible: boolean;
     position: { x: number; y: number };
@@ -670,12 +692,139 @@ function App() {
     }
   }, [isContinuousRunning]);
 
-  // Start polling when continuous execution begins
+  const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
+    setNodes(nodes => 
+      nodes.map(node => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              inputValues: {
+                ...node.data.inputValues,
+                [inputName]: value
+              }
+            }
+          };
+        }
+        return node;
+      })
+    );
+    
+    // Send real-time input update via WebSocket
+    if (isWebSocketConnected) {
+      websocketService.sendInputUpdate(nodeId, inputName, value);
+    }
+  }, [setNodes, isWebSocketConnected]);
+
+  // WebSocket connection and event handlers
+  useEffect(() => {
+    const connectWebSocket = async () => {
+      try {
+        await websocketService.connect();
+        setIsWebSocketConnected(true);
+        console.log('WebSocket connected');
+        
+        // Start heartbeat
+        websocketService.startHeartbeat();
+        
+        // Subscribe to events
+        websocketService.subscribe(['execution_status', 'node_state', 'workflow_event', 'continuous_update', 'robot_status']);
+        
+      } catch (error) {
+        console.error('Failed to connect WebSocket:', error);
+        setIsWebSocketConnected(false);
+      }
+    };
+
+    connectWebSocket();
+
+    // Set up event handlers
+    const unsubscribeHandlers = [
+      websocketService.on('execution_status', (data) => {
+        console.log('Execution status update:', data);
+        setExecutionResults(data);
+      }),
+
+      websocketService.on('node_state', (data) => {
+        console.log('Node state update:', data);
+
+        throttledSetNodeStates(prev => ({
+          ...prev,
+          [data.node_id]: {
+            state: data.state,
+            data: data.data,
+            timestamp: data.timestamp
+          }
+        }));
+      }),
+
+      websocketService.on('workflow_event', (data) => {
+        console.log('Workflow event:', data);
+        if (data.event === 'continuous_started') {
+          setIsContinuousRunning(true);
+        } else if (data.event === 'continuous_stopped') {
+          setIsContinuousRunning(false);
+        }
+      }),
+
+      websocketService.on('continuous_update', (data) => {
+        console.log('Continuous update:', data);
+        setContinuousStatus({
+          is_running: data.status === 'executing' || data.status === 'completed',
+          execution_count: data.execution_count,
+          last_execution_time: data.data?.execution_time || 0,
+          results: data.data?.results || {},
+          status: data.status
+        });
+      }),
+
+      websocketService.on('input_updated', (data) => {
+        // Handle real-time input updates from other clients
+        if (data.sender !== websocketService) { // Don't echo back our own changes
+          handleInputValueChange(data.node_id, data.input_name, data.input_value);
+        }
+      }),
+
+      websocketService.on('robot_status', (data) => {
+        console.log('Robot status update:', data);
+        // Handle robot status updates
+      }),
+
+      websocketService.on('robot_status_stream', (data) => {
+        console.log('Robot status stream:', data);
+        
+        // Update node state with streaming robot status data
+        if (data.node_id) {
+          throttledSetNodeStates(prev => ({
+            ...prev,
+            [data.node_id]: {
+              ...prev[data.node_id],
+              robotStatus: data.status,
+              streamUpdate: data.stream_update,
+              streamComplete: data.stream_complete,
+              streamError: data.stream_error,
+              timestamp: data.timestamp
+            }
+          }));
+        }
+      })
+    ];
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribeHandlers.forEach(unsub => unsub());
+      websocketService.disconnect();
+      setIsWebSocketConnected(false);
+    };
+  }, [handleInputValueChange]);
+
+  // Start polling when continuous execution begins (fallback for WebSocket failures)
   React.useEffect(() => {
-    if (isContinuousRunning) {
+    if (isContinuousRunning && !isWebSocketConnected) {
       pollContinuousStatus();
     }
-  }, [isContinuousRunning, pollContinuousStatus]);
+  }, [isContinuousRunning, isWebSocketConnected, pollContinuousStatus]);
 
   const handleNodeContextMenu = useCallback((event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => {
     setContextMenu({
@@ -847,26 +996,6 @@ function App() {
     };
   }, [handleKeyDown]);
 
-  const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
-    setNodes(nodes => 
-      nodes.map(node => {
-        if (node.id === nodeId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              inputValues: {
-                ...node.data.inputValues,
-                [inputName]: value
-              }
-            }
-          };
-        }
-        return node;
-      })
-    );
-  }, [setNodes]);
-
   const toggleInputMode = useCallback((inputName: string) => {
     if (!contextMenu.nodeId) return;
     
@@ -1004,6 +1133,28 @@ function App() {
     return baseItems;
   }, [toggleBypass, copyNode, pasteNode, copiedNodeData, copyNodeId, duplicateNode, deleteNode, contextMenu.nodeInfo, contextMenu.nodeId, nodes, toggleInputMode]);
 
+  // Update nodes with real-time state information (using debounced state)
+  const nodesWithState = React.useMemo(() => {
+    return nodes.map(node => {
+      const nodeState = debouncedNodeStates[node.id];
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          nodeState: nodeState ? {
+            state: nodeState.state,
+            data: nodeState.data,
+            timestamp: nodeState.timestamp
+          } : undefined,
+          robotStatus: nodeState?.robotStatus,
+          streamUpdate: nodeState?.streamUpdate,
+          streamComplete: nodeState?.streamComplete,
+          streamError: nodeState?.streamError
+        }
+      };
+    });
+  }, [nodes, debouncedNodeStates]);
+
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
   }), [handleNodeContextMenu, handleInputValueChange]);
@@ -1012,7 +1163,7 @@ function App() {
     <div className="app">
       <div className="app-tabs">
         <div className="tab-group">
-          {canvases.map((canvas, idx) => (
+          {canvases.map((canvas) => (
             <button
               key={canvas.id}
               className={`tab${activeCanvasId === canvas.id ? ' active' : ''}`}
@@ -1071,7 +1222,7 @@ function App() {
                 onDragLeave={onDragLeave}
               >
                 <ReactFlow
-                  nodes={nodes}
+                  nodes={nodesWithState}
                   edges={edges}
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
@@ -1168,6 +1319,12 @@ function App() {
         <div className="toolbar-info">
           <span className="node-count">Nodes: {nodes.length}</span>
           <span className="edge-count">Connections: {edges.length}</span>
+          
+          {isWebSocketConnected && (
+            <span className="websocket-status">
+              🔗 Live
+            </span>
+          )}
           
           {isContinuousRunning && continuousStatus && (
             <span className="continuous-status">

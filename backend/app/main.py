@@ -1,9 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 import os
 import sys
+import json
+import logging
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -11,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.node_registry import node_registry
 from core.workflow_executor import workflow_executor
 from continuous_executor import ContinuousExecutor
+from websocket_manager import websocket_manager
 
 app = FastAPI(title="Factory UI Backend", version="1.0.0")
 
@@ -53,8 +56,8 @@ robot_state = {
     "device_info": None
 }
 
-# Global continuous executor instance
-continuous_executor = ContinuousExecutor(loop_interval=0)
+# Global continuous executor instance with WebSocket support
+continuous_executor = ContinuousExecutor(loop_interval=0, websocket_manager=websocket_manager)
 
 @app.on_event("startup")
 async def startup_event():
@@ -254,6 +257,74 @@ async def set_continuous_interval(interval: float):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to set interval: {str(e)}")
+
+# WebSocket endpoint for real-time communication
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time communication"""
+    await websocket_manager.connect(websocket)
+    try:
+        while True:
+            # Receive messages from client
+            data = await websocket.receive_text()
+            try:
+                message = json.loads(data)
+                await handle_websocket_message(websocket, message)
+            except json.JSONDecodeError:
+                await websocket_manager.send_personal_message({
+                    "type": "error",
+                    "message": "Invalid JSON format"
+                }, websocket)
+    except WebSocketDisconnect:
+        websocket_manager.disconnect(websocket)
+
+async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]):
+    """Handle incoming WebSocket messages from client"""
+    message_type = message.get("type")
+    
+    if message_type == "ping":
+        # Respond to ping with pong
+        await websocket_manager.send_personal_message({
+            "type": "pong",
+            "timestamp": message.get("timestamp")
+        }, websocket)
+        
+    elif message_type == "subscribe":
+        # Client wants to subscribe to specific events
+        events = message.get("events", [])
+        await websocket_manager.send_personal_message({
+            "type": "subscription_confirmed",
+            "events": events
+        }, websocket)
+        
+    elif message_type == "input_update":
+        # Real-time input value update from frontend
+        node_id = message.get("node_id")
+        input_name = message.get("input_name")
+        input_value = message.get("input_value")
+        
+        # Broadcast to other clients for collaborative editing
+        await websocket_manager.broadcast({
+            "type": "input_updated",
+            "node_id": node_id,
+            "input_name": input_name,
+            "input_value": input_value,
+            "sender": id(websocket)  # Don't echo back to sender
+        })
+        
+    elif message_type == "get_status":
+        # Client requesting current status
+        regular_status = workflow_executor.get_status()
+        continuous_status = continuous_executor.get_status()
+        
+        await websocket_manager.send_personal_message({
+            "type": "status_response",
+            "data": {
+                "regular_execution": regular_status,
+                "continuous_execution": continuous_status,
+                "robot": robot_state
+            }
+        }, websocket)
 
 if __name__ == "__main__":
     import uvicorn

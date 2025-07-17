@@ -15,12 +15,34 @@ interface CustomNodeData {
   inputModes?: Record<string, 'connection' | 'manual'>;
   inputValues?: Record<string, string>;
   bypassed?: boolean;
+  nodeState?: {
+    state: 'idle' | 'executing' | 'completed' | 'error';
+    data?: any;
+    timestamp?: number;
+  };
+  robotStatus?: {
+    positions?: Record<string, number>;
+    modes?: Record<string, any>;
+    servo_ids?: number[];
+    timestamp?: number;
+    connected?: boolean;
+    stream_count?: number;
+    error?: string;
+  };
+  streamUpdate?: boolean;
+  streamComplete?: boolean;
+  streamError?: boolean;
 }
 
 const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
-  const { nodeInfo, inputModes = {}, inputValues = {}, bypassed = false } = data;
+  const { nodeInfo, inputModes = {}, inputValues = {}, bypassed = false, nodeState, robotStatus, streamUpdate, streamComplete, streamError } = data;
   const onContextMenu = (props as any).onContextMenu;
   const onInputValueChange = (props as any).onInputValueChange;
+  
+  // Debug logging for node state
+  if (nodeState) {
+    console.log(`🔄 Node ${id} state:`, nodeState.state, nodeState);
+  }
   
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
@@ -81,7 +103,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
 
   return (
     <div 
-      className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} node-${category}`}
+      className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} ${nodeState?.state ? `node-${nodeState.state}` : ''} node-${category}`}
       onContextMenu={handleContextMenu}
     >
       {/* Node header */}
@@ -194,6 +216,103 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
           })}
         </div>
       </div>
+      
+      {/* Robot Status Display */}
+      {robotStatus && nodeInfo.name === 'RobotStatusReader' && (
+        <div className="robot-status-display">
+          <div className="robot-status-header">
+            <span className="robot-status-title">Robot Status</span>
+            {streamUpdate && <span className="stream-indicator">🔄 Live</span>}
+            {streamComplete && <span className="stream-indicator">✅ Complete</span>}
+            {streamError && <span className="stream-indicator">❌ Error</span>}
+          </div>
+          
+          {robotStatus.error ? (
+            <div className="robot-status-error">
+              Error: {robotStatus.error}
+            </div>
+          ) : (
+            <div className="robot-status-content">
+              {robotStatus.positions && (
+                <div className="robot-positions">
+                  <div className="robot-section-title">Positions:</div>
+                  <div className="robot-positions-grid">
+                    {Object.entries(robotStatus.positions).map(([servoId, position]) => (
+                      <div key={servoId} className="robot-position-item">
+                        <span className="servo-id">ID {servoId}:</span>
+                        <span className="servo-position">{position}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {robotStatus.modes && (
+                <div className="robot-modes">
+                  <div className="robot-section-title">Modes:</div>
+                  <div className="robot-modes-grid">
+                    {Object.entries(robotStatus.modes).map(([servoId, mode]) => (
+                      <div key={servoId} className="robot-mode-item">
+                        <span className="servo-id">ID {servoId}:</span>
+                        <span className="servo-mode">{mode || 'N/A'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="robot-metadata">
+                <div className="robot-meta-item">
+                  <span className="meta-label">Connected:</span>
+                  <span className={`meta-value ${robotStatus.connected ? 'connected' : 'disconnected'}`}>
+                    {robotStatus.connected ? '✅ Yes' : '❌ No'}
+                  </span>
+                </div>
+                {robotStatus.stream_count !== undefined && (
+                  <div className="robot-meta-item">
+                    <span className="meta-label">Updates:</span>
+                    <span className="meta-value">{robotStatus.stream_count}</span>
+                  </div>
+                )}
+                {robotStatus.timestamp && (
+                  <div className="robot-meta-item">
+                    <span className="meta-label">Last Update:</span>
+                    <span className="meta-value">
+                      {new Date(robotStatus.timestamp * 1000).toLocaleTimeString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Real-Time Update Display */}
+      {nodeState?.data?.rt_update && (
+        <div className="rt-update-display">
+          <div className="rt-update-header">
+            <span className="rt-update-title">Real-Time Update</span>
+            <span className="rt-update-state">{nodeState.state}</span>
+          </div>
+          <div className="rt-update-content">
+            {typeof nodeState.data.rt_update === 'object' ? (
+              <pre className="rt-update-json">
+                {JSON.stringify(nodeState.data.rt_update, null, 2)}
+              </pre>
+            ) : (
+              <div className="rt-update-text">
+                {nodeState.data.rt_update}
+              </div>
+            )}
+          </div>
+          {nodeState.timestamp && (
+            <div className="rt-update-timestamp">
+              Updated: {new Date(nodeState.timestamp * 1000).toLocaleTimeString()}
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Detailed Description Modal */}
       {showDetailedDescription && (

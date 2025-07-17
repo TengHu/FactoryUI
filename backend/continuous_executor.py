@@ -14,6 +14,7 @@ import sys
 import os
 import hashlib
 import copy
+import asyncio
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,7 +26,7 @@ from core.node_cache import NodeCache  # Import NodeCache from new module
 class ContinuousExecutor:
     """Continuously executes workflows in a loop"""
     
-    def __init__(self, loop_interval: float = 1.0):
+    def __init__(self, loop_interval: float = 1.0, websocket_manager=None):
         self.loop_interval = loop_interval
         self.is_running = False
         self.current_workflow = None
@@ -35,6 +36,7 @@ class ContinuousExecutor:
         self.last_execution_time = 0
         self.thread = None
         self.node_cache = NodeCache()  # Add node cache
+        self.websocket_manager = websocket_manager
         
     def load_workflow(self, workflow_data: Dict[str, Any]) -> bool:
         """Load a workflow for continuous execution"""
@@ -91,9 +93,22 @@ class ContinuousExecutor:
         """Main execution loop that runs continuously"""
         self.log_message("info", "Continuous execution loop started")
         
+        # Broadcast workflow started event
+        if self.websocket_manager:
+            asyncio.run(self.websocket_manager.broadcast_workflow_event("continuous_started", {
+                "workflow_id": id(self.current_workflow),
+                "node_count": len(self.current_workflow.get("nodes", []))
+            }))
+        
         while self.is_running:
             try:
                 start_time = time.time()
+                
+                # Broadcast execution start
+                if self.websocket_manager:
+                    asyncio.run(self.websocket_manager.broadcast_continuous_update(
+                        self.execution_count + 1, "executing", {"start_time": start_time}
+                    ))
                 
                 # Execute the workflow
                 self._execute_workflow_once()
@@ -101,6 +116,14 @@ class ContinuousExecutor:
                 # Update timing
                 self.last_execution_time = time.time() - start_time
                 self.execution_count += 1
+                
+                # Broadcast execution completed
+                if self.websocket_manager:
+                    asyncio.run(self.websocket_manager.broadcast_continuous_update(
+                        self.execution_count, "completed", {
+                            "execution_time": self.last_execution_time,
+                        }
+                    ))
                 
                 # Log execution stats periodically
                 if self.execution_count % 10 == 0:
@@ -114,6 +137,13 @@ class ContinuousExecutor:
             except Exception as e:
                 self.log_message("error", f"Error in execution loop: {str(e)}")
                 self.log_message("error", f"Traceback: {traceback.format_exc()}")
+                
+                # Broadcast error
+                if self.websocket_manager:
+                    asyncio.run(self.websocket_manager.broadcast_continuous_update(
+                        self.execution_count, "error", {"error": str(e)}
+                    ))
+                
                 time.sleep(self.loop_interval)  # Continue after error
     
     def _execute_workflow_once(self):
@@ -132,9 +162,30 @@ class ContinuousExecutor:
             # Execute nodes in order
             node_results = {}
             for node_id in execution_order:
-                node_result = self._execute_node(node_id, nodes, edges, node_results)
-                if node_result is not None:
-                    node_results[node_id] = node_result
+                # Broadcast node execution start
+                if self.websocket_manager:
+                    asyncio.run(self.websocket_manager.broadcast_node_state(
+                        node_id, "executing", {"start_time": time.time()}
+                    ))
+                
+                try:
+                    node_result, rt_update = self._execute_node(node_id, nodes, edges, node_results)
+                    if node_result is not None:
+                        node_results[node_id] = node_result
+                    
+                    # Broadcast node execution completed
+                    if self.websocket_manager:
+                        asyncio.run(self.websocket_manager.broadcast_node_state(
+                            node_id, "completed", {"rt_update": rt_update}
+                        ))
+                        
+                except Exception as e:
+                    # Broadcast node error
+                    if self.websocket_manager:
+                        asyncio.run(self.websocket_manager.broadcast_node_state(
+                            node_id, "error", {"error": str(e)}
+                        ))
+                    raise
             
             # Store results
             self.execution_results = node_results
@@ -220,6 +271,12 @@ class ContinuousExecutor:
 
             # Create node instance and execute
             node_instance = node_class()
+            
+            # Pass websocket manager and node ID to the node instance for streaming
+            if self.websocket_manager:
+                node_instance._websocket_manager = self.websocket_manager
+                node_instance._node_id = node_id
+            
             # Validate inputs
             try:
                 node_instance.validate_inputs(**inputs)
@@ -230,12 +287,19 @@ class ContinuousExecutor:
             if hasattr(node_instance, function_name):
                 execute_func = getattr(node_instance, function_name)
                 result = execute_func(**inputs)
+                # If result is a 2-tuple, use the second element for websocket broadcast
+                rt_update = None
+                node_result = None
+                if isinstance(result, tuple) and len(result) == 2:
+                    node_result, rt_update = result
+                else:
+                    node_result = result
                 # Cache the result
-                # self.node_cache.set_cache(node_id, inputs, result)
+                # self.node_cache.set_cache(node_id, inputs, node_result)
                 # Log successful execution
                 if self.execution_count % 50 == 0:
                     self.log_message("debug", f"Node {node_id} ({node_type}) executed successfully")
-                return result
+                return node_result, rt_update
             else:
                 raise ValueError(f"Node {node_type} does not have function {function_name}")
         except Exception as e:
