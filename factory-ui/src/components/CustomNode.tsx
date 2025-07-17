@@ -311,70 +311,111 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                     title={`${input} (${typeName}) - ${isRequired ? 'required' : 'optional'}`}
                   />
                 )}
-                
-                {inputMode === 'manual' ? (
-                  typeName === 'CAMERA' ? (
-                    <div className="camera-input-container">
-                      <span className="input-label">{input}:</span>
-                      <div className="camera-controls">
-                        <button
-                          className="camera-button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const stream = cameraStreams[input];
-                            if (stream) {
-                              stopCamera(input);
-                            } else {
-                              await startCamera(input);
-                            }
-                          }}
-                        >
-                          {cameraStreams[input] ? '⏹️ Stop' : '📹 Camera'}
-                        </button>
-                      </div>
-                      <div className="camera-feed-container" style={{ minHeight: cameraStreams[input] ? '150px' : '0px' }}>
-                        {cameraStreams[input] && (
-                          <div className="camera-feed">
-                            <video
-                              ref={(el) => {
-                                cameraRefs.current[input] = el;
-                                if (el && cameraStreams[input]) {
-                                  el.srcObject = cameraStreams[input];
-                                  el.play().catch(console.error);
+
+                {inputMode === 'manual' ? (() => {
+                  switch (typeName) {
+                    case 'CAMERA':
+                      return (
+                        <div className="camera-input-container">
+                          <span className="input-label">{input}:</span>
+                          <div className="camera-controls">
+                            <button
+                              className="camera-button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const stream = cameraStreams[input];
+                                if (stream) {
+                                  stopCamera(input);
+                                } else {
+                                  await startCamera(input);
                                 }
                               }}
-                              autoPlay
-                              muted
-                              style={{
-                                width: '100%',
-                                maxWidth: '200px',
-                                height: '150px',
-                                objectFit: 'cover',
-                                borderRadius: '4px'
-                              }}
-                            />
+                            >
+                              {cameraStreams[input] ? '⏹️ Stop' : '📹 Camera'}
+                            </button>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="manual-input-container">
-                      <span className="input-label">{input}:</span>
-                      <input
-                        type="text"
-                        className="manual-input"
-                        value={inputValue}
-                        placeholder={`Enter ${typeName.toLowerCase()}`}
-                        onChange={(e) => {
-                          if (onInputValueChange) {
-                            onInputValueChange(id, input, e.target.value);
-                          }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                  )
-                ) : (
+                          <div className="camera-feed-container" style={{ minHeight: cameraStreams[input] ? '150px' : '0px' }}>
+                            {cameraStreams[input] && (
+                              <div className="camera-feed">
+                                <video
+                                  ref={(el) => {
+                                    cameraRefs.current[input] = el;
+                                    if (el && cameraStreams[input]) {
+                                      el.srcObject = cameraStreams[input];
+                                      el.play().catch(console.error);
+                                    }
+                                  }}
+                                  autoPlay
+                                  muted
+                                  style={{
+                                    width: '100%',
+                                    maxWidth: '200px',
+                                    height: '150px',
+                                    objectFit: 'cover',
+                                    borderRadius: '4px'
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    case 'STRING':
+                      return (
+                        <div className="manual-input-container">
+                          <span className="input-label">{input}:</span>
+                          <input
+                            type="text"
+                            className="manual-input"
+                            value={inputValue}
+                            placeholder={`Enter ${typeName.toLowerCase()}`}
+                            onChange={(e) => {
+                              if (onInputValueChange) {
+                                onInputValueChange(id, input, e.target.value);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      );
+                    case 'FLOAT':
+                      return (
+                        <div className="manual-input-container">
+                          <span className="input-label">{input}:</span>
+                          <input
+                            type="number"
+                            className="manual-input"
+                            value={inputValue}
+                            placeholder={`Enter ${typeName.toLowerCase()}`}
+                            onChange={(e) => {
+                              if (onInputValueChange) {
+                                onInputValueChange(id, input, e.target.value);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      );
+                    default:
+                      return (
+                        <div className="manual-input-container">
+                          <span className="input-label">{input}:</span>
+                          <input
+                            type="text"
+                            className="manual-input"
+                            value={inputValue}
+                            placeholder={`Enter ${typeName.toLowerCase()}`}
+                            onChange={(e) => {
+                              if (onInputValueChange) {
+                                onInputValueChange(id, input, e.target.value);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      );
+                  }
+                })() : (
                   <span className={`connection-label ${isRequired ? 'required' : 'optional'}`}>
                     {`${input} (${typeName})`}
                   </span>
