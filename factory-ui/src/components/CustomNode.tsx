@@ -50,7 +50,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   
   // Camera state for CAMERA input types
   const [cameraStreams, setCameraStreams] = useState<Record<string, MediaStream | null>>({});
-  const [cameraElements, setCameraElements] = useState<Record<string, HTMLVideoElement | null>>({});
   const cameraRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   
   // Camera utility functions
