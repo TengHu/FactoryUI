@@ -11,7 +11,6 @@ import logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.node_registry import node_registry
-from core.workflow_executor import workflow_executor
 from continuous_executor import ContinuousExecutor
 from websocket_manager import websocket_manager
 
@@ -56,8 +55,9 @@ robot_state = {
     "device_info": None
 }
 
-# Global continuous executor instance with WebSocket support
-continuous_executor = ContinuousExecutor(loop_interval=0, websocket_manager=websocket_manager)
+# Global executor instance with WebSocket support
+# This single executor handles both continuous and single workflow execution
+executor = ContinuousExecutor(loop_interval=1, websocket_manager=websocket_manager)
 
 @app.on_event("startup")
 async def startup_event():
@@ -107,10 +107,10 @@ async def save_workflow(workflow: WorkflowRequest):
 
 @app.post("/run", response_model=ExecutionResponse)
 async def run_workflow(workflow: WorkflowRequest):
-    """Execute a workflow"""
+    """Execute a workflow once"""
     try:
-        if workflow_executor.is_running:
-            raise HTTPException(status_code=409, detail="Another workflow is already running")
+        if executor.is_running:
+            raise HTTPException(status_code=409, detail="Continuous execution is running. Stop it first to run a single workflow.")
         
         # Convert workflow to execution format
         workflow_data = {
@@ -119,10 +119,9 @@ async def run_workflow(workflow: WorkflowRequest):
             "metadata": workflow.metadata
         }
         
-        # Execute workflow
-        result = await workflow_executor.execute_workflow(workflow_data)
+        # Execute workflow once
+        result = executor.execute_workflow_once(workflow_data)
         
-
         return ExecutionResponse(**result)
     
     except Exception as e:
@@ -134,21 +133,28 @@ async def run_workflow(workflow: WorkflowRequest):
 @app.post("/stop")
 async def stop_execution():
     """Stop the current workflow execution"""
-    stopped = workflow_executor.stop_execution()
-    return {
-        "success": stopped,
-        "message": "Execution stopped" if stopped else "No execution running"
-    }
+    try:
+        if executor.is_running:
+            executor.stop_continuous_execution()
+            return {
+                "success": True,
+                "message": "Execution stopped"
+            }
+        else:
+            return {
+                "success": True,
+                "message": "No execution running"
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to stop execution: {str(e)}")
 
 @app.get("/status")
 async def get_execution_status():
     """Get current execution status"""
-    regular_status = workflow_executor.get_status()
-    continuous_status = continuous_executor.get_status()
+    status = executor.get_status()
     
     return {
-        "regular_execution": regular_status,
-        "continuous_execution": continuous_status
+        "execution": status
     }
 
 @app.post("/robot/connect")
@@ -208,11 +214,11 @@ async def start_continuous_execution(workflow: WorkflowRequest):
         }
         
         # Set the sleep time for continuous execution
-        continuous_executor.set_loop_interval(workflow.sleep_time)
+        executor.set_loop_interval(workflow.sleep_time)
         
         # Load workflow into continuous executor
-        if continuous_executor.load_workflow(workflow_data):
-            continuous_executor.start_continuous_execution()
+        if executor.load_workflow(workflow_data):
+            executor.start_continuous_execution()
             return {
                 "success": True,
                 "message": f"Continuous execution started with {workflow.sleep_time}s sleep interval"
@@ -230,7 +236,7 @@ async def start_continuous_execution(workflow: WorkflowRequest):
 async def stop_continuous_execution():
     """Stop continuous execution"""
     try:
-        continuous_executor.stop_continuous_execution()
+        executor.stop_continuous_execution()
         return {
             "success": True,
             "message": "Continuous execution stopped"
@@ -241,7 +247,7 @@ async def stop_continuous_execution():
 @app.get("/continuous/status")
 async def get_continuous_status():
     """Get continuous execution status"""
-    return continuous_executor.get_status()
+    return executor.get_status()
 
 @app.post("/continuous/set-interval")
 async def set_continuous_interval(interval: float):
@@ -250,7 +256,7 @@ async def set_continuous_interval(interval: float):
         if interval < 0.1:
             raise HTTPException(status_code=400, detail="Interval must be at least 0.1 seconds")
         
-        continuous_executor.loop_interval = interval
+        executor.loop_interval = interval
         return {
             "success": True,
             "message": f"Execution interval set to {interval} seconds"
@@ -300,14 +306,12 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
         
     elif message_type == "get_status":
         # Client requesting current status
-        regular_status = workflow_executor.get_status()
-        continuous_status = continuous_executor.get_status()
+        execution_status = executor.get_status()
         
         await websocket_manager.send_personal_message({
             "type": "status_response",
             "data": {
-                "regular_execution": regular_status,
-                "continuous_execution": continuous_status,
+                "execution": execution_status,
                 "robot": robot_state
             }
         }, websocket)

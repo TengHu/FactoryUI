@@ -20,7 +20,6 @@ import asyncio
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.node_registry import node_registry
-from core.workflow_executor import workflow_executor
 from core.node_cache import NodeCache  # Import NodeCache from new module
 
 class ContinuousExecutor:
@@ -37,6 +36,25 @@ class ContinuousExecutor:
         self.thread = None
         self.node_cache = NodeCache()  # Add node cache
         self.websocket_manager = websocket_manager
+        
+    def _broadcast_sync(self, coro):
+        """Helper method to run async WebSocket broadcasts from sync thread"""
+        try:
+            # Try to get the current event loop
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If we're already in an event loop, schedule the coroutine
+                asyncio.create_task(coro)
+            else:
+                # If no event loop is running, run the coroutine
+                asyncio.run(coro)
+        except RuntimeError:
+            # If there's no event loop, create one and run the coroutine
+            try:
+                asyncio.run(coro)
+            except Exception as e:
+                # If all else fails, just log the error and continue
+                self.log_message("warning", f"Failed to broadcast WebSocket message: {str(e)}")
         
     def load_workflow(self, workflow_data: Dict[str, Any]) -> bool:
         """Load a workflow for continuous execution"""
@@ -96,7 +114,7 @@ class ContinuousExecutor:
         
         # Broadcast workflow started event
         if self.websocket_manager:
-            asyncio.run(self.websocket_manager.broadcast_workflow_event("continuous_started", {
+            self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("continuous_started", {
                 "workflow_id": id(self.current_workflow),
                 "node_count": len(self.current_workflow.get("nodes", []))
             }))
@@ -107,7 +125,7 @@ class ContinuousExecutor:
                 
                 # Broadcast execution start
                 if self.websocket_manager:
-                    asyncio.run(self.websocket_manager.broadcast_continuous_update(
+                    self._broadcast_sync(self.websocket_manager.broadcast_continuous_update(
                         self.count_of_iterations + 1, "executing", {"start_time": start_time}
                     ))
                 
@@ -120,7 +138,7 @@ class ContinuousExecutor:
                 
                 # Broadcast execution completed
                 if self.websocket_manager:
-                    asyncio.run(self.websocket_manager.broadcast_continuous_update(
+                    self._broadcast_sync(self.websocket_manager.broadcast_continuous_update(
                         self.count_of_iterations, "completed", {
                             "execution_time": self.last_execution_time,
                         }
@@ -141,7 +159,7 @@ class ContinuousExecutor:
                 
                 # Broadcast error
                 if self.websocket_manager:
-                    asyncio.run(self.websocket_manager.broadcast_continuous_update(
+                    self._broadcast_sync(self.websocket_manager.broadcast_continuous_update(
                         self.count_of_iterations, "error", {"error": str(e)}
                     ))
                 
@@ -165,7 +183,7 @@ class ContinuousExecutor:
             for node_id in execution_order:
                 # Broadcast node execution start
                 if self.websocket_manager:
-                    asyncio.run(self.websocket_manager.broadcast_node_state(
+                    self._broadcast_sync(self.websocket_manager.broadcast_node_state(
                         node_id, "executing", {"start_time": time.time()}
                     ))
                 
@@ -176,14 +194,14 @@ class ContinuousExecutor:
                     
                     # Broadcast node execution completed
                     if self.websocket_manager:
-                        asyncio.run(self.websocket_manager.broadcast_node_state(
+                        self._broadcast_sync(self.websocket_manager.broadcast_node_state(
                             node_id, "completed", {"rt_update": rt_update}
                         ))
                         
                 except Exception as e:
                     # Broadcast node error
                     if self.websocket_manager:
-                        asyncio.run(self.websocket_manager.broadcast_node_state(
+                        self._broadcast_sync(self.websocket_manager.broadcast_node_state(
                             node_id, "error", {"error": str(e)}
                         ))
                     raise
@@ -381,6 +399,84 @@ class ContinuousExecutor:
         # Print to console
         timestamp = time.strftime("%H:%M:%S", time.localtime(log_entry["timestamp"]))
         print(f"[{timestamp}] {level.upper()}: {message}")
+    
+    def execute_workflow_once(self, workflow_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a workflow once (single execution, not continuous)"""
+        if self.is_running:
+            raise ValueError("Cannot execute single workflow while continuous execution is running")
+        
+        # Load the workflow
+        if not self.load_workflow(workflow_data):
+            return {
+                "success": False,
+                "error": "Failed to load workflow",
+                "logs": self.execution_logs
+            }
+        
+        # Broadcast workflow started event
+        if self.websocket_manager:
+            self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("workflow_started", {
+                "workflow_id": id(workflow_data),
+                "node_count": len(workflow_data.get("nodes", []))
+            }))
+        
+        try:
+            # Execute the workflow once
+            start_time = time.time()
+            
+            # Broadcast execution start
+            if self.websocket_manager:
+                self._broadcast_sync(self.websocket_manager.broadcast_execution_status({
+                    "is_running": True,
+                    "workflow_id": id(workflow_data),
+                    "timestamp": start_time
+                }))
+            
+            self._execute_workflow_once()
+            
+            execution_time = time.time() - start_time
+            
+            # Broadcast workflow completed event
+            if self.websocket_manager:
+                self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("workflow_completed", {
+                    "workflow_id": id(workflow_data),
+                    "execution_time": execution_time,
+                }))
+            
+            return {
+                "success": True,
+            }
+            
+        except Exception as e:
+            self.log_message("error", f"Single workflow execution failed: {str(e)}")
+            
+            # Broadcast workflow error event
+            if self.websocket_manager:
+                self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("workflow_error", {
+                    "workflow_id": id(workflow_data),
+                    "error": str(e)
+                }))
+            
+            return {
+                "success": False,
+                "error": str(e),
+                "logs": self.execution_logs
+            }
+        
+        finally:
+            # Broadcast execution status update
+            if self.websocket_manager:
+                self._broadcast_sync(self.websocket_manager.broadcast_execution_status({
+                    "is_running": False,
+                    "workflow_id": id(workflow_data),
+                    "timestamp": time.time()
+                }))
+    
+    def stop_single_execution(self) -> bool:
+        """Stop single workflow execution (for compatibility with workflow_executor interface)"""
+        # For single execution, we don't have a separate stop mechanism
+        # This is mainly for API compatibility
+        return not self.is_running
     
     def get_status(self) -> Dict[str, Any]:
         """Get current execution status"""
