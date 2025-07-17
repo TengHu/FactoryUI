@@ -299,8 +299,6 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
         await websocket_manager.send_personal_message({
             "type": "status_response",
             "data": {
-                "execution": execution_status,
-                "robot": robot_state
             }
         }, websocket)
 

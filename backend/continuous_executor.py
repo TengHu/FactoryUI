@@ -52,13 +52,16 @@ class ContinuousExecutor:
             if loop.is_running():
                 # If we're already in an event loop, schedule the coroutine
                 asyncio.create_task(coro)
+                self.log_message("debug", "WebSocket message scheduled as task")
             else:
                 # If no event loop is running, run the coroutine
                 asyncio.run(coro)
+                self.log_message("debug", "WebSocket message sent via asyncio.run")
         except RuntimeError:
             # If there's no event loop, create one and run the coroutine
             try:
                 asyncio.run(coro)
+                self.log_message("debug", "WebSocket message sent via new event loop")
             except Exception as e:
                 # If all else fails, just log the error and continue
                 self.log_message("warning", f"Failed to broadcast WebSocket message: {str(e)}")
@@ -108,10 +111,13 @@ class ContinuousExecutor:
         
         # Broadcast workflow stopped event
         if self.websocket_manager:
+            self.log_message("info", "Broadcasting continuous_stopped event")
             self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("continuous_stopped", {
                 "workflow_id": id(self.current_workflow) if self.current_workflow else None,
                 "total_iterations": self.count_of_iterations
             }))
+        else:
+            self.log_message("warning", "No websocket_manager available for broadcasting stop event")
         
         if self.thread:
             self.thread.join(timeout=5.0)
