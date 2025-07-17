@@ -318,6 +318,17 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
             }
         }, websocket)
 
+
+    elif message_type == "input_update":
+        if executor.is_running:
+            pass
+            
+            # data = message.get("data", {})
+            # node_id = data.get("node_id")
+            # input_name = data.get("input_name")
+            # input_value = data.get("input_value")
+            
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
