@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
-import ReactFlow, {
+import {
+  ReactFlow,
   Node,
   Edge,
   addEdge,
@@ -11,8 +12,8 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   NodeTypes,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import './App.css';
 import NodePanel from './components/NodePanel';
 import CustomNode from './components/CustomNode';
@@ -447,7 +448,7 @@ function App() {
     }
   }, [nodes.length, edges.length, setNodes, setEdges]);
 
-  const isValidConnection = useCallback((connection: Connection) => {
+  const isValidConnection = useCallback((connection: Connection | Edge) => {
     // Find source and target nodes to get type information
     const sourceNode = nodes.find(node => node.id === connection.source);
     const targetNode = nodes.find(node => node.id === connection.target);
@@ -532,20 +533,20 @@ function App() {
     );
     
     // Log bypassed nodes for user feedback
-    const bypassedNodes = nodes.filter(node => node.data.bypassed);
+    const bypassedNodes = nodes.filter(node => (node.data as any).bypassed);
     if (bypassedNodes.length > 0) {
       console.log(`⚫ Skipping ${bypassedNodes.length} bypassed node(s):`, 
-        bypassedNodes.map(n => n.data.nodeInfo.display_name).join(', ')
+        bypassedNodes.map(n => (n.data as any).nodeInfo.display_name).join(', ')
       );
     }
     
     return {
       nodes: activeNodes.map(node => ({
         id: node.id,
-        type: node.data.nodeInfo?.name || node.data.type || node.type,
+        type: (node.data as any).nodeInfo?.name || (node.data as any).type || node.type,
         data: {
           ...node.data,
-          parameters: node.data.inputValues || {}
+          parameters: (node.data as any).inputValues || {}
         },
         position: node.position
       })),
@@ -838,7 +839,7 @@ function App() {
       const nodeToCopy = nodes.find(node => node.id === contextMenu.nodeId);
       if (nodeToCopy) {
         setCopiedNodeData(nodeToCopy);
-        console.log('✓ Node copied:', nodeToCopy.data.nodeInfo.display_name);
+        console.log('✓ Node copied:', (nodeToCopy.data as any).nodeInfo.display_name);
       }
     }
   }, [contextMenu.nodeId, nodes]);
@@ -848,7 +849,7 @@ function App() {
     const selectedNode = nodes.find(node => node.selected);
     if (selectedNode) {
       setCopiedNodeData(selectedNode);
-      console.log('✓ Node copied:', selectedNode.data.nodeInfo.display_name);
+      console.log('✓ Node copied:', (selectedNode.data as any).nodeInfo.display_name);
     } else {
       console.log('⚠ No node selected to copy');
     }
@@ -879,13 +880,13 @@ function App() {
       // Create new node with unique ID
       const newNode: Node = {
         ...copiedNodeData,
-        id: `${copiedNodeData.data.nodeInfo.name}-${Date.now()}`,
+        id: `${(copiedNodeData.data as any).nodeInfo.name}-${Date.now()}`,
         position: pastePosition,
         selected: false, // Don't select the pasted node by default
       };
 
       setNodes(nodes => [...nodes, newNode]);
-      console.log('✓ Node pasted:', newNode.data.nodeInfo.display_name);
+      console.log('✓ Node pasted:', (newNode.data as any).nodeInfo.display_name);
     } else {
       console.log('⚠ No node copied to paste');
     }
@@ -897,8 +898,8 @@ function App() {
       setNodes(nodes => 
         nodes.map(node => {
           if (node.id === contextMenu.nodeId) {
-            const newBypassed = !node.data.bypassed;
-            console.log(`${newBypassed ? '⚫' : '✓'} Node ${newBypassed ? 'bypassed' : 'activated'}:`, node.data.nodeInfo.display_name);
+            const newBypassed = !(node.data as any).bypassed;
+            console.log(`${newBypassed ? '⚫' : '✓'} Node ${newBypassed ? 'bypassed' : 'activated'}:`, (node.data as any).nodeInfo.display_name);
             return {
               ...node,
               data: {
@@ -963,14 +964,14 @@ function App() {
       nodes.map(node => {
         if (node.id === contextMenu.nodeId) {
           // Get the type information to determine default mode
-          const nodeInfo = node.data.nodeInfo as NodeInfo;
+          const nodeInfo = (node.data as any).nodeInfo as NodeInfo;
           const typeInfo = 
             nodeInfo.input_types.required?.[inputName] ||
             nodeInfo.input_types.optional?.[inputName];
           const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
           const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
           
-          const currentMode = node.data.inputModes?.[inputName] || defaultMode;
+          const currentMode = (node.data as any).inputModes?.[inputName] || defaultMode;
           const newMode = currentMode === 'connection' ? 'manual' : 'connection';
           
           // If switching to connection mode, remove any edges for this input
@@ -987,7 +988,7 @@ function App() {
             data: {
               ...node.data,
               inputModes: {
-                ...node.data.inputModes,
+                ...(node.data as any).inputModes,
                 [inputName]: newMode
               }
             }
@@ -1001,7 +1002,7 @@ function App() {
   const contextMenuItems: ContextMenuItem[] = React.useMemo(() => {
     // Check if current node is bypassed
     const currentNode = contextMenu.nodeId ? nodes.find(n => n.id === contextMenu.nodeId) : null;
-    const isBypassed = currentNode?.data?.bypassed || false;
+    const isBypassed = (currentNode?.data as any)?.bypassed || false;
     
     const baseItems: ContextMenuItem[] = [
       {
@@ -1077,7 +1078,7 @@ function App() {
           const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
           const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
           
-          const currentMode = node?.data.inputModes?.[inputName] || defaultMode;
+          const currentMode = (node?.data as any).inputModes?.[inputName] || defaultMode;
           const isManual = currentMode === 'manual';
           
           baseItems.splice(-1, 0, {
@@ -1124,7 +1125,7 @@ function App() {
             data: {
               ...node.data,
               inputValues: {
-                ...node.data.inputValues,
+                ...(node.data as any).inputValues,
                 [inputName]: value
               }
             }

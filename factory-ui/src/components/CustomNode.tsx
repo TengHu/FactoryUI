@@ -1,9 +1,9 @@
 import { memo, useState } from 'react';
-import { Handle, Position, NodeProps, NodeResizer } from 'reactflow';
+import { Handle, Position, NodeProps, NodeResizer } from '@xyflow/react';
 import { NodeInfo } from '../services/api';
 import './CustomNode.css';
 
-export interface CustomNodeProps extends NodeProps<CustomNodeData> {
+export interface CustomNodeProps extends NodeProps {
   onContextMenu?: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void;
   onInputValueChange?: (nodeId: string, inputName: string, value: string) => void;
 }
@@ -35,7 +35,8 @@ interface CustomNodeData {
 }
 
 const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
-  const { nodeInfo, inputModes = {}, inputValues = {}, bypassed = false, nodeState, robotStatus, streamUpdate, streamComplete, streamError } = data;
+  const nodeData = data as unknown as CustomNodeData;
+  const { nodeInfo, inputModes = {}, inputValues = {}, bypassed = false, nodeState, robotStatus, streamUpdate, streamComplete, streamError } = nodeData;
   const onContextMenu = (props as any).onContextMenu;
   const onInputValueChange = (props as any).onInputValueChange;
   
@@ -106,7 +107,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       <NodeResizer 
         minWidth={200}
         minHeight={100}
-        isVisible={selected}
+        isVisible={selected || false}
         lineClassName="resize-line"
         handleClassName="resize-handle"
         shouldResize={() => true}
