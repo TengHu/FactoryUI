@@ -61,7 +61,7 @@ class ContinuousExecutor:
             # If there's no event loop, create one and run the coroutine
             try:
                 asyncio.run(coro)
-                self.log_message("debug", "WebSocket message sent via new event loop")
+                # self.log_message("debug", "WebSocket message sent via new event loop")
             except Exception as e:
                 # If all else fails, just log the error and continue
                 self.log_message("warning", f"Failed to broadcast WebSocket message: {str(e)}")

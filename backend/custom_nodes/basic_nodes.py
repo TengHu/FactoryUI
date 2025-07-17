@@ -538,6 +538,8 @@ Usage: Use this node to combine string values in your workflow, useful for creat
 class ConnectRobotNode(NodeBase):
     """Connect to a robot and return ScsServoSDK instance"""
     
+    def __init__(self):
+        self.port2sdk = {}
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
@@ -589,33 +591,28 @@ Usage: Use this node at the beginning of robot workflows to establish communicat
     def connect_robot(self, port_name: str) -> tuple:
         """Connect to robot and return SDK instance"""
         
+        if port_name in self.port2sdk:
+            return (self.port2sdk[port_name],)
+
         sdk = ScsServoSDK()
+    
+        # Connect to servo controller
+        # If port_name is empty, pass None to auto-detect
+        port_to_use = port_name if port_name.strip() else None
+        success = sdk.connect(port_name=port_to_use)
         
-        try:
-            # Connect to servo controller
-            # If port_name is empty, pass None to auto-detect
-            port_to_use = port_name if port_name.strip() else None
-            success = sdk.connect(port_name=port_to_use)
+        if not success:
+            raise Exception("Failed to connect to robot")
+        
+        print(f"✓ Robot connected successfully")
+        if sdk.port_handler:
+            print(f"  Port: {sdk.port_handler.port_name}")
+        
+
+        self.port2sdk[port_name] = sdk
+
+        return (sdk,)
             
-            if not success:
-                raise Exception("Failed to connect to robot")
-            
-            print(f"✓ Robot connected successfully")
-            if sdk.port_handler:
-                print(f"  Port: {sdk.port_handler.port_name}")
-            
-            return (sdk,)
-            
-        except Exception as e:
-            # Clean up on failure
-            try:
-                sdk.disconnect()
-            except:
-                pass
-            
-            error_msg = f"Robot connection failed: {str(e)}"
-            print(f"❌ {error_msg}")
-            raise Exception(error_msg)
 
 class Grok4Node(NodeBase):
     """Node for calling Grok4 LLM to get a position dict from a prompt and instruction"""
