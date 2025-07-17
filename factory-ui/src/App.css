@@ -438,3 +438,22 @@
     stroke-dashoffset: -12;
   }
 }
+
+/* WebSocket connection status indicators */
+.websocket-status {
+  color: var(--success-color);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.websocket-status.error {
+  color: var(--error-color);
+}
+
+.websocket-status:hover {
+  opacity: 0.8;
+}
