@@ -98,25 +98,34 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     }
   }, []);
 
-  // Queued frame sender to prevent re-render cascade
+  // Rate-limited frame sender to prevent re-render cascade
   const sendFrameToBackend = useCallback((inputName: string, frameData: string) => {
     // Store frame immediately for display consistency
     frameBufferRefs.current[inputName] = frameData;
     
-    // Clear existing timeout for this input
-    if (backendQueueRef.current[inputName]) {
-      clearTimeout(backendQueueRef.current[inputName]);
+    // Rate limiting: only send if no timeout is pending
+    if (!backendQueueRef.current[inputName]) {
+      console.log(`📤 Sending frame to backend for ${inputName} (rate limited)`);
+      
+      // Send immediately via setTimeout to break synchronous execution
+      setTimeout(() => {
+        if (onInputValueChange) {
+          onInputValueChange(id, inputName, frameData);
+          console.log(`✅ Frame delivered to backend for ${inputName}`);
+        } else {
+          console.warn(`❌ onInputValueChange is null for ${inputName}`);
+        }
+      }, 0);
+      
+      // Set timeout to prevent next send for 1 second
+      backendQueueRef.current[inputName] = setTimeout(() => {
+        console.log(`🔓 Rate limit cleared for ${inputName}`);
+        delete backendQueueRef.current[inputName];
+      }, 1);
+      
+    } else {
+      console.log(`⏳ Frame skipped for ${inputName} (rate limited)`);
     }
-    
-    // Queue the backend call to break synchronous execution
-    backendQueueRef.current[inputName] = setTimeout(() => {
-      if (onInputValueChange) {
-        onInputValueChange(id, inputName, frameData);
-        console.log(`📤 Frame sent to backend for ${inputName} (queued)`);
-      }
-      delete backendQueueRef.current[inputName];
-    }, 1000); // 1 second delay to reduce frequency
-    
   }, [id, onInputValueChange]);
 
   // Camera stream management
@@ -138,7 +147,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     processingCanvas.width = 320; // Backend processing resolution
     processingCanvas.height = 240;
 
-    let frameCounter = 0;
 
     // High frequency display updates (smooth video)
     const updateDisplay = () => {
@@ -170,9 +178,8 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
           processingCtx.drawImage(video, 0, 0, processingCanvas.width, processingCanvas.height);
           const frameData = processingCanvas.toDataURL('image/jpeg', 0.7);
           
-          // Send to backend with debouncing to prevent re-renders
+          // Send to backend with rate limiting to prevent re-renders
           sendFrameToBackend(inputName, frameData);
-          
           
         } catch (error) {
           console.warn('Backend frame processing error:', error);
