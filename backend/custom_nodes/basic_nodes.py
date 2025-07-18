@@ -2,6 +2,7 @@ import time
 import random
 import sys
 import os
+import re
 from typing import Any, Dict
 from core.node_base import NodeBase, NodeCategory
 
@@ -577,7 +578,7 @@ class ConnectRobotNode(NodeBase):
         return """
 ConnectRobotNode
 
-Purpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.
+Purpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot control nodes.
 
 Inputs:
   - port_name (STRING): port name to connect the robot, e.g. /dev/tty.usbmodem5A7A0573841
@@ -734,17 +735,63 @@ Usage: Use this node to display an image in your workflow. The backend will prin
         """
 
     def show_image(self, image):
-        print("[ShowImageNode] Displaying provided image (read by backend)")
+        print(f"[ShowImageNode] Received image of type: {type(image)}")
+        print(f"[ShowImageNode] Image length/size: {len(image) if hasattr(image, '__len__') else 'N/A'}")
+        
         # Pass through the image for UI rendering (if needed)
         rt_update = {}
-        if isinstance(image, bytes):
-            image_b64 = base64.b64encode(image).decode("utf-8")
-            rt_update = {"image_base64": image_b64, "image_format": "jpg"}
-        elif isinstance(image, str):
-            # Assume already base64
-            rt_update = {"image_base64": image, "image_format": "jpg"}
-        else:
-            rt_update = {"error": "Invalid image format"}
+        
+        try:
+            if isinstance(image, bytes):
+                # Convert bytes to base64
+                image_b64 = base64.b64encode(image).decode("utf-8")
+                # Try to detect format from content
+                if image.startswith(b'<svg') or b'<svg' in image[:100]:
+                    image_format = "svg+xml"
+                elif image.startswith(b'\x89PNG'):
+                    image_format = "png"
+                elif image.startswith(b'\xff\xd8'):
+                    image_format = "jpeg"
+                else:
+                    image_format = "png"  # Default
+                rt_update = {"image_base64": image_b64, "image_format": image_format}
+                print(f"[ShowImageNode] Converted bytes to base64, format: {image_format}, length: {len(image_b64)}")
+                
+            elif isinstance(image, str):
+                # Check if it's already a data URL
+                if image.startswith('data:image/'):
+                    # Extract base64 from data URL
+                    try:
+                        header, base64_data = image.split(',', 1)
+                        format_match = re.match(r'data:image/([^;]+)', header)
+                        image_format = format_match.group(1) if format_match else 'png'
+                        rt_update = {"image_base64": base64_data, "image_format": image_format}
+                        print(f"[ShowImageNode] Extracted from data URL, format: {image_format}")
+                    except Exception as e:
+                        print(f"[ShowImageNode] Error parsing data URL: {e}")
+                        rt_update = {"error": f"Invalid data URL format: {e}"}
+                else:
+                    # Assume it's already base64, try to detect format
+                    if image.startswith('<svg') or '<svg' in image[:100]:
+                        image_format = "svg+xml"
+                    else:
+                        image_format = "png"  # Default
+                    rt_update = {"image_base64": image, "image_format": image_format}
+                    print(f"[ShowImageNode] Using string as base64, format: {image_format}, length: {len(image)}")
+                    
+            elif image is None:
+                rt_update = {"error": "No image data received"}
+                print(f"[ShowImageNode] Error: No image data received")
+                
+            else:
+                rt_update = {"error": f"Invalid image format: {type(image)}"}
+                print(f"[ShowImageNode] Error: Invalid image format: {type(image)}")
+                
+        except Exception as e:
+            rt_update = {"error": f"Error processing image: {str(e)}"}
+            print(f"[ShowImageNode] Exception: {e}")
+        
+        print(f"[ShowImageNode] Returning rt_update: {rt_update}")
         return (None, rt_update)
 
 class CameraNode(NodeBase):

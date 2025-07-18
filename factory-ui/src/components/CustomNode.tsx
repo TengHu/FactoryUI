@@ -55,7 +55,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const cameraRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const overlayCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
   const frameBufferRefs = useRef<Record<string, string>>({});
-  const lastSentFrameRefs = useRef<Record<string, number>>({});
   
   // Camera utility functions
   const enumerateDevices = useCallback(async () => {
@@ -97,20 +96,10 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     }
   }, []);
 
-  // Debounced frame sender to reduce re-renders
+  // Direct frame sender - timing controlled by unified processor
   const sendFrameToBackend = useCallback((inputName: string, frameData: string) => {
-    const now = Date.now();
-    const lastSent = lastSentFrameRefs.current[inputName] || 0;
-    
-    // Only send frames every 500ms (2 FPS) to reduce re-renders
-    if (now - lastSent >= 500) {
-      lastSentFrameRefs.current[inputName] = now;
-      if (onInputValueChange) {
-        onInputValueChange(id, inputName, frameData);
-      }
-    } else {
-      // Buffer the frame for next send
-      frameBufferRefs.current[inputName] = frameData;
+    if (onInputValueChange) {
+      onInputValueChange(id, inputName, frameData);
     }
   }, [id, onInputValueChange]);
 
@@ -126,60 +115,55 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     }
   }, [initializeCameraCanvas]);
 
-  const createFrameIntervals = useCallback((inputName: string) => {
-    // Set up frame capture canvas for backend
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 320; // Reduced resolution for better performance
-    canvas.height = 240;
+  const createFrameProcessor = useCallback((inputName: string) => {
+    // Single canvas for frame processing (both UI and backend)
+    const processingCanvas = document.createElement('canvas');
+    const processingCtx = processingCanvas.getContext('2d');
+    processingCanvas.width = 320; // Resolution for backend processing
+    processingCanvas.height = 240;
 
-    const updateDisplay = () => {
+    const processFrame = () => {
       const video = cameraRefs.current[inputName];
-      const overlayCanvas = overlayCanvasRefs.current[inputName];
+      const displayCanvas = overlayCanvasRefs.current[inputName];
       
-      if (video && video.readyState === 4 && overlayCanvas) {
+      if (video && video.readyState === 4 && processingCtx && displayCanvas) {
         requestAnimationFrame(() => {
           try {
-            // Update display canvas at high frequency for smooth video
-            const overlayCtx = overlayCanvas.getContext('2d');
-            if (overlayCtx) {
-              overlayCtx.drawImage(video, 0, 0, overlayCanvas.width, overlayCanvas.height);
+            // 1. Capture frame from video to processing canvas
+            processingCtx.drawImage(video, 0, 0, processingCanvas.width, processingCanvas.height);
+            
+            // 2. Get frame data for backend
+            const frameData = processingCanvas.toDataURL('image/jpeg', 0.7);
+            
+            // 3. Update display canvas with the SAME frame data
+            const displayCtx = displayCanvas.getContext('2d');
+            if (displayCtx) {
+              // Create image from the frame data to ensure consistency
+              const img = new Image();
+              img.onload = () => {
+                // Display the exact same frame that goes to backend
+                displayCtx.drawImage(img, 0, 0, displayCanvas.width, displayCanvas.height);
+              };
+              img.src = frameData;
             }
+            
+            // 4. Send to backend with rate limiting
+            sendFrameToBackend(inputName, frameData);
+            
+            // 5. Store frame for debugging/reference
+            frameBufferRefs.current[inputName] = frameData;
+            
           } catch (error) {
-            console.warn('Display update error:', error);
+            console.warn('Frame processing error:', error);
           }
         });
       }
     };
-
-    const captureFrame = () => {
-      const video = cameraRefs.current[inputName];
-      
-      if (video && ctx && video.readyState === 4) {
-        try {
-          // Capture frame for backend (less frequent)
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const frameData = canvas.toDataURL('image/jpeg', 0.7);
-          
-          // Send to backend with debouncing
-          sendFrameToBackend(inputName, frameData);
-          
-          // Store last frame locally (no state update to prevent re-render)
-          frameBufferRefs.current[inputName] = frameData;
-          
-        } catch (error) {
-          console.warn('Frame capture error:', error);
-        }
-      }
-    };
     
-    // Update display at 30 FPS for smooth video
-    const displayIntervalId = setInterval(updateDisplay, 33);
+    // Process frames at controlled rate (10 FPS for consistency)
+    const frameIntervalId = setInterval(processFrame, 500);
     
-    // Capture frames for backend at 5 FPS
-    const captureIntervalId = setInterval(captureFrame, 200);
-    
-    return { displayIntervalId, captureIntervalId };
+    return { frameIntervalId };
   }, [sendFrameToBackend]);
 
   const startCamera = useCallback(async (inputName: string, deviceId?: string) => {
@@ -201,28 +185,24 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       // Setup camera stream and UI
       setupCameraStream(inputName, stream);
       
-      // Create frame capture intervals
-      const intervals = createFrameIntervals(inputName);
+      // Create unified frame processor
+      const processor = createFrameProcessor(inputName);
       
-      // Store interval IDs for cleanup
-      (stream as any).displayIntervalId = intervals.displayIntervalId;
-      (stream as any).captureIntervalId = intervals.captureIntervalId;
+      // Store interval ID for cleanup
+      (stream as any).frameIntervalId = processor.frameIntervalId;
       
     } catch (error) {
       console.error('Error accessing camera:', error);
       alert('Could not access camera. Please check permissions.');
     }
-  }, [setupCameraStream, createFrameIntervals]);
+  }, [setupCameraStream, createFrameProcessor]);
 
   const stopCamera = useCallback((inputName: string) => {
     const stream = cameraStreams[inputName];
     if (stream) {
-      // Clear both intervals
-      if ((stream as any).displayIntervalId) {
-        clearInterval((stream as any).displayIntervalId);
-      }
-      if ((stream as any).captureIntervalId) {
-        clearInterval((stream as any).captureIntervalId);
+      // Clear frame processing interval
+      if ((stream as any).frameIntervalId) {
+        clearInterval((stream as any).frameIntervalId);
       }
       
       // Stop all tracks
@@ -244,7 +224,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       
       // Clear buffers without state updates
       frameBufferRefs.current[inputName] = '';
-      lastSentFrameRefs.current[inputName] = 0;
     }
   }, [cameraStreams, initializeCameraCanvas]);
 
@@ -265,27 +244,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     setShowCameraMenu(prev => ({ ...prev, [inputName]: false }));
     await startCamera(inputName, deviceId);
   }, [startCamera]);
-
-  // Send buffered frames periodically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      Object.entries(frameBufferRefs.current).forEach(([inputName, frameData]) => {
-        if (frameData && cameraStreams[inputName]) {
-          const now = Date.now();
-          const lastSent = lastSentFrameRefs.current[inputName] || 0;
-          if (now - lastSent >= 500) {
-            lastSentFrameRefs.current[inputName] = now;
-            if (onInputValueChange) {
-              onInputValueChange(id, inputName, frameData);
-            }
-            frameBufferRefs.current[inputName] = '';
-          }
-        }
-      });
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, [cameraStreams, onInputValueChange, id]);
   
   // Cleanup camera streams on unmount
   useEffect(() => {
