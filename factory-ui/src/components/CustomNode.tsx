@@ -1,6 +1,7 @@
-import { memo, useState, useRef, useCallback } from 'react';
+import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeInfo } from '../services/api';
+import { useCameraManager, CameraInput } from './camera';
 import './CustomNode.css';
 
 export interface CustomNodeProps extends NodeProps {
@@ -40,13 +41,39 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const onContextMenu = (props as any).onContextMenu;
   const onInputValueChange = (props as any).onInputValueChange;
   
-  // Debug logging for node state
-  if (nodeState) {
-    console.log(`🔄 Node ${id} state:`, nodeState.state, nodeState);
-  }
+  
   
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
+  
+  // Camera management hook
+  const {
+    cameraState,
+    toggleCameraMenu,
+    selectDevice,
+    setupCanvas,
+    setupVideo,
+    isCameraActive,
+    isCameraMenuOpen
+  } = useCameraManager({
+    nodeId: id,
+    onFrameCapture: onInputValueChange
+  });
+  
+  
+  // Handle ResizeObserver errors
+  useEffect(() => {
+    const handleResizeObserverError = (e: ErrorEvent) => {
+      if (e.message.includes('ResizeObserver loop completed with undelivered notifications')) {
+        e.stopImmediatePropagation();
+        return false;
+      }
+      return true;
+    };
+
+    window.addEventListener('error', handleResizeObserverError);
+    return () => window.removeEventListener('error', handleResizeObserverError);
+  }, []);
   
   // Custom resize functionality
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -200,8 +227,8 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
               (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
               ['unknown'];
             const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-            // Default to manual mode for STRING and FLOAT inputs, connection mode for others
-            const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
+            // Default to manual mode for STRING, FLOAT, and CAMERA inputs, connection mode for others
+            const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
             const inputMode = inputModes[input] || defaultMode;
             const inputValue = inputValues[input] || '';
             
@@ -223,24 +250,79 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                     title={`${input} (${typeName}) - ${isRequired ? 'required' : 'optional'}`}
                   />
                 )}
-                
-                {inputMode === 'manual' ? (
-                  <div className="manual-input-container">
-                    <span className="input-label">{input}:</span>
-                    <input
-                      type="text"
-                      className="manual-input"
-                      value={inputValue}
-                      placeholder={`Enter ${typeName.toLowerCase()}`}
-                      onChange={(e) => {
-                        if (onInputValueChange) {
-                          onInputValueChange(id, input, e.target.value);
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                ) : (
+
+                {inputMode === 'manual' ? (() => {
+                  switch (typeName) {
+                    case 'CAMERA':
+                      return (
+                        <CameraInput
+                          inputName={input}
+                          nodeId={id}
+                          isActive={isCameraActive(input)}
+                          isMenuOpen={isCameraMenuOpen(input)}
+                          devices={cameraState.devices}
+                          onToggleMenu={toggleCameraMenu}
+                          onSelectDevice={selectDevice}
+                          onSetupCanvas={setupCanvas}
+                          onSetupVideo={setupVideo}
+                        />
+                      );
+                    case 'STRING':
+                      return (
+                        <div className="manual-input-container">
+                          <span className="input-label">{input}:</span>
+                          <input
+                            type="text"
+                            className="manual-input"
+                            value={inputValue}
+                            placeholder={`Enter ${typeName.toLowerCase()}`}
+                            onChange={(e) => {
+                              if (onInputValueChange) {
+                                onInputValueChange(id, input, e.target.value);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      );
+                    case 'FLOAT':
+                      return (
+                        <div className="manual-input-container">
+                          <span className="input-label">{input}:</span>
+                          <input
+                            type="number"
+                            className="manual-input"
+                            value={inputValue}
+                            placeholder={`Enter ${typeName.toLowerCase()}`}
+                            onChange={(e) => {
+                              if (onInputValueChange) {
+                                onInputValueChange(id, input, e.target.value);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      );
+                    default:
+                      return (
+                        <div className="manual-input-container">
+                          <span className="input-label">{input}:</span>
+                          <input
+                            type="text"
+                            className="manual-input"
+                            value={inputValue}
+                            placeholder={`Enter ${typeName.toLowerCase()}`}
+                            onChange={(e) => {
+                              if (onInputValueChange) {
+                                onInputValueChange(id, input, e.target.value);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      );
+                  }
+                })() : (
                   <span className={`connection-label ${isRequired ? 'required' : 'optional'}`}>
                     {`${input} (${typeName})`}
                   </span>
@@ -355,10 +437,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       {/* Real-Time Update Display */}
       {nodeState?.data?.rt_update && (
         <div className="rt-update-display" style={{ borderWidth: '1px', padding: '1px 1px' }}>
-          {/* <div className="rt-update-header">
-            <span className="rt-update-title">Real-Time Update</span>
-            <span className="rt-update-state">{nodeState.state}</span>
-          </div> */}
           <div className="rt-update-content">
             {typeof nodeState.data.rt_update === 'object' && nodeState.data.rt_update.image_base64 && nodeState.data.rt_update.image_format ? (
               <img
