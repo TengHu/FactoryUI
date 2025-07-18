@@ -206,6 +206,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       <div className="node-io-row">
         {/* Inputs column */}
         <div className="io-column io-inputs">
+          {/* Connection inputs first */}
           {allInputs.map((input) => {
             const isRequired = requiredInputs.includes(input);
             const typeInfo =
@@ -216,11 +217,11 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
             // Default to manual mode for STRING, FLOAT, and CAMERA inputs, connection mode for others
             const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
             const inputMode = inputModes[input] || defaultMode;
-            const inputValue = inputValues[input] || '';
             
-            return (
-              <div key={`input-${input}`} className="io-item input-item">
-                {inputMode === 'connection' && (
+            // Only render connection inputs here
+            if (inputMode === 'connection') {
+              return (
+                <div key={`input-${input}`} className="io-item input-item">
                   <Handle
                     type="target"
                     position={Position.Left}
@@ -235,72 +236,13 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                     }}
                     title={`${input} (${typeName}) - ${isRequired ? 'required' : 'optional'}`}
                   />
-                )}
-
-                {inputMode === 'manual' ? (() => {
-                  switch (typeName) {
-                    case 'STRING':
-                      return (
-                        <div className="manual-input-container">
-                          <span className="input-label">{input}:</span>
-                          <input
-                            type="text"
-                            className="manual-input"
-                            value={inputValue}
-                            placeholder={`Enter ${typeName.toLowerCase()}`}
-                            onChange={(e) => {
-                              if (onInputValueChange) {
-                                onInputValueChange(id, input, e.target.value);
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      );
-                    case 'FLOAT':
-                      return (
-                        <div className="manual-input-container">
-                          <span className="input-label">{input}:</span>
-                          <input
-                            type="number"
-                            className="manual-input"
-                            value={inputValue}
-                            placeholder={`Enter ${typeName.toLowerCase()}`}
-                            onChange={(e) => {
-                              if (onInputValueChange) {
-                                onInputValueChange(id, input, e.target.value);
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      );
-                    default:
-                      return (
-                        <div className="manual-input-container">
-                          <span className="input-label">{input}:</span>
-                          <input
-                            type="text"
-                            className="manual-input"
-                            value={inputValue}
-                            placeholder={`Enter ${typeName.toLowerCase()}`}
-                            onChange={(e) => {
-                              if (onInputValueChange) {
-                                onInputValueChange(id, input, e.target.value);
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      );
-                  }
-                })() : (
                   <span className={`connection-label ${isRequired ? 'required' : 'optional'}`}>
                     {`${input} (${typeName})`}
                   </span>
-                )}
-              </div>
-            );
+                </div>
+              );
+            }
+            return null;
           })}
         </div>
         {/* Center content */}
@@ -334,6 +276,112 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
           })}
         </div>
       </div>
+      
+      {/* Manual inputs section - below the main IO row */}
+      {allInputs.some((input) => {
+        const typeInfo =
+          (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
+          (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
+          ['unknown'];
+        const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+        const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
+        const inputMode = inputModes[input] || defaultMode;
+        return inputMode === 'manual';
+      }) && (
+        <div className="manual-inputs-section">
+          <div className="section-title">Manual Inputs</div>
+          <div className="manual-inputs-grid">
+            {allInputs.map((input) => {
+              const typeInfo =
+                (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
+                (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
+                ['unknown'];
+              const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+              const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
+              const inputMode = inputModes[input] || defaultMode;
+              const inputValue = inputValues[input] || '';
+              
+              // Only render manual inputs here
+              if (inputMode === 'manual') {
+                return (
+                  <div key={`manual-input-${input}`} className="manual-input-item">
+                    {(() => {
+                      switch (typeName) {
+                        case 'STRING':
+                          return (
+                            <div className="manual-input-container">
+                              <span className="input-label">{input}:</span>
+                              <textarea
+                                className="manual-input manual-textarea"
+                                value={inputValue}
+                                placeholder={`Enter ${typeName.toLowerCase()}`}
+                                onChange={(e) => {
+                                  if (onInputValueChange) {
+                                    onInputValueChange(id, input, e.target.value);
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                rows={1}
+                                style={{
+                                  resize: 'vertical',
+                                  minHeight: '32px',
+                                  overflow: 'hidden'
+                                }}
+                                onInput={(e) => {
+                                  // Auto-resize the textarea
+                                  const target = e.target as HTMLTextAreaElement;
+                                  target.style.height = 'auto';
+                                  target.style.height = `${target.scrollHeight}px`;
+                                }}
+                              />
+                            </div>
+                          );
+                        case 'FLOAT':
+                          return (
+                            <div className="manual-input-container">
+                              <span className="input-label">{input}:</span>
+                              <input
+                                type="number"
+                                className="manual-input"
+                                value={inputValue}
+                                placeholder={`Enter ${typeName.toLowerCase()}`}
+                                onChange={(e) => {
+                                  if (onInputValueChange) {
+                                    onInputValueChange(id, input, e.target.value);
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          );
+                        default:
+                          return (
+                            <div className="manual-input-container">
+                              <span className="input-label">{input}:</span>
+                              <input
+                                type="text"
+                                className="manual-input"
+                                value={inputValue}
+                                placeholder={`Enter ${typeName.toLowerCase()}`}
+                                onChange={(e) => {
+                                  if (onInputValueChange) {
+                                    onInputValueChange(id, input, e.target.value);
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          );
+                      }
+                    })()}
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
+        </div>
+      )}
       
       {/* Robot Status Display */}
       {robotStatus && nodeInfo.name === 'RobotStatusReader' && (
