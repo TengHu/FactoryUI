@@ -40,6 +40,16 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const onContextMenu = (props as any).onContextMenu;
   const onInputValueChange = (props as any).onInputValueChange;
   
+  // Debug logging for re-renders and camera issues
+  const renderCountRef = useRef(0);
+  renderCountRef.current++;
+  
+  useEffect(() => {
+    if (renderCountRef.current > 1) {
+      console.log(`🔄 CustomNode re-render #${renderCountRef.current} for node ${id}`);
+    }
+  });
+  
   // Debug logging for node state
   if (nodeState) {
     console.log(`🔄 Node ${id} state:`, nodeState.state, nodeState);
@@ -55,6 +65,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const cameraRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const overlayCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
   const frameBufferRefs = useRef<Record<string, string>>({});
+  const backendQueueRef = useRef<Record<string, NodeJS.Timeout>>({});
   
   // Camera utility functions
   const enumerateDevices = useCallback(async () => {
@@ -96,11 +107,25 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     }
   }, []);
 
-  // Direct frame sender - timing controlled by unified processor
+  // Queued frame sender to prevent re-render cascade
   const sendFrameToBackend = useCallback((inputName: string, frameData: string) => {
-    if (onInputValueChange) {
-      onInputValueChange(id, inputName, frameData);
+    // Store frame immediately for display consistency
+    frameBufferRefs.current[inputName] = frameData;
+    
+    // Clear existing timeout for this input
+    if (backendQueueRef.current[inputName]) {
+      clearTimeout(backendQueueRef.current[inputName]);
     }
+    
+    // Queue the backend call to break synchronous execution
+    backendQueueRef.current[inputName] = setTimeout(() => {
+      if (onInputValueChange) {
+        onInputValueChange(id, inputName, frameData);
+        console.log(`📤 Frame sent to backend for ${inputName} (queued)`);
+      }
+      delete backendQueueRef.current[inputName];
+    }, 1000); // 1 second delay to reduce frequency
+    
   }, [id, onInputValueChange]);
 
   // Camera stream management
@@ -116,54 +141,62 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   }, [initializeCameraCanvas]);
 
   const createFrameProcessor = useCallback((inputName: string) => {
-    // Single canvas for frame processing (both UI and backend)
+    // Separate canvases for different purposes
     const processingCanvas = document.createElement('canvas');
     const processingCtx = processingCanvas.getContext('2d');
-    processingCanvas.width = 320; // Resolution for backend processing
+    processingCanvas.width = 320; // Backend processing resolution
     processingCanvas.height = 240;
 
-    const processFrame = () => {
+    let frameCounter = 0;
+
+    // High frequency display updates (smooth video)
+    const updateDisplay = () => {
       const video = cameraRefs.current[inputName];
       const displayCanvas = overlayCanvasRefs.current[inputName];
       
-      if (video && video.readyState === 4 && processingCtx && displayCanvas) {
+      if (video && video.readyState === 4 && displayCanvas) {
         requestAnimationFrame(() => {
           try {
-            // 1. Capture frame from video to processing canvas
-            processingCtx.drawImage(video, 0, 0, processingCanvas.width, processingCanvas.height);
-            
-            // 2. Get frame data for backend
-            const frameData = processingCanvas.toDataURL('image/jpeg', 0.7);
-            
-            // 3. Update display canvas with the SAME frame data
+            // Direct video-to-canvas for smooth display (no re-renders)
             const displayCtx = displayCanvas.getContext('2d');
             if (displayCtx) {
-              // Create image from the frame data to ensure consistency
-              const img = new Image();
-              img.onload = () => {
-                // Display the exact same frame that goes to backend
-                displayCtx.drawImage(img, 0, 0, displayCanvas.width, displayCanvas.height);
-              };
-              img.src = frameData;
+              displayCtx.drawImage(video, 0, 0, displayCanvas.width, displayCanvas.height);
             }
-            
-            // 4. Send to backend with rate limiting
-            sendFrameToBackend(inputName, frameData);
-            
-            // 5. Store frame for debugging/reference
-            frameBufferRefs.current[inputName] = frameData;
-            
           } catch (error) {
-            console.warn('Frame processing error:', error);
+            console.warn('Display update error:', error);
           }
         });
       }
     };
+
+    // Backend frame capture and processing
+    const processFrameForBackend = () => {
+      const video = cameraRefs.current[inputName];
+      
+      if (video && video.readyState === 4 && processingCtx) {
+        try {
+          // Capture frame for backend
+          processingCtx.drawImage(video, 0, 0, processingCanvas.width, processingCanvas.height);
+          const frameData = processingCanvas.toDataURL('image/jpeg', 0.7);
+          
+          // Send to backend with debouncing to prevent re-renders
+          sendFrameToBackend(inputName, frameData);
+          
+          console.log(`Frame ${frameCounter++} captured for ${inputName}`);
+          
+        } catch (error) {
+          console.warn('Backend frame processing error:', error);
+        }
+      }
+    };
     
-    // Process frames at controlled rate (10 FPS for consistency)
-    const frameIntervalId = setInterval(processFrame, 500);
+    // Smooth display at 30 FPS (no parent re-renders)
+    const displayIntervalId = setInterval(updateDisplay, 1000 / 30);
     
-    return { frameIntervalId };
+    // Backend processing at 2 FPS (reduce re-render frequency)
+    const backendIntervalId = setInterval(processFrameForBackend, 1000 / 2);
+    
+    return { displayIntervalId, backendIntervalId };
   }, [sendFrameToBackend]);
 
   const startCamera = useCallback(async (inputName: string, deviceId?: string) => {
@@ -185,11 +218,12 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       // Setup camera stream and UI
       setupCameraStream(inputName, stream);
       
-      // Create unified frame processor
+      // Create separated frame processor
       const processor = createFrameProcessor(inputName);
       
-      // Store interval ID for cleanup
-      (stream as any).frameIntervalId = processor.frameIntervalId;
+      // Store interval IDs for cleanup
+      (stream as any).displayIntervalId = processor.displayIntervalId;
+      (stream as any).backendIntervalId = processor.backendIntervalId;
       
     } catch (error) {
       console.error('Error accessing camera:', error);
@@ -200,9 +234,12 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const stopCamera = useCallback((inputName: string) => {
     const stream = cameraStreams[inputName];
     if (stream) {
-      // Clear frame processing interval
-      if ((stream as any).frameIntervalId) {
-        clearInterval((stream as any).frameIntervalId);
+      // Clear both processing intervals
+      if ((stream as any).displayIntervalId) {
+        clearInterval((stream as any).displayIntervalId);
+      }
+      if ((stream as any).backendIntervalId) {
+        clearInterval((stream as any).backendIntervalId);
       }
       
       // Stop all tracks
@@ -222,8 +259,12 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
         initializeCameraCanvas(overlayCanvas, true);
       }
       
-      // Clear buffers without state updates
+      // Clear buffers and pending backend calls
       frameBufferRefs.current[inputName] = '';
+      if (backendQueueRef.current[inputName]) {
+        clearTimeout(backendQueueRef.current[inputName]);
+        delete backendQueueRef.current[inputName];
+      }
     }
   }, [cameraStreams, initializeCameraCanvas]);
 
@@ -524,6 +565,9 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                             <div className="camera-view">
                               <canvas
                                 ref={(el) => {
+                                  if (el !== overlayCanvasRefs.current[input]) {
+                                    console.log(`🎨 Canvas recreated for ${input}, previous:`, overlayCanvasRefs.current[input], 'new:', el);
+                                  }
                                   overlayCanvasRefs.current[input] = el;
                                   if (el) {
                                     initializeCameraCanvas(el, !cameraStreams[input]);
