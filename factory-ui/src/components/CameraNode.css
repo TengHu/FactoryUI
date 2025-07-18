@@ -38,6 +38,20 @@
   animation: none !important;
 }
 
+/* Camera input bottom section */
+.camera-node .camera-input-bottom {
+  margin-top: 8px;
+  padding: 8px;
+  border-top: 1px solid #e5e7eb;
+  background: rgba(79, 70, 229, 0.05);
+  border-radius: 4px;
+}
+
+.camera-node .camera-input-bottom .camera-controls {
+  justify-content: center;
+  width: 100%;
+}
+
 /* Override any inherited animations for camera nodes */
 .camera-node.node-executing {
   animation: none !important;
