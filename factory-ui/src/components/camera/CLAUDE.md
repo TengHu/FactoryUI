@@ -302,3 +302,239 @@ The bypass system provides significant performance improvements:
 - **After**: 30 FPS camera = 0 React re-renders = Smooth video feed
 
 This implementation successfully eliminates the canvas blinking issue while maintaining all existing functionality and real-time performance.
+
+## Multiple Camera Node Support
+
+### Overview
+
+The camera system supports multiple camera nodes operating simultaneously, each with independent camera source selection and stream management. This is achieved through unique stream keys that combine node ID and input name.
+
+### Stream Key Architecture
+
+Each camera stream is identified by a unique key in the format:
+
+```
+streamKey = "nodeId:inputName"
+```
+
+**Examples:**
+- Node "CameraNode-1234" with input "camera_input" → `"CameraNode-1234:camera_input"`
+- Node "ImageProcessor-5678" with input "source" → `"ImageProcessor-5678:source"`
+
+### Implementation Details
+
+#### 1. Unique Stream Keys
+
+```typescript
+// In useOptimizedCameraManager.ts and useCameraManager.ts
+const createStreamKey = useCallback((inputName: string) => {
+  return `${nodeIdRef.current}:${inputName}`;
+}, []);
+```
+
+#### 2. Stream Isolation
+
+**Before (Collision Risk):**
+```typescript
+// Multiple nodes could collide on same input name
+cameraManager.startCamera("camera_input", deviceId);
+```
+
+**After (Unique Keys):**
+```typescript
+// Each node gets unique stream identifier
+const streamKey = createStreamKey(inputName); // "CameraNode-1234:camera_input"
+cameraManager.startCamera(streamKey, deviceId);
+```
+
+#### 3. Frame Handler Updates
+
+The frame handlers now receive stream keys and extract the original input name:
+
+```typescript
+const optimizedFrameHandler = useCallback((streamKey: string, frameData: string) => {
+  // Extract inputName from streamKey (format: "nodeId:inputName")
+  const inputName = streamKey.split(':').slice(1).join(':');
+  
+  if (isCameraFrame) {
+    websocketService.sendInputUpdate(nodeIdRef.current, inputName, frameData);
+  }
+}, []);
+```
+
+### Multiple Camera Scenarios
+
+#### Scenario 1: Different Camera Sources
+
+```
+Node A (CameraNode-1234)     Node B (CameraNode-5678)
+├── Input: "camera_input"    ├── Input: "camera_input"  
+├── Stream Key: "A:camera"   ├── Stream Key: "B:camera"
+├── Device: Built-in Camera  ├── Device: USB Camera
+└── Resolution: 640x480      └── Resolution: 1280x720
+```
+
+#### Scenario 2: Same Node, Multiple Inputs
+
+```
+Node C (MultiCameraNode-9999)
+├── Input: "left_camera"     → Stream Key: "C:left_camera"   → Device: Camera 1
+├── Input: "right_camera"    → Stream Key: "C:right_camera"  → Device: Camera 2
+└── Input: "overhead_camera" → Stream Key: "C:overhead"      → Device: Camera 3
+```
+
+#### Scenario 3: Mixed Camera and Regular Inputs
+
+```
+Node D (HybridNode-1111)
+├── Input: "camera_feed"     → Stream Key: "D:camera_feed"   → Camera Device
+├── Input: "text_input"      → Regular React state          → Text Input
+└── Input: "threshold"       → Regular React state          → Number Input
+```
+
+### Resource Management
+
+#### 1. Independent Lifecycle
+
+Each camera stream has independent lifecycle management:
+
+```typescript
+// Starting Camera A doesn't affect Camera B
+nodeA.startCamera("camera_input", "device1");
+nodeB.startCamera("camera_input", "device2");
+
+// Stopping Camera A doesn't affect Camera B
+nodeA.stopCamera("camera_input"); // Only stops "NodeA:camera_input"
+// "NodeB:camera_input" continues running
+```
+
+#### 2. Cleanup Isolation
+
+When a node is unmounted, only its streams are cleaned up:
+
+```typescript
+// Cleanup on unmount
+useEffect(() => {
+  return () => {
+    // Stop all active cameras for THIS node only
+    Object.keys(cameraState.activeStreams).forEach(inputName => {
+      if (cameraState.activeStreams[inputName]) {
+        const streamKey = createStreamKey(inputName);
+        cameraManager.stopCamera(streamKey); // Only affects this node's streams
+      }
+    });
+  };
+}, [cameraState.activeStreams, createStreamKey]);
+```
+
+#### 3. Device Sharing Prevention
+
+The browser's `getUserMedia` API prevents multiple streams from the same physical device by default, but the system gracefully handles this:
+
+- **Different Devices**: Multiple nodes can use different cameras simultaneously
+- **Same Device**: Attempting to use the same device shows appropriate error handling
+- **Device Detection**: Available devices are enumerated per node independently
+
+### Performance Characteristics
+
+#### Memory Usage Per Node
+
+| Component | Memory per Node | Scales With |
+|-----------|----------------|-------------|
+| Stream Objects | ~50KB | Number of active cameras |
+| Canvas Elements | ~100KB | Canvas resolution |
+| Video Elements | ~5KB | Number of inputs |
+| Frame Buffers | ~500KB | Frame size × FPS |
+
+#### Concurrent Camera Limits
+
+| Scenario | Typical Limit | Browser Limitation |
+|----------|---------------|-------------------|
+| Different Devices | 4-8 cameras | Hardware dependent |
+| Same Device | 1 camera | `getUserMedia` restriction |
+| Total Bandwidth | ~50 Mbps | Network dependent |
+
+### Testing Multiple Cameras
+
+#### 1. Create Multiple Camera Nodes
+
+```javascript
+// In browser console or testing
+const nodeA = document.querySelector('[data-testid="camera-node-A"]');
+const nodeB = document.querySelector('[data-testid="camera-node-B"]');
+
+// Each should have independent device selection
+```
+
+#### 2. Verify Stream Isolation
+
+```javascript
+// Check that stream keys are unique
+console.log('Active streams:', cameraManager.streams.keys());
+// Should show: ["NodeA:camera_input", "NodeB:camera_input"]
+```
+
+#### 3. Test Device Independence
+
+1. Select different camera devices on each node
+2. Verify both streams work simultaneously  
+3. Stop one stream, confirm other continues
+4. Test cleanup when nodes are removed
+
+### Debugging Multiple Cameras
+
+#### Common Issues
+
+1. **Device Access Conflicts**:
+   ```javascript
+   // Check if multiple nodes try to use same device
+   navigator.mediaDevices.enumerateDevices().then(devices => {
+     console.log('Available cameras:', devices.filter(d => d.kind === 'videoinput'));
+   });
+   ```
+
+2. **Stream Key Collisions**:
+   ```javascript
+   // Verify stream keys are unique
+   console.log('Stream keys:', Array.from(cameraManager.streams.keys()));
+   ```
+
+3. **Memory Leaks**:
+   ```javascript
+   // Monitor stream cleanup
+   window.cameraDebug = {
+     getActiveStreams: () => cameraManager.streams.size,
+     getStreamKeys: () => Array.from(cameraManager.streams.keys())
+   };
+   ```
+
+#### Debug Commands
+
+```javascript
+// Monitor multiple camera status
+setInterval(() => {
+  console.log('Active cameras:', {
+    streamCount: cameraManager.streams.size,
+    streamKeys: Array.from(cameraManager.streams.keys()),
+    memoryUsage: performance.memory?.usedJSHeapSize || 'N/A'
+  });
+}, 5000);
+```
+
+### Future Enhancements
+
+#### Planned Features
+
+1. **Device Sharing Detection**: Warning when multiple nodes try to access same device
+2. **Bandwidth Management**: Automatic quality adjustment based on active camera count
+3. **Stream Synchronization**: Coordinated frame capture across multiple cameras
+4. **Camera Groups**: Logical grouping of related camera streams
+
+#### Technical Improvements
+
+1. **WebRTC Support**: Direct peer-to-peer streaming for reduced latency
+2. **Hardware Acceleration**: GPU-based frame processing for multiple streams
+3. **Adaptive Quality**: Dynamic resolution/FPS based on system performance
+4. **Stream Prioritization**: Quality preferences for primary vs secondary cameras
+
+This multiple camera support enables complex computer vision workflows where different nodes can process feeds from different camera sources simultaneously, each with independent configuration and lifecycle management.

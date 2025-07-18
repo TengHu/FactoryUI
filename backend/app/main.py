@@ -274,7 +274,6 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
     """Handle incoming WebSocket messages from client"""
     message_type = message.get("type")
 
-    print(f"📨 Received WebSocket message type: {message_type}")
     
     if message_type == "ping":
         # Respond to ping with pong
@@ -308,12 +307,14 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
         if not executor.is_running:
             return
 
+
         # Handle real-time parameter updates
         data = message.get("data", {})
         node_id = data.get("node_id")
         input_name = data.get("input_name")
         input_value = data.get("input_value")
         
+        )
         if not all([node_id, input_name is not None]):
             await websocket_manager.send_personal_message({
                 "type": "error",
@@ -321,6 +322,7 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
             }, websocket)
             return
         
+        print(f"📨 Received WebSocket message type: {len(input_value)}"
         # Update the node parameter in real-time
         success = executor.update_node_parameter(node_id, input_name, input_value)
         

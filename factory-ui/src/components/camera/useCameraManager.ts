@@ -19,6 +19,11 @@ export function useCameraManager({ nodeId, onFrameCapture }: UseCameraManagerOpt
     showMenus: {}
   });
 
+  // Create unique stream key combining nodeId and inputName
+  const createStreamKey = useCallback((inputName: string) => {
+    return `${nodeId}:${inputName}`;
+  }, [nodeId]);
+
   // Enumerate camera devices
   const enumerateDevices = useCallback(async () => {
     try {
@@ -34,13 +39,18 @@ export function useCameraManager({ nodeId, onFrameCapture }: UseCameraManagerOpt
   // Start camera for input
   const startCamera = useCallback(async (inputName: string, deviceId?: string) => {
     try {
-      await cameraManager.startCamera(inputName, deviceId);
+      const streamKey = createStreamKey(inputName);
+      await cameraManager.startCamera(streamKey, deviceId);
       
       // Setup frame processing if callback provided
       if (onFrameCapture) {
         cameraManager.setupFrameProcessing(
-          inputName,
-          (inputName, frameData) => onFrameCapture(nodeId, inputName, frameData),
+          streamKey,
+          (streamKey, frameData) => {
+            // Extract inputName from streamKey (format: "nodeId:inputName")
+            const inputName = streamKey.split(':').slice(1).join(':');
+            onFrameCapture(nodeId, inputName, frameData);
+          },
           {
             width: 320,
             height: 240,
@@ -61,17 +71,18 @@ export function useCameraManager({ nodeId, onFrameCapture }: UseCameraManagerOpt
       console.error('Failed to start camera:', error);
       alert('Could not access camera. Please check permissions.');
     }
-  }, [nodeId, onFrameCapture]);
+  }, [nodeId, onFrameCapture, createStreamKey]);
 
   // Stop camera for input
   const stopCamera = useCallback((inputName: string) => {
-    cameraManager.stopCamera(inputName);
+    const streamKey = createStreamKey(inputName);
+    cameraManager.stopCamera(streamKey);
     setCameraState(prev => ({
       ...prev,
       activeStreams: { ...prev.activeStreams, [inputName]: false },
       showMenus: { ...prev.showMenus, [inputName]: false }
     }));
-  }, []);
+  }, [createStreamKey]);
 
   // Toggle camera menu
   const toggleCameraMenu = useCallback(async (inputName: string) => {
@@ -113,28 +124,31 @@ export function useCameraManager({ nodeId, onFrameCapture }: UseCameraManagerOpt
 
   // Setup canvas references
   const setupCanvas = useCallback((inputName: string, canvas: HTMLCanvasElement | null) => {
-    cameraManager.setCanvasRef(inputName, canvas);
+    const streamKey = createStreamKey(inputName);
+    cameraManager.setCanvasRef(streamKey, canvas);
     if (canvas) {
       cameraManager.initializeCanvas(canvas, !cameraState.activeStreams[inputName]);
     }
-  }, [cameraState.activeStreams]);
+  }, [createStreamKey, cameraState.activeStreams]);
 
   // Setup video references
   const setupVideo = useCallback((inputName: string, video: HTMLVideoElement | null) => {
-    cameraManager.setVideoRef(inputName, video);
-  }, []);
+    const streamKey = createStreamKey(inputName);
+    cameraManager.setVideoRef(streamKey, video);
+  }, [createStreamKey]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Stop all active cameras
+      // Stop all active cameras for this node
       Object.keys(cameraState.activeStreams).forEach(inputName => {
         if (cameraState.activeStreams[inputName]) {
-          cameraManager.stopCamera(inputName);
+          const streamKey = createStreamKey(inputName);
+          cameraManager.stopCamera(streamKey);
         }
       });
     };
-  }, [cameraState.activeStreams]);
+  }, [cameraState.activeStreams, createStreamKey]);
 
   // Handle clicks outside camera menus
   useEffect(() => {

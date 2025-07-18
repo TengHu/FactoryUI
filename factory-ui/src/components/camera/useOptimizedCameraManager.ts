@@ -30,8 +30,16 @@ export function useOptimizedCameraManager({ nodeId, onFrameCapture }: UseOptimiz
     nodeIdRef.current = nodeId;
   }, [onFrameCapture, nodeId]);
 
+  // Create unique stream key combining nodeId and inputName
+  const createStreamKey = useCallback((inputName: string) => {
+    return `${nodeIdRef.current}:${inputName}`;
+  }, []);
+
   // Optimized frame handler that bypasses React state updates for camera frames
-  const optimizedFrameHandler = useCallback((inputName: string, frameData: string) => {
+  const optimizedFrameHandler = useCallback((streamKey: string, frameData: string) => {
+    // Extract inputName from streamKey (format: "nodeId:inputName")
+    const inputName = streamKey.split(':').slice(1).join(':');
+    
     // Check if this is a camera frame (base64 image data)
     const isCameraFrame = frameData.startsWith('data:image/') && frameData.length > 1000;
     
@@ -63,11 +71,12 @@ export function useOptimizedCameraManager({ nodeId, onFrameCapture }: UseOptimiz
   // Start camera for input with optimized frame processing
   const startCamera = useCallback(async (inputName: string, deviceId?: string) => {
     try {
-      await cameraManager.startCamera(inputName, deviceId);
+      const streamKey = createStreamKey(inputName);
+      await cameraManager.startCamera(streamKey, deviceId);
       
-      // Setup frame processing with optimized handler
+      // Setup frame processing with optimized handler using unique stream key
       cameraManager.setupFrameProcessing(
-        inputName,
+        streamKey,
         optimizedFrameHandler,
         {
           width: 320,
@@ -88,17 +97,18 @@ export function useOptimizedCameraManager({ nodeId, onFrameCapture }: UseOptimiz
       console.error('Failed to start camera:', error);
       alert('Could not access camera. Please check permissions.');
     }
-  }, [optimizedFrameHandler]);
+  }, [createStreamKey, optimizedFrameHandler]);
 
   // Stop camera for input
   const stopCamera = useCallback((inputName: string) => {
-    cameraManager.stopCamera(inputName);
+    const streamKey = createStreamKey(inputName);
+    cameraManager.stopCamera(streamKey);
     setCameraState(prev => ({
       ...prev,
       activeStreams: { ...prev.activeStreams, [inputName]: false },
       showMenus: { ...prev.showMenus, [inputName]: false }
     }));
-  }, []);
+  }, [createStreamKey]);
 
   // Toggle camera menu
   const toggleCameraMenu = useCallback(async (inputName: string) => {
@@ -140,28 +150,31 @@ export function useOptimizedCameraManager({ nodeId, onFrameCapture }: UseOptimiz
 
   // Setup canvas references
   const setupCanvas = useCallback((inputName: string, canvas: HTMLCanvasElement | null) => {
-    cameraManager.setCanvasRef(inputName, canvas);
+    const streamKey = createStreamKey(inputName);
+    cameraManager.setCanvasRef(streamKey, canvas);
     if (canvas) {
       cameraManager.initializeCanvas(canvas, !cameraState.activeStreams[inputName]);
     }
-  }, [cameraState.activeStreams]);
+  }, [createStreamKey, cameraState.activeStreams]);
 
   // Setup video references
   const setupVideo = useCallback((inputName: string, video: HTMLVideoElement | null) => {
-    cameraManager.setVideoRef(inputName, video);
-  }, []);
+    const streamKey = createStreamKey(inputName);
+    cameraManager.setVideoRef(streamKey, video);
+  }, [createStreamKey]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Stop all active cameras
+      // Stop all active cameras for this node
       Object.keys(cameraState.activeStreams).forEach(inputName => {
         if (cameraState.activeStreams[inputName]) {
-          cameraManager.stopCamera(inputName);
+          const streamKey = createStreamKey(inputName);
+          cameraManager.stopCamera(streamKey);
         }
       });
     };
-  }, [cameraState.activeStreams]);
+  }, [cameraState.activeStreams, createStreamKey]);
 
   // Handle clicks outside camera menus
   useEffect(() => {
