@@ -737,6 +737,8 @@ Usage: Use this node to display an image in your workflow. The backend will prin
     def show_image(self, image):
         # Pass through the image for UI rendering (if needed)
         rt_update = {}
+
+
         
         try:
             if isinstance(image, bytes):
@@ -823,7 +825,7 @@ class CameraNode(NodeBase):
         """
 
     def open_camera(self, image_stream):
-        return (image_stream,)
+        return (image_stream, None)
 
 class DisplayNode(NodeBase):
     """A node that takes ANY input and returns nothing, for display/debugging purposes."""

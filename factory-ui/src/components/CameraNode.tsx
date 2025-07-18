@@ -1,14 +1,16 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeInfo } from '../services/api';
+import { useOptimizedCameraManager, CameraInput } from './camera';
 import './CustomNode.css';
+import './CameraNode.css';
 
-export interface CustomNodeProps extends NodeProps {
+export interface CameraNodeProps extends NodeProps {
   onContextMenu?: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void;
   onInputValueChange?: (nodeId: string, inputName: string, value: string) => void;
 }
 
-interface CustomNodeData {
+interface CameraNodeData {
   label: string;
   nodeInfo: NodeInfo;
   type: string;
@@ -34,18 +36,28 @@ interface CustomNodeData {
   streamError?: boolean;
 }
 
-const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
-  const nodeData = data as unknown as CustomNodeData;
+const CameraNode = ({ id, data, selected, ...props }: CameraNodeProps) => {
+  const nodeData = data as unknown as CameraNodeData;
   const { nodeInfo, inputModes = {}, inputValues = {}, bypassed = false, nodeState, robotStatus, streamUpdate, streamComplete, streamError } = nodeData;
   const onContextMenu = (props as any).onContextMenu;
   const onInputValueChange = (props as any).onInputValueChange;
   
-  
-  
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
   
-  
+  // Optimized camera management hook that bypasses React state updates
+  const {
+    cameraState,
+    toggleCameraMenu,
+    selectDevice,
+    setupCanvas,
+    setupVideo,
+    isCameraActive,
+    isCameraMenuOpen
+  } = useOptimizedCameraManager({
+    nodeId: id,
+    onFrameCapture: onInputValueChange // This will be bypassed for camera frames
+  });
   
   // Handle ResizeObserver errors
   useEffect(() => {
@@ -67,7 +79,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const [resizeDirection, setResizeDirection] = useState<string>('');
   
   const handleResizeStart = useCallback((direction: string) => (e: React.MouseEvent) => {
-    // Completely prevent all event propagation
     e.preventDefault();
     e.stopPropagation();
     e.nativeEvent.preventDefault();
@@ -127,17 +138,15 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const optionalInputs = Object.keys(nodeInfo.input_types.optional || {});
   const allInputs = [...requiredInputs, ...optionalInputs];
   
-  // Parse outputs from nodeInfo - handle both old format (string[]) and new format (dict)
+  // Parse outputs from nodeInfo
   let outputs: Array<{name: string, type: string, required?: boolean}> = [];
   if (Array.isArray(nodeInfo.return_types)) {
-    // Old format: string array
     outputs = nodeInfo.return_types.map((type, index) => ({
       name: (nodeInfo.return_types as string[]).length === 1 ? 'output' : `output-${index}`,
       type: type,
       required: true
     }));
   } else if (nodeInfo.return_types && typeof nodeInfo.return_types === 'object') {
-    // New format: dict with required/optional
     const requiredOutputs = Object.entries(nodeInfo.return_types.required || {}).map(([name, typeInfo]) => ({
       name,
       type: Array.isArray(typeInfo) ? typeInfo[0] : typeInfo,
@@ -180,12 +189,12 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     <div className="node-container">
       <div 
         ref={nodeRef}
-        className={`custom-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} ${nodeState?.state ? `node-${nodeState.state}` : ''} node-${category} ${isResizing ? `resizing resizing-${resizeDirection}` : ''}`}
+        className={`custom-node camera-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} ${nodeState?.state ? `node-${nodeState.state}` : ''} node-${category} ${isResizing ? `resizing resizing-${resizeDirection}` : ''}`}
         onContextMenu={handleContextMenu}
       >
       {/* Node header */}
       <div className="node-header">
-        <div className="node-title">{nodeInfo.display_name}</div>
+        <div className="node-title">📹 {nodeInfo.display_name}</div>
         <div className="node-header-right">
           <div className="node-category-badge">{category}</div>
           {nodeInfo.detailed_description && (
@@ -202,6 +211,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       {nodeInfo.description && (
         <div className="node-description">{nodeInfo.description}</div>
       )}
+      
       {/* Main node body: inputs left, content center, outputs right */}
       <div className="node-io-row">
         {/* Inputs column */}
@@ -213,7 +223,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
               (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
               ['unknown'];
             const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-            // Default to manual mode for STRING, FLOAT, and CAMERA inputs, connection mode for others
             const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
             const inputMode = inputModes[input] || defaultMode;
             const inputValue = inputValues[input] || '';
@@ -239,6 +248,20 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
 
                 {inputMode === 'manual' ? (() => {
                   switch (typeName) {
+                    case 'CAMERA':
+                      return (
+                        <CameraInput
+                          inputName={input}
+                          nodeId={id}
+                          isActive={isCameraActive(input)}
+                          isMenuOpen={isCameraMenuOpen(input)}
+                          devices={cameraState.devices}
+                          onToggleMenu={toggleCameraMenu}
+                          onSelectDevice={selectDevice}
+                          onSetupCanvas={setupCanvas}
+                          onSetupVideo={setupVideo}
+                        />
+                      );
                     case 'STRING':
                       return (
                         <div className="manual-input-container">
@@ -303,13 +326,15 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
             );
           })}
         </div>
+        
         {/* Center content */}
         <div className="io-center" />
+        
         {/* Outputs column */}
         <div className="io-column io-outputs">
           {outputs.map((output, index) => {
             const outputId = outputs.length === 1 ? 'output' : `output-${index}`;
-            const isRequired = output.required !== false; // Default to required if not specified
+            const isRequired = output.required !== false;
             return (
               <div key={`output-${index}`} className="io-item output-item">
                 <span className={`connection-label output-label ${isRequired ? 'required' : 'optional'}`}>
@@ -506,4 +531,4 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   );
 };
 
-export default memo(CustomNode);
+export default memo(CameraNode);

@@ -17,10 +17,13 @@ import '@xyflow/react/dist/style.css';
 import './App.css';
 import NodePanel from './components/NodePanel';
 import CustomNode from './components/CustomNode';
+import CameraNode from './components/CameraNode';
 import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
 import ThemeToggle from './components/ThemeToggle';
 import { NodeInfo, apiService } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
+import { shouldUseCameraNode } from './utils/nodeUtils';
+import { mergeCameraFramesWithInputValues } from './utils/cameraFrameUtils';
 import { websocketService, ConnectionState } from './services/websocket';
 
 interface WorkflowData {
@@ -41,6 +44,13 @@ const createCustomNodeWithContextMenu = (
   onInputValueChange: (nodeId: string, inputName: string, value: string) => void
 ) => {
   return (props: any) => <CustomNode {...props} onContextMenu={onContextMenu} onInputValueChange={onInputValueChange} />;
+};
+
+const createCameraNodeWithContextMenu = (
+  onContextMenu: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void,
+  onInputValueChange: (nodeId: string, inputName: string, value: string) => void
+) => {
+  return (props: any) => <CameraNode {...props} onContextMenu={onContextMenu} onInputValueChange={onInputValueChange} />;
 };
 
 // Safe expression evaluator for sleep time calculations
@@ -384,7 +394,7 @@ function App() {
 
         const newNode: Node = {
           id: `${nodeInfo.name}-${Date.now()}`,
-          type: 'customNode',
+          type: shouldUseCameraNode(nodeInfo) ? 'cameraNode' : 'customNode',
           position,
           data: { 
             label: nodeInfo.display_name,
@@ -568,15 +578,22 @@ function App() {
     }
     
     return {
-      nodes: activeNodes.map(node => ({
-        id: node.id,
-        type: (node.data as any).nodeInfo?.name || (node.data as any).type || node.type,
-        data: {
-          ...node.data,
-          parameters: (node.data as any).inputValues || {}
-        },
-        position: node.position
-      })),
+      nodes: activeNodes.map(node => {
+        const inputValues = (node.data as any).inputValues || {};
+        
+        // Merge camera frames with input values for camera nodes
+        const finalParameters = mergeCameraFramesWithInputValues(node.id, inputValues);
+        
+        return {
+          id: node.id,
+          type: (node.data as any).nodeInfo?.name || (node.data as any).type || node.type,
+          data: {
+            ...node.data,
+            parameters: finalParameters
+          },
+          position: node.position
+        };
+      }),
       edges: activeEdges.map(edge => ({
         id: edge.id,
         source: edge.source,
@@ -1263,6 +1280,7 @@ function App() {
         return node;
       })
     );
+
     
     // Send real-time input update via WebSocket
     if (connectionState.isConnected) {
@@ -1272,6 +1290,7 @@ function App() {
 
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
+    cameraNode: createCameraNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
   }), [handleNodeContextMenu, handleInputValueChange]);
 
 

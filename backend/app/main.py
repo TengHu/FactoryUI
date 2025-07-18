@@ -207,6 +207,8 @@ async def get_robot_status():
 async def start_continuous_execution(workflow: WorkflowRequest):
     """Start continuous execution of a workflow"""
     try:
+
+
         # Convert workflow to execution format
         workflow_data = {
             "nodes": workflow.nodes,
@@ -274,8 +276,6 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
     """Handle incoming WebSocket messages from client"""
     message_type = message.get("type")
 
-    print(f"📨 Received WebSocket message type: {message_type}")
-    
     if message_type == "ping":
         # Respond to ping with pong
         await websocket_manager.send_personal_message({
@@ -308,6 +308,7 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
         if not executor.is_running:
             return
 
+
         # Handle real-time parameter updates
         data = message.get("data", {})
         node_id = data.get("node_id")
@@ -320,6 +321,7 @@ async def handle_websocket_message(websocket: WebSocket, message: Dict[str, Any]
                 "message": "Missing required fields: node_id, input_name"
             }, websocket)
             return
+        
         
         # Update the node parameter in real-time
         success = executor.update_node_parameter(node_id, input_name, input_value)

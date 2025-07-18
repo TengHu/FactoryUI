@@ -99,14 +99,19 @@ class ContinuousExecutor:
         self.thread.start()
         self.log_message("info", "Started continuous execution")
     
-    def stop_continuous_execution(self):
-        """Stop the continuous execution loop"""
+    def stop_continuous_execution(self, join_thread: bool = True):
+        """Stop the continuous execution loop
+
+        Args:
+            join_thread (bool): Whether to join the execution thread. 
+                Set to False if calling from within the execution thread itself.
+        """
         if not self.is_running:
             self.log_message("warning", "Continuous execution is not running")
             return
-        
+
         self.is_running = False
-        
+
         # Broadcast workflow stopped event
         if self.websocket_manager:
             self.log_message("info", "Broadcasting continuous_stopped event")
@@ -116,9 +121,11 @@ class ContinuousExecutor:
             }))
         else:
             self.log_message("warning", "No websocket_manager available for broadcasting stop event")
-        
-        if self.thread:
-            self.thread.join(timeout=5.0)
+
+        if self.thread and join_thread:
+            # Avoid joining the current thread
+            if threading.current_thread() != self.thread:
+                self.thread.join(timeout=5.0)
         self.log_message("info", "Stopped continuous execution")
     
     def set_loop_interval(self, interval: float):
@@ -198,6 +205,7 @@ class ContinuousExecutor:
             }))
         
         while self.is_running:
+
             try:
                 start_time = time.time()
                 
@@ -234,14 +242,16 @@ class ContinuousExecutor:
             except Exception as e:
                 self.log_message("error", f"Error in execution loop: {str(e)}")
                 self.log_message("error", f"Traceback: {traceback.format_exc()}")
+
+                
                 
                 # Broadcast error
                 if self.websocket_manager:
                     self._broadcast_sync(self.websocket_manager.broadcast_continuous_update(
                         self.count_of_iterations, "error", {"error": str(e)}
                     ))
-                
-                time.sleep(self.loop_interval)  # Continue after error
+                self.stop_continuous_execution()
+                return
     
     def _execute_workflow_once_optimized(self):
         """Execute the workflow once using pre-computed data structures for maximum performance"""
@@ -274,7 +284,7 @@ class ContinuousExecutor:
                     self._broadcast_sync(self.websocket_manager.broadcast_node_state(
                         node_id, "error", {"error": str(e)}
                     ))
-                raise
+                raise e
         
         # Store results
         self.execution_results = node_results
@@ -360,7 +370,7 @@ class ContinuousExecutor:
             
         except Exception as e:
             self.log_message("error", f"Node {node_id} execution failed: {str(e)}")
-            raise
+            raise e
     
     def _prepare_node_inputs_optimized(self, node_id: str, node_data: Dict, 
                                      node_results: Dict[str, Any]) -> Dict[str, Any]:

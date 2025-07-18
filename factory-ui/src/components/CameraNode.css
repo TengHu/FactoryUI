@@ -1,0 +1,102 @@
+/* Camera Node Specific Styling */
+
+.camera-node {
+  /* Disable animations and transitions to prevent blinking */
+  animation: none !important;
+  transition: none !important;
+}
+
+.camera-node .camera-canvas {
+  /* Ensure smooth rendering for camera feeds */
+  image-rendering: optimizeSpeed;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  
+  /* Disable any potential CSS transitions on canvas */
+  transition: none !important;
+  animation: none !important;
+}
+
+.camera-node .camera-display-container {
+  /* Stable container for camera feed */
+  will-change: auto;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  
+  /* Disable transitions */
+  transition: none !important;
+  animation: none !important;
+}
+
+.camera-node .camera-view {
+  /* Optimized camera view rendering */
+  contain: layout style paint;
+  
+  /* Disable transitions */
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Override any inherited animations for camera nodes */
+.camera-node.node-executing {
+  animation: none !important;
+  border-color: #fd7e14;
+  background: linear-gradient(145deg, #fff3e0, #fff8f0);
+}
+
+.camera-node.node-completed {
+  animation: none !important;
+  border-color: #198754;
+  background: linear-gradient(145deg, #e8f5e8, #f0fff4);
+}
+
+.camera-node.node-error {
+  animation: none !important;
+  border-color: #dc3545;
+  background: linear-gradient(145deg, #ffeaea, #fff5f5);
+}
+
+/* Camera node header styling */
+.camera-node .node-title {
+  /* Visual indicator that this is a camera node */
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+/* Optimize camera controls */
+.camera-node .camera-controls {
+  /* Position context for menu */
+  position: relative;
+  z-index: 999997;
+  
+  /* Disable transitions */
+  transition: none !important;
+  animation: none !important;
+}
+
+.camera-node .camera-button {
+  /* Stable button styling */
+  transition: none !important;
+  animation: none !important;
+}
+
+.camera-node .camera-menu {
+  /* Stable menu positioning with highest z-index */
+  position: absolute;
+  z-index: 999999 !important;
+  
+  /* Disable transitions */
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Performance optimizations for camera nodes */
+.camera-node {
+  /* GPU acceleration for smooth rendering */
+  transform: translateZ(0);
+  will-change: auto;
+  
+  /* Contain layout changes */
+  contain: layout style;
+}

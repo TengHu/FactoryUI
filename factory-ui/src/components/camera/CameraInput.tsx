@@ -7,15 +7,15 @@ export interface CameraInputProps {
   isActive: boolean;
   isMenuOpen: boolean;
   devices: CameraDevice[];
-  onToggleMenu: (inputName: string) => void;
-  onSelectDevice: (inputName: string, deviceId: string) => void;
+  onToggleMenu: (inputName: string) => Promise<void>;
+  onSelectDevice: (inputName: string, deviceId: string) => Promise<void>;
   onSetupCanvas: (inputName: string, canvas: HTMLCanvasElement | null) => void;
   onSetupVideo: (inputName: string, video: HTMLVideoElement | null) => void;
 }
 
 export const CameraInput: React.FC<CameraInputProps> = ({
   inputName,
-  nodeId,
+  nodeId: _nodeId, // Prefix with underscore to indicate intentionally unused
   isActive,
   isMenuOpen,
   devices,
@@ -31,16 +31,16 @@ export const CameraInput: React.FC<CameraInputProps> = ({
       <div className="camera-controls">
         <button
           className="camera-button"
-          onClick={async (e) => {
+          onClick={(e) => {
             e.stopPropagation();
-            await onToggleMenu(inputName);
+            onToggleMenu(inputName);
           }}
         >
           {isActive ? '⏹️ Stop' : '📹 Camera'}
         </button>
         
         {isMenuOpen && !isActive && (
-          <div className="camera-menu">
+          <div className="camera-menu camera-menu-overlay">
             <div className="camera-menu-header">Select Camera:</div>
             {devices.length === 0 ? (
               <div className="camera-menu-item loading">Loading devices...</div>
