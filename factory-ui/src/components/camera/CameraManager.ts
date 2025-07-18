@@ -311,6 +311,47 @@ export class CameraManager {
   }
 
   /**
+   * Get all active stream keys
+   */
+  getActiveStreamKeys(): string[] {
+    return Array.from(this.streams.keys());
+  }
+
+  /**
+   * Get all camera frames for a specific node
+   */
+  getCameraFramesForNode(nodeId: string): Record<string, string> {
+    const frames: Record<string, string> = {};
+    const streamKeys = Array.from(this.streams.keys());
+    
+    for (const streamKey of streamKeys) {
+      if (streamKey.startsWith(`${nodeId}:`)) {
+        const inputName = streamKey.split(':').slice(1).join(':');
+        const currentFrame = this.getCurrentFrame(streamKey);
+        
+        if (currentFrame) {
+          frames[inputName] = currentFrame;
+        }
+      }
+    }
+    
+    return frames;
+  }
+
+  /**
+   * Check if a node has any active camera streams
+   */
+  nodeHasActiveStreams(nodeId: string): boolean {
+    const streamKeys = Array.from(this.streams.keys());
+    for (const streamKey of streamKeys) {
+      if (streamKey.startsWith(`${nodeId}:`)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Cleanup all cameras
    */
   cleanup(): void {

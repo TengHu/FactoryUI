@@ -23,6 +23,7 @@ import ThemeToggle from './components/ThemeToggle';
 import { NodeInfo, apiService } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
 import { shouldUseCameraNode } from './utils/nodeUtils';
+import { mergeCameraFramesWithInputValues } from './utils/cameraFrameUtils';
 import { websocketService, ConnectionState } from './services/websocket';
 
 interface WorkflowData {
@@ -577,15 +578,22 @@ function App() {
     }
     
     return {
-      nodes: activeNodes.map(node => ({
-        id: node.id,
-        type: (node.data as any).nodeInfo?.name || (node.data as any).type || node.type,
-        data: {
-          ...node.data,
-          parameters: (node.data as any).inputValues || {}
-        },
-        position: node.position
-      })),
+      nodes: activeNodes.map(node => {
+        const inputValues = (node.data as any).inputValues || {};
+        
+        // Merge camera frames with input values for camera nodes
+        const finalParameters = mergeCameraFramesWithInputValues(node.id, inputValues);
+        
+        return {
+          id: node.id,
+          type: (node.data as any).nodeInfo?.name || (node.data as any).type || node.type,
+          data: {
+            ...node.data,
+            parameters: finalParameters
+          },
+          position: node.position
+        };
+      }),
       edges: activeEdges.map(edge => ({
         id: edge.id,
         source: edge.source,

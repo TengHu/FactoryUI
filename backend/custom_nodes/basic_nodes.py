@@ -739,7 +739,6 @@ Usage: Use this node to display an image in your workflow. The backend will prin
         rt_update = {}
 
 
-        return (None, random.randint(0, 1000000))
         
         try:
             if isinstance(image, bytes):

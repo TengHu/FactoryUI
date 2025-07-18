@@ -150,6 +150,8 @@ export function useCameraManager({ nodeId, onFrameCapture }: UseCameraManagerOpt
     };
   }, [cameraState.activeStreams, createStreamKey]);
 
+  // Note: Regular camera manager doesn't need auto-sync since it uses normal state flow
+
   // Handle clicks outside camera menus
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

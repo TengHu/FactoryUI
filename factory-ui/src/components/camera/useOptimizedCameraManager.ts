@@ -23,6 +23,9 @@ export function useOptimizedCameraManager({ nodeId, onFrameCapture }: UseOptimiz
   // Use refs to store callback and nodeId to prevent re-renders
   const callbackRef = useRef(onFrameCapture);
   const nodeIdRef = useRef(nodeId);
+  
+  // Shadow state for camera frames (bypass React re-renders)
+  const shadowFrameState = useRef<Record<string, string>>({});
 
   // Update refs when values change
   useEffect(() => {
@@ -103,6 +106,10 @@ export function useOptimizedCameraManager({ nodeId, onFrameCapture }: UseOptimiz
   const stopCamera = useCallback((inputName: string) => {
     const streamKey = createStreamKey(inputName);
     cameraManager.stopCamera(streamKey);
+    
+    // Clean up shadow state
+    delete shadowFrameState.current[inputName];
+    
     setCameraState(prev => ({
       ...prev,
       activeStreams: { ...prev.activeStreams, [inputName]: false },
@@ -173,8 +180,37 @@ export function useOptimizedCameraManager({ nodeId, onFrameCapture }: UseOptimiz
           cameraManager.stopCamera(streamKey);
         }
       });
+      
+      // Clear shadow state
+      shadowFrameState.current = {};
     };
   }, [cameraState.activeStreams, createStreamKey]);
+
+  // Auto-sync latest camera frames to shadow state every 2 seconds (no re-render)
+  useEffect(() => {
+    if (Object.keys(cameraState.activeStreams).length === 0) return;
+    
+    const interval = setInterval(() => {
+      Object.keys(cameraState.activeStreams).forEach(inputName => {
+        if (cameraState.activeStreams[inputName]) {
+          const streamKey = createStreamKey(inputName);
+          const currentFrame = cameraManager.getCurrentFrame(streamKey);
+          
+          if (currentFrame) {
+            // Store in shadow state (no React re-render)
+            shadowFrameState.current[inputName] = currentFrame;
+          }
+        }
+      });
+    }, 2000);
+    
+    return () => clearInterval(interval);
+  }, [cameraState.activeStreams, createStreamKey]);
+  
+  // Method to get current camera frames for workflow preparation
+  const getCurrentCameraFrames = useCallback(() => {
+    return { ...shadowFrameState.current };
+  }, []);
 
   // Handle clicks outside camera menus
   useEffect(() => {
@@ -199,6 +235,7 @@ export function useOptimizedCameraManager({ nodeId, onFrameCapture }: UseOptimiz
     closeCameraMenu,
     setupCanvas,
     setupVideo,
+    getCurrentCameraFrames, // New method to get frames without re-render
     isCameraActive: (inputName: string) => cameraState.activeStreams[inputName] || false,
     isCameraMenuOpen: (inputName: string) => cameraState.showMenus[inputName] || false
   };
