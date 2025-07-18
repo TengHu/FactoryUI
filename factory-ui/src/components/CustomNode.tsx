@@ -1,7 +1,6 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeInfo } from '../services/api';
-import { useCameraManager, CameraInput } from './camera';
 import './CustomNode.css';
 
 export interface CustomNodeProps extends NodeProps {
@@ -46,19 +45,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
   
-  // Camera management hook
-  const {
-    cameraState,
-    toggleCameraMenu,
-    selectDevice,
-    setupCanvas,
-    setupVideo,
-    isCameraActive,
-    isCameraMenuOpen
-  } = useCameraManager({
-    nodeId: id,
-    onFrameCapture: onInputValueChange
-  });
   
   
   // Handle ResizeObserver errors
@@ -253,20 +239,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
 
                 {inputMode === 'manual' ? (() => {
                   switch (typeName) {
-                    case 'CAMERA':
-                      return (
-                        <CameraInput
-                          inputName={input}
-                          nodeId={id}
-                          isActive={isCameraActive(input)}
-                          isMenuOpen={isCameraMenuOpen(input)}
-                          devices={cameraState.devices}
-                          onToggleMenu={toggleCameraMenu}
-                          onSelectDevice={selectDevice}
-                          onSetupCanvas={setupCanvas}
-                          onSetupVideo={setupVideo}
-                        />
-                      );
                     case 'STRING':
                       return (
                         <div className="manual-input-container">
