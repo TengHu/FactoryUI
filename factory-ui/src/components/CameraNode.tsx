@@ -216,115 +216,7 @@ const CameraNode = ({ id, data, selected, ...props }: CameraNodeProps) => {
       <div className="node-io-row">
         {/* Inputs column */}
         <div className="io-column io-inputs">
-          {allInputs.map((input) => {
-            const isRequired = requiredInputs.includes(input);
-            const typeInfo =
-              (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
-              (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
-              ['unknown'];
-            const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-            const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
-            const inputMode = inputModes[input] || defaultMode;
-            const inputValue = inputValues[input] || '';
-            
-            return (
-              <div key={`input-${input}`} className="io-item input-item">
-                {inputMode === 'connection' && (
-                  <Handle
-                    type="target"
-                    position={Position.Left}
-                    id={input}
-                    className="connection-handle input-handle"
-                    data-input-type={typeName}
-                    style={{
-                      background: isRequired ? '#ef4444' : '#94a3b8',
-                      border: '2px solid white',
-                      width: '10px',
-                      height: '10px',
-                    }}
-                    title={`${input} (${typeName}) - ${isRequired ? 'required' : 'optional'}`}
-                  />
-                )}
-
-                {inputMode === 'manual' ? (() => {
-                  switch (typeName) {
-                    case 'CAMERA':
-                      return (
-                        <CameraInput
-                          inputName={input}
-                          nodeId={id}
-                          isActive={isCameraActive(input)}
-                          isMenuOpen={isCameraMenuOpen(input)}
-                          devices={cameraState.devices}
-                          onToggleMenu={toggleCameraMenu}
-                          onSelectDevice={selectDevice}
-                          onSetupCanvas={setupCanvas}
-                          onSetupVideo={setupVideo}
-                        />
-                      );
-                    case 'STRING':
-                      return (
-                        <div className="manual-input-container">
-                          <span className="input-label">{input}:</span>
-                          <input
-                            type="text"
-                            className="manual-input"
-                            value={inputValue}
-                            placeholder={`Enter ${typeName.toLowerCase()}`}
-                            onChange={(e) => {
-                              if (onInputValueChange) {
-                                onInputValueChange(id, input, e.target.value);
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      );
-                    case 'FLOAT':
-                      return (
-                        <div className="manual-input-container">
-                          <span className="input-label">{input}:</span>
-                          <input
-                            type="number"
-                            className="manual-input"
-                            value={inputValue}
-                            placeholder={`Enter ${typeName.toLowerCase()}`}
-                            onChange={(e) => {
-                              if (onInputValueChange) {
-                                onInputValueChange(id, input, e.target.value);
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      );
-                    default:
-                      return (
-                        <div className="manual-input-container">
-                          <span className="input-label">{input}:</span>
-                          <input
-                            type="text"
-                            className="manual-input"
-                            value={inputValue}
-                            placeholder={`Enter ${typeName.toLowerCase()}`}
-                            onChange={(e) => {
-                              if (onInputValueChange) {
-                                onInputValueChange(id, input, e.target.value);
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      );
-                  }
-                })() : (
-                  <span className={`connection-label ${isRequired ? 'required' : 'optional'}`}>
-                    {`${input} (${typeName})`}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+          {/*  Don't show other inputs */}
         </div>
         
         {/* Center content */}
@@ -359,6 +251,48 @@ const CameraNode = ({ id, data, selected, ...props }: CameraNodeProps) => {
           })}
         </div>
       </div>
+      
+      {/* Camera Input at the bottom */}
+      {allInputs.some((input) => {
+        const typeInfo =
+          (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
+          (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
+          ['unknown'];
+        const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+        const defaultMode = (typeName === 'CAMERA') ? 'manual' : 'connection';
+        const inputMode = inputModes[input] || defaultMode;
+        return typeName === 'CAMERA' && inputMode === 'manual';
+      }) && (
+        <div className="camera-input-bottom">
+          {allInputs.map((input) => {
+            const typeInfo =
+              (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
+              (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
+              ['unknown'];
+            const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+            const defaultMode = (typeName === 'CAMERA') ? 'manual' : 'connection';
+            const inputMode = inputModes[input] || defaultMode;
+            
+            if (typeName === 'CAMERA' && inputMode === 'manual') {
+              return (
+                <CameraInput
+                  key={`camera-bottom-${input}`}
+                  inputName={input}
+                  nodeId={id}
+                  isActive={isCameraActive(input)}
+                  isMenuOpen={isCameraMenuOpen(input)}
+                  devices={cameraState.devices}
+                  onToggleMenu={toggleCameraMenu}
+                  onSelectDevice={selectDevice}
+                  onSetupCanvas={setupCanvas}
+                  onSetupVideo={setupVideo}
+                />
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
       
       {/* Robot Status Display */}
       {robotStatus && nodeInfo.name === 'RobotStatusReader' && (

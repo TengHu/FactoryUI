@@ -878,6 +878,57 @@ Usage: Use this node to inspect values in your workflow. It prints the value to 
         print(f"[DisplayNode] Value: {value}")
         return (None,value)
 
+class NoteNode(NodeBase):
+    """A node that takes text as input and has no output, useful for adding comments or notes to workflows."""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "text": ("STRING", {"default": "Add your note here..."})
+            }
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {}
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "note"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Note"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Add a note or comment to your workflow (no output)."
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+NoteNode
+
+Purpose: Takes text input and produces no output. Useful for adding comments, notes, or documentation to your workflow.
+
+Inputs:
+  - text (STRING): The note or comment text to add to the workflow
+
+Outputs:
+  - None
+
+Usage: Use this node to add documentation, comments, or notes to your workflow. The text will be visible in the node but won't affect the workflow execution.
+        """
+
+    def note(self, text: str):
+        # Simply consume the text input without producing any output
+        return (None,)
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
@@ -887,5 +938,6 @@ NODE_CLASS_MAPPINGS = {
     "Grok4Node": Grok4Node,
     "ShowImageNode": ShowImageNode,
     "CameraNode": CameraNode,
-    "DisplayNode": DisplayNode
+    "DisplayNode": DisplayNode,
+    "NoteNode": NoteNode
 }
