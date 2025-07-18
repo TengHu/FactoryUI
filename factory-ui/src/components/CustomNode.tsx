@@ -40,15 +40,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const onContextMenu = (props as any).onContextMenu;
   const onInputValueChange = (props as any).onInputValueChange;
   
-  // Debug logging for re-renders and camera issues
-  const renderCountRef = useRef(0);
-  renderCountRef.current++;
-  
-  useEffect(() => {
-    if (renderCountRef.current > 1) {
-      console.log(`🔄 CustomNode re-render #${renderCountRef.current} for node ${id}`);
-    }
-  });
   
   // Debug logging for node state
   if (nodeState) {
@@ -182,7 +173,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
           // Send to backend with debouncing to prevent re-renders
           sendFrameToBackend(inputName, frameData);
           
-          console.log(`Frame ${frameCounter++} captured for ${inputName}`);
           
         } catch (error) {
           console.warn('Backend frame processing error:', error);
@@ -191,12 +181,9 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     };
     
     // Smooth display at 30 FPS (no parent re-renders)
-    const displayIntervalId = setInterval(updateDisplay, 1000 / 30);
+    const intervalId = setInterval(updateDisplay, 1000 / 30);
     
-    // Backend processing at 2 FPS (reduce re-render frequency)
-    const backendIntervalId = setInterval(processFrameForBackend, 1000 / 2);
-    
-    return { displayIntervalId, backendIntervalId };
+    return { intervalId, intervalId};
   }, [sendFrameToBackend]);
 
   const startCamera = useCallback(async (inputName: string, deviceId?: string) => {
