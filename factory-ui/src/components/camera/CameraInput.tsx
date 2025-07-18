@@ -40,7 +40,7 @@ export const CameraInput: React.FC<CameraInputProps> = ({
         </button>
         
         {isMenuOpen && !isActive && (
-          <div className="camera-menu">
+          <div className="camera-menu camera-menu-overlay">
             <div className="camera-menu-header">Select Camera:</div>
             {devices.length === 0 ? (
               <div className="camera-menu-item loading">Loading devices...</div>

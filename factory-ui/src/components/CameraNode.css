@@ -66,9 +66,9 @@
 
 /* Optimize camera controls */
 .camera-node .camera-controls {
-  /* Prevent layout shifts */
-  contain: layout;
+  /* Position context for menu */
   position: relative;
+  z-index: 999997;
   
   /* Disable transitions */
   transition: none !important;
@@ -82,9 +82,9 @@
 }
 
 .camera-node .camera-menu {
-  /* Stable menu positioning with high z-index */
+  /* Stable menu positioning with highest z-index */
   position: absolute;
-  z-index: 9999 !important;
+  z-index: 999999 !important;
   
   /* Disable transitions */
   transition: none !important;
