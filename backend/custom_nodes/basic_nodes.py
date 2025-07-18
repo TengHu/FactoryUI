@@ -735,9 +735,6 @@ Usage: Use this node to display an image in your workflow. The backend will prin
         """
 
     def show_image(self, image):
-        print(f"[ShowImageNode] Received image of type: {type(image)}")
-        print(f"[ShowImageNode] Image length/size: {len(image) if hasattr(image, '__len__') else 'N/A'}")
-        
         # Pass through the image for UI rendering (if needed)
         rt_update = {}
         
@@ -791,7 +788,6 @@ Usage: Use this node to display an image in your workflow. The backend will prin
             rt_update = {"error": f"Error processing image: {str(e)}"}
             print(f"[ShowImageNode] Exception: {e}")
         
-        print(f"[ShowImageNode] Returning rt_update: {rt_update}")
         return (None, rt_update)
 
 class CameraNode(NodeBase):
