@@ -191,7 +191,6 @@ export class CameraManager {
           processingCtx.drawImage(video, 0, 0, processingCanvas.width, processingCanvas.height);
           const frameData = processingCanvas.toDataURL('image/jpeg', quality);
           
-          // Rate-limited frame sending
           this.sendFrameToBackend(inputName, frameData, onFrameCapture);
         } catch (error) {
           console.warn('Backend frame processing error:', error);
@@ -224,17 +223,14 @@ export class CameraManager {
 
     // Rate limiting: only send if no timeout is pending
     if (!this.rateLimitTimeouts.has(inputName)) {
-      console.log(`📤 Sending frame to backend for ${inputName} (rate limited)`);
 
       // Send immediately via setTimeout to break synchronous execution
       setTimeout(() => {
         onFrameCapture(inputName, frameData);
-        console.log(`✅ Frame delivered to backend for ${inputName}`);
       }, 0);
 
       // Set timeout to prevent next send for 1 second
       const timeout = setTimeout(() => {
-        console.log(`🔓 Rate limit cleared for ${inputName}`);
         this.rateLimitTimeouts.delete(inputName);
       }, 1000) as NodeJS.Timeout;
 

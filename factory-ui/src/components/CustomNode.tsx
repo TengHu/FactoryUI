@@ -42,10 +42,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   const onInputValueChange = (props as any).onInputValueChange;
   
   
-  // Debug logging for node state
-  if (nodeState) {
-    console.log(`🔄 Node ${id} state:`, nodeState.state, nodeState);
-  }
   
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
@@ -441,10 +437,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       {/* Real-Time Update Display */}
       {nodeState?.data?.rt_update && (
         <div className="rt-update-display" style={{ borderWidth: '1px', padding: '1px 1px' }}>
-          {/* <div className="rt-update-header">
-            <span className="rt-update-title">Real-Time Update</span>
-            <span className="rt-update-state">{nodeState.state}</span>
-          </div> */}
           <div className="rt-update-content">
             {typeof nodeState.data.rt_update === 'object' && nodeState.data.rt_update.image_base64 && nodeState.data.rt_update.image_format ? (
               <img

@@ -12,6 +12,7 @@ export const TYPE_COMPATIBILITY: TypeCompatibility = {
   'FLOAT': ['FLOAT', 'NUMBER', 'ANY'],
   'BOOLEAN': ['BOOLEAN', 'ANY'],
   'ANY': ['ANY'],
+  'IMAGE': ['IMAGE', 'ANY'],
   
   // Generic types that can connect to their own type
   'NUMBER': ['NUMBER', 'INT', 'FLOAT', 'ANY'],
