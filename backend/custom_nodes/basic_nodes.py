@@ -752,20 +752,16 @@ Usage: Use this node to display an image in your workflow. The backend will prin
                 else:
                     image_format = "png"  # Default
                 rt_update = {"image_base64": image_b64, "image_format": image_format}
-                print(f"[ShowImageNode] Converted bytes to base64, format: {image_format}, length: {len(image_b64)}")
                 
             elif isinstance(image, str):
                 # Check if it's already a data URL
                 if image.startswith('data:image/'):
-                    # Extract base64 from data URL
                     try:
                         header, base64_data = image.split(',', 1)
                         format_match = re.match(r'data:image/([^;]+)', header)
                         image_format = format_match.group(1) if format_match else 'png'
                         rt_update = {"image_base64": base64_data, "image_format": image_format}
-                        print(f"[ShowImageNode] Extracted from data URL, format: {image_format}")
                     except Exception as e:
-                        print(f"[ShowImageNode] Error parsing data URL: {e}")
                         rt_update = {"error": f"Invalid data URL format: {e}"}
                 else:
                     # Assume it's already base64, try to detect format
@@ -774,19 +770,15 @@ Usage: Use this node to display an image in your workflow. The backend will prin
                     else:
                         image_format = "png"  # Default
                     rt_update = {"image_base64": image, "image_format": image_format}
-                    print(f"[ShowImageNode] Using string as base64, format: {image_format}, length: {len(image)}")
                     
             elif image is None:
                 rt_update = {"error": "No image data received"}
-                print(f"[ShowImageNode] Error: No image data received")
                 
             else:
                 rt_update = {"error": f"Invalid image format: {type(image)}"}
-                print(f"[ShowImageNode] Error: Invalid image format: {type(image)}")
                 
         except Exception as e:
             rt_update = {"error": f"Error processing image: {str(e)}"}
-            print(f"[ShowImageNode] Exception: {e}")
         
         return (None, rt_update)
 

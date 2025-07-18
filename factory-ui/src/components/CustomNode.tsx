@@ -1,6 +1,7 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeInfo } from '../services/api';
+import { useCameraManager, CameraInput } from './camera';
 import './CustomNode.css';
 
 export interface CustomNodeProps extends NodeProps {
@@ -49,249 +50,21 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
   
-  // Camera state for CAMERA input types
-  const [cameraStreams, setCameraStreams] = useState<Record<string, MediaStream | null>>({});
-  const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
-  const [showCameraMenu, setShowCameraMenu] = useState<Record<string, boolean>>({});
-  const cameraRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-  const overlayCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
-  const frameBufferRefs = useRef<Record<string, string>>({});
-  const backendQueueRef = useRef<Record<string, NodeJS.Timeout>>({});
+  // Camera management hook
+  const {
+    cameraState,
+    toggleCameraMenu,
+    selectDevice,
+    setupCanvas,
+    setupVideo,
+    isCameraActive,
+    isCameraMenuOpen
+  } = useCameraManager({
+    nodeId: id,
+    onFrameCapture: onInputValueChange
+  });
   
-  // Camera utility functions
-  const enumerateDevices = useCallback(async () => {
-    try {
-      await navigator.mediaDevices.getUserMedia({ video: true });
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      setAvailableDevices(videoDevices);
-      return videoDevices;
-    } catch (error) {
-      console.error('Error enumerating devices:', error);
-      alert('Could not access camera devices. Please check permissions.');
-      return [];
-    }
-  }, []);
-
-  // Camera canvas management
-  const initializeCameraCanvas = useCallback((canvas: HTMLCanvasElement, showPlaceholder = true) => {
-    canvas.width = 200;
-    canvas.height = 150;
-    
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      if (showPlaceholder) {
-        // Draw placeholder when no camera
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = '#666';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('No Camera', canvas.width / 2, canvas.height / 2 - 10);
-        ctx.fillText('Selected', canvas.width / 2, canvas.height / 2 + 10);
-      } else {
-        // Clear canvas for camera feed
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-  }, []);
-
-  // Rate-limited frame sender to prevent re-render cascade
-  const sendFrameToBackend = useCallback((inputName: string, frameData: string) => {
-    // Store frame immediately for display consistency
-    frameBufferRefs.current[inputName] = frameData;
-    
-    // Rate limiting: only send if no timeout is pending
-    if (!backendQueueRef.current[inputName]) {
-      console.log(`📤 Sending frame to backend for ${inputName} (rate limited)`);
-      
-      // Send immediately via setTimeout to break synchronous execution
-      setTimeout(() => {
-        if (onInputValueChange) {
-          onInputValueChange(id, inputName, frameData);
-          console.log(`✅ Frame delivered to backend for ${inputName}`);
-        } else {
-          console.warn(`❌ onInputValueChange is null for ${inputName}`);
-        }
-      }, 0);
-      
-      // Set timeout to prevent next send for 1 second
-      backendQueueRef.current[inputName] = setTimeout(() => {
-        console.log(`🔓 Rate limit cleared for ${inputName}`);
-        delete backendQueueRef.current[inputName];
-      }, 1);
-      
-    } else {
-      console.log(`⏳ Frame skipped for ${inputName} (rate limited)`);
-    }
-  }, [id, onInputValueChange]);
-
-  // Camera stream management
-  const setupCameraStream = useCallback((inputName: string, stream: MediaStream) => {
-    setCameraStreams(prev => ({ ...prev, [inputName]: stream }));
-    
-    // Update canvas to show it's active
-    const canvas = overlayCanvasRefs.current[inputName];
-    if (canvas) {
-      canvas.className = 'camera-canvas active';
-      initializeCameraCanvas(canvas, false);
-    }
-  }, [initializeCameraCanvas]);
-
-  const createFrameProcessor = useCallback((inputName: string) => {
-    // Separate canvases for different purposes
-    const processingCanvas = document.createElement('canvas');
-    const processingCtx = processingCanvas.getContext('2d');
-    processingCanvas.width = 320; // Backend processing resolution
-    processingCanvas.height = 240;
-
-
-    // High frequency display updates (smooth video)
-    const updateDisplay = () => {
-      const video = cameraRefs.current[inputName];
-      const displayCanvas = overlayCanvasRefs.current[inputName];
-      
-      if (video && video.readyState === 4 && displayCanvas) {
-        requestAnimationFrame(() => {
-          try {
-            // Direct video-to-canvas for smooth display (no re-renders)
-            const displayCtx = displayCanvas.getContext('2d');
-            if (displayCtx) {
-              displayCtx.drawImage(video, 0, 0, displayCanvas.width, displayCanvas.height);
-            }
-          } catch (error) {
-            console.warn('Display update error:', error);
-          }
-        });
-      }
-    };
-
-    // Backend frame capture and processing
-    const processFrameForBackend = () => {
-      const video = cameraRefs.current[inputName];
-      
-      if (video && video.readyState === 4 && processingCtx) {
-        try {
-          // Capture frame for backend
-          processingCtx.drawImage(video, 0, 0, processingCanvas.width, processingCanvas.height);
-          const frameData = processingCanvas.toDataURL('image/jpeg', 0.7);
-          
-          // Send to backend with rate limiting to prevent re-renders
-          sendFrameToBackend(inputName, frameData);
-          
-        } catch (error) {
-          console.warn('Backend frame processing error:', error);
-        }
-      }
-    };
-    
-    // FPS for display and backend processing
-    const fps = 1000 / 30
-
-    const displayIntervalId = setInterval(updateDisplay, fps);
-    const backendIntervalId = setInterval(processFrameForBackend, fps);
-    
-    return { displayIntervalId, backendIntervalId };
-  }, [sendFrameToBackend]);
-
-  const startCamera = useCallback(async (inputName: string, deviceId?: string) => {
-    try {
-      const constraints: MediaStreamConstraints = {
-        video: { 
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 30 }
-        }
-      };
-      
-      if (deviceId) {
-        (constraints.video as MediaTrackConstraints).deviceId = { exact: deviceId };
-      }
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      // Setup camera stream and UI
-      setupCameraStream(inputName, stream);
-      
-      // Create separated frame processor
-      const processor = createFrameProcessor(inputName);
-      
-      // Store interval IDs for cleanup
-      (stream as any).displayIntervalId = processor.displayIntervalId;
-      (stream as any).backendIntervalId = processor.backendIntervalId;
-      
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      alert('Could not access camera. Please check permissions.');
-    }
-  }, [setupCameraStream, createFrameProcessor]);
-
-  const stopCamera = useCallback((inputName: string) => {
-    const stream = cameraStreams[inputName];
-    if (stream) {
-      // Clear both processing intervals
-      if ((stream as any).displayIntervalId) {
-        clearInterval((stream as any).displayIntervalId);
-      }
-      if ((stream as any).backendIntervalId) {
-        clearInterval((stream as any).backendIntervalId);
-      }
-      
-      // Stop all tracks
-      stream.getTracks().forEach(track => track.stop());
-      setCameraStreams(prev => ({ ...prev, [inputName]: null }));
-      
-      // Clear video element
-      const video = cameraRefs.current[inputName];
-      if (video) {
-        video.srcObject = null;
-      }
-      
-      // Reset canvas to placeholder state
-      const overlayCanvas = overlayCanvasRefs.current[inputName];
-      if (overlayCanvas) {
-        overlayCanvas.className = 'camera-canvas placeholder';
-        initializeCameraCanvas(overlayCanvas, true);
-      }
-      
-      // Clear buffers and pending backend calls
-      frameBufferRefs.current[inputName] = '';
-      if (backendQueueRef.current[inputName]) {
-        clearTimeout(backendQueueRef.current[inputName]);
-        delete backendQueueRef.current[inputName];
-      }
-    }
-  }, [cameraStreams, initializeCameraCanvas]);
-
-  const handleCameraMenuClick = useCallback(async (inputName: string) => {
-    if (cameraStreams[inputName]) {
-      stopCamera(inputName);
-      return;
-    }
-    
-    if (availableDevices.length === 0) {
-      await enumerateDevices();
-    }
-    
-    setShowCameraMenu(prev => ({ ...prev, [inputName]: !prev[inputName] }));
-  }, [cameraStreams, availableDevices, enumerateDevices, stopCamera]);
-
-  const handleDeviceSelect = useCallback(async (inputName: string, deviceId: string) => {
-    setShowCameraMenu(prev => ({ ...prev, [inputName]: false }));
-    await startCamera(inputName, deviceId);
-  }, [startCamera]);
   
-  // Cleanup camera streams on unmount
-  useEffect(() => {
-    return () => {
-      Object.keys(cameraStreams).forEach(inputName => {
-        stopCamera(inputName);
-      });
-    };
-  }, [stopCamera, cameraStreams]);
-
   // Handle ResizeObserver errors
   useEffect(() => {
     const handleResizeObserverError = (e: ErrorEvent) => {
@@ -304,19 +77,6 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
 
     window.addEventListener('error', handleResizeObserverError);
     return () => window.removeEventListener('error', handleResizeObserverError);
-  }, []);
-
-  // Handle clicks outside camera menu to close it
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (!target.closest('.camera-controls')) {
-        setShowCameraMenu({});
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   
   // Custom resize functionality
@@ -499,82 +259,17 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                   switch (typeName) {
                     case 'CAMERA':
                       return (
-                        <div className="camera-input-container">
-                          <span className="input-label">{input}:</span>
-                          <div className="camera-controls">
-                            <button
-                              className="camera-button"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                await handleCameraMenuClick(input);
-                              }}
-                            >
-                              {cameraStreams[input] ? '⏹️ Stop' : '📹 Camera'}
-                            </button>
-                            {showCameraMenu[input] && !cameraStreams[input] && (
-                              <div className="camera-menu">
-                                <div className="camera-menu-header">Select Camera:</div>
-                                {availableDevices.length === 0 ? (
-                                  <div className="camera-menu-item loading">Loading devices...</div>
-                                ) : (
-                                  availableDevices.map((device, index) => (
-                                    <button
-                                      key={device.deviceId}
-                                      className="camera-menu-item"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeviceSelect(input, device.deviceId);
-                                      }}
-                                    >
-                                      {device.label || `Camera ${index + 1}`}
-                                    </button>
-                                  ))
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          {/* Always present camera display container */}
-                          <div className="camera-display-container">
-                            {/* Hidden video element for stream processing */}
-                            <video
-                              ref={(el) => {
-                                cameraRefs.current[input] = el;
-                                if (el && cameraStreams[input]) {
-                                  el.srcObject = cameraStreams[input];
-                                  el.onloadedmetadata = () => {
-                                    el.play().catch(console.error);
-                                  };
-                                }
-                              }}
-                              autoPlay
-                              muted
-                              playsInline
-                              style={{
-                                position: 'absolute',
-                                top: '-9999px',
-                                left: '-9999px',
-                                width: '1px',
-                                height: '1px'
-                              }}
-                            />
-                            
-                            {/* Persistent camera view */}
-                            <div className="camera-view">
-                              <canvas
-                                ref={(el) => {
-                                  if (el !== overlayCanvasRefs.current[input]) {
-                                    console.log(`🎨 Canvas recreated for ${input}, previous:`, overlayCanvasRefs.current[input], 'new:', el);
-                                  }
-                                  overlayCanvasRefs.current[input] = el;
-                                  if (el) {
-                                    initializeCameraCanvas(el, !cameraStreams[input]);
-                                  }
-                                }}
-                                className={`camera-canvas ${cameraStreams[input] ? 'active' : 'placeholder'}`}
-                              />
-                            </div>
-                          </div>
-                        </div>
+                        <CameraInput
+                          inputName={input}
+                          nodeId={id}
+                          isActive={isCameraActive(input)}
+                          isMenuOpen={isCameraMenuOpen(input)}
+                          devices={cameraState.devices}
+                          onToggleMenu={toggleCameraMenu}
+                          onSelectDevice={selectDevice}
+                          onSetupCanvas={setupCanvas}
+                          onSetupVideo={setupVideo}
+                        />
                       );
                     case 'STRING':
                       return (
