@@ -791,7 +791,7 @@ class CameraNode(NodeBase):
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
-            "optional": {
+            "required": {
                 "image_stream": ("CAMERA", {}),
             }
         }
@@ -825,7 +825,7 @@ class CameraNode(NodeBase):
         return """
         """
 
-    def open_camera(self, image_stream = None):
+    def open_camera(self, image_stream):
         return (image_stream, None)
 
 class DisplayNode(NodeBase):

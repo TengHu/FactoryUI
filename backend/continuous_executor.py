@@ -205,6 +205,7 @@ class ContinuousExecutor:
             }))
         
         while self.is_running:
+
             try:
                 start_time = time.time()
                 
@@ -241,6 +242,8 @@ class ContinuousExecutor:
             except Exception as e:
                 self.log_message("error", f"Error in execution loop: {str(e)}")
                 self.log_message("error", f"Traceback: {traceback.format_exc()}")
+
+                
                 
                 # Broadcast error
                 if self.websocket_manager:
