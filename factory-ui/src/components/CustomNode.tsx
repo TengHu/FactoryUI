@@ -180,10 +180,13 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
       }
     };
     
-    // Smooth display at 30 FPS (no parent re-renders)
-    const intervalId = setInterval(updateDisplay, 1000 / 30);
+    // FPS for display and backend processing
+    const fps = 1000 / 30
+
+    const displayIntervalId = setInterval(updateDisplay, fps);
+    const backendIntervalId = setInterval(processFrameForBackend, fps);
     
-    return { intervalId, intervalId};
+    return { displayIntervalId, backendIntervalId };
   }, [sendFrameToBackend]);
 
   const startCamera = useCallback(async (inputName: string, deviceId?: string) => {
