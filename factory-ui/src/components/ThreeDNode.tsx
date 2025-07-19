@@ -101,7 +101,8 @@ function RobotScene({
         stlLoader.load(
           path,
           (geometry: THREE.BufferGeometry) => {
-            const material = new THREE.MeshLambertMaterial({ color: 0x808080 });
+            // Use green color from URDF material definition (rgba="0.06 0.4 0.1 1.0")
+            const material = new THREE.MeshLambertMaterial({ color: 0x0F6619 });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
@@ -110,7 +111,7 @@ function RobotScene({
           undefined,
           (error: unknown) => {
             console.error('Failed to load STL:', path, error);
-            // Create a placeholder box
+            // Create a placeholder box in red for errors
             const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
             const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
             const mesh = new THREE.Mesh(geometry, material);
@@ -118,9 +119,9 @@ function RobotScene({
           }
         );
       } else {
-        // Fallback for other formats
+        // Fallback for other formats - use green
         const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-        const material = new THREE.MeshLambertMaterial({ color: 0x808080 });
+        const material = new THREE.MeshLambertMaterial({ color: 0x0F6619 });
         const mesh = new THREE.Mesh(geometry, material);
         done(mesh);
       }
@@ -166,17 +167,14 @@ function RobotScene({
     };
   }, [urdfUrl, scene, onRobotLoaded]);
 
-  // Apply joint states
+  // Apply joint states (matching bambot implementation)
   useEffect(() => {
     if (robotRef.current && robotRef.current.joints && jointStates) {
       jointStates.forEach((state) => {
         const joint = robotRef.current!.joints[state.name];
-        if (joint) {
-          // Convert servo angle (0-360°) to joint angle for URDF
-          // SO-ARM100 uses 180° as neutral position
-          const servoAngle = state.angle;
-          const jointAngle = (servoAngle - 180) * (Math.PI / 180); // Convert to radians with offset
-          joint.setJointValue(jointAngle);
+        if (joint && joint.jointType !== 'continuous') {
+          // Direct conversion from degrees to radians (same as bambot)
+          joint.setJointValue(state.angle * (Math.PI / 180));
         }
       });
     }
@@ -185,6 +183,16 @@ function RobotScene({
   return (
     <>
       <OrbitControls target={SO_ARM100_CONFIG.orbitTarget} enablePan={true} enableZoom={true} enableRotate={true} />
+      
+      {/* Ground plane */}
+      <mesh 
+        rotation={[-Math.PI / 2, 0, 0]} 
+        position={[0, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[20, 20]} />
+        <meshLambertMaterial color="#f5f5f5" />
+      </mesh>
       
       <directionalLight
         castShadow
@@ -354,12 +362,16 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
           joints[joint.name] = joint;
           
           // Get initial angle from SO-ARM100 config or default to 0
-          const initialAngle = (SO_ARM100_CONFIG.urdfInitJointAngles as any)[joint.name] || 0;
+          const servoInitAngle = (SO_ARM100_CONFIG.urdfInitJointAngles as any)[joint.name] || 0;
           const servoId = (SO_ARM100_CONFIG.jointNameIdMap as any)[joint.name];
+          
+          // Convert from servo angle (0-360°) to joint angle (-180° to +180°)
+          // 180° servo angle = 0° joint angle (neutral position)
+          const jointAngle = servoInitAngle - 180;
           
           jointStates.push({
             name: joint.name,
-            angle: initialAngle,
+            angle: jointAngle,
             servoId: servoId
           });
         }
@@ -607,8 +619,8 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
                   </label>
                   <input
                     type="range"
-                    min="0"
-                    max="360"
+                    min="-180"
+                    max="180"
                     value={jointState.angle}
                     onChange={(e) => handleJointAngleChange(jointState.name, parseFloat(e.target.value))}
                     className="joint-slider"
