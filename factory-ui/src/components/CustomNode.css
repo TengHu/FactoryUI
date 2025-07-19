@@ -328,42 +328,54 @@
   flex: 1;
 }
 
-.node-category-badge {
+.node-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.node-tag-badge {
   background: #f1f3f4;
   color: #586069;
   font-size: 10px;
   padding: 2px 6px;
   border-radius: 10px;
-  text-transform: uppercase;
+  text-transform: lowercase;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-/* Category-specific badge colors */
-.node-input .node-category-badge {
+/* Tag-specific badge colors */
+.node-input .node-tag-badge {
   background: #ddf4ff;
   color: #0969da;
 }
 
-.node-output .node-category-badge {
+.node-output .node-tag-badge {
   background: #dcfce7;
   color: #1a7f37;
 }
 
-.node-processing .node-category-badge {
+.node-processing .node-tag-badge {
   background: #fef3c7;
   color: #bf8700;
 }
 
-.node-control .node-category-badge {
+.node-control .node-tag-badge {
   background: #fdf2f8;
   color: #bf0e99;
 }
 
-.node-robot .node-category-badge {
+.node-robot .node-tag-badge {
   background: #fee2e2;
   color: #cf222e;
+}
+
+.node-untagged .node-tag-badge {
+  background: #f6f8fa;
+  color: #656d76;
 }
 
 .node-description {

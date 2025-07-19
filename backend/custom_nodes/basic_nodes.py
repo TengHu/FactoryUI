@@ -3,8 +3,8 @@ import random
 import sys
 import os
 import re
-from typing import Any, Dict
-from core.node_base import NodeBase, NodeCategory
+from typing import Any, Dict, List
+from core.node_base import NodeBase
 
 # Add feetech-servo-sdk to path for robot connectivity
 feetech_path = os.path.join(os.path.dirname(__file__), 'feetech-servo-sdk')
@@ -15,6 +15,9 @@ from feetech_servo import ScsServoSDK
 import http.client
 import json
 import base64
+
+
+MODULE_TAG = "Basic"
 
 class InputNode(NodeBase):
     """Basic input node for providing data to the workflow"""
@@ -40,8 +43,8 @@ class InputNode(NodeBase):
         return "execute"
     
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.INPUT.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -94,8 +97,8 @@ class OutputNode(NodeBase):
         return "execute"
     
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.OUTPUT.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -150,8 +153,8 @@ class TextProcessorNode(NodeBase):
         return "execute"
     
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -219,8 +222,8 @@ class DelayNode(NodeBase):
         return "execute"
     
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.CONTROL.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -276,8 +279,8 @@ class RandomNumberNode(NodeBase):
         return "execute"
     
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -333,8 +336,8 @@ class MathNode(NodeBase):
         return "execute"
     
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -380,55 +383,6 @@ Usage: Use this node for calculations in your workflow, such as converting units
         else:
             raise ValueError(f"Unknown operation: {operation}")
 
-class HelloWorldNode(NodeBase):
-    """A node that returns 'hello world' with no input."""
-
-    @classmethod
-    def INPUT_TYPES(cls) -> Dict[str, Any]:
-        return {}
-
-    @classmethod
-    def RETURN_TYPES(cls) -> Dict[str, Any]:
-        return {
-            "required": {
-                "output": ("STRING", {})
-            }
-        }
-
-    @classmethod
-    def FUNCTION(cls) -> str:
-        return "execute"
-
-    @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
-
-    @classmethod
-    def DISPLAY_NAME(cls) -> str:
-        return "Hello World"
-
-    @classmethod
-    def DESCRIPTION(cls) -> str:
-        return "Returns the string 'hello world'"
-
-    @classmethod
-    def get_detailed_description(cls) -> str:
-        return """
-HelloWorldNode
-
-Purpose: A simple test node that outputs 'hello world' with no inputs required.
-
-Inputs:
-  - None
-
-Outputs:
-  - output (STRING): Always returns the string 'hello world'
-
-Usage: Use this node for testing workflow connectivity and as a simple starting point for new workflows.
-        """
-
-    def execute(self) -> str:
-        return "hello world"
 
 class PrintToConsoleNode(NodeBase):
     """A node that prints the input value and returns no output."""
@@ -450,8 +404,8 @@ class PrintToConsoleNode(NodeBase):
         return "execute"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -505,8 +459,8 @@ class ConcatNode(NodeBase):
         return "execute"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -562,8 +516,8 @@ class ConnectRobotNode(NodeBase):
         return "connect_robot"
     
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.ROBOT.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -640,8 +594,8 @@ class Grok4Node(NodeBase):
         return "call_grok4"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -707,8 +661,8 @@ class ShowImageNode(NodeBase):
         return "show_image"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -808,8 +762,8 @@ class CameraNode(NodeBase):
         return "open_camera"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -847,8 +801,8 @@ class DisplayNode(NodeBase):
         return "display"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -898,8 +852,8 @@ class NoteNode(NodeBase):
         return "note"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -952,8 +906,8 @@ class ThreeDVisualizationNode(NodeBase):
         return "visualize_3d"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -1000,53 +954,13 @@ Usage: Use this node to visualize robot joint states in 3D. Connect it to nodes 
             for servo_id in range(len(list_of_angles))
         ]
 
-
-        # angles = [
-        #     'Rotation': 132.7,
-        #     'Pitch': 90.4,
-        #     'Elbow': 264.6,
-        #     'Wrist_Pitch': 79.5,
-        #     'Wrist_Roll': 39.0,
-        #     'Jaw': 230.3
-        # ]
-
         return (None, angles)
-
-
-        # # Define joint names in order corresponding to servo IDs 1-6
-        # joint_names = ['Rotation', 'Pitch', 'Elbow', 'Wrist_Pitch', 'Wrist_Roll', 'Jaw']
-        
-        # if not positions:
-        #     raise ValueError("No positions provided")
-        
-        # # Convert positions to angles using the same logic as MotorPositionsToAnglesNode
-        # rt_update = []
-        # for i, joint_name in enumerate(joint_names):
-        #     servo_id = i + 1  # Servo IDs are 1-based
-        #     if servo_id in positions:
-        #         # Convert servo position (0-4095) to angle (0-360 degrees)
-        #         position = positions[servo_id]
-        #         angle = (position / 4095.0) * 360.0
-        #         angle = round(angle, 1)  # Round to 1 decimal place
-        #     else:
-        #         print(f"Warning: No position data for servo {servo_id} ({joint_name})")
-        #         angle = 0.0
-            
-        #     rt_update.append({
-        #         "name": joint_name,
-        #         "angle": angle,
-        #         "servoId": servo_id
-        #     })
-        
-
-        # return (None, rt_update)
 
 
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
     "PrintToConsoleNode": PrintToConsoleNode,
-    # "ConcatNode": ConcatNode,
     "ConnectRobotNode": ConnectRobotNode,
     "Grok4Node": Grok4Node,
     "ShowImageNode": ShowImageNode,

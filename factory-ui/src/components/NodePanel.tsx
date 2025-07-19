@@ -10,7 +10,7 @@ const NodePanel = ({ onNodeDrag }: NodePanelProps) => {
   const [nodes, setNodes] = useState<NodeInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedTag, setSelectedTag] = useState<string>('all');
 
   useEffect(() => {
     fetchNodes();
@@ -37,17 +37,18 @@ const NodePanel = ({ onNodeDrag }: NodePanelProps) => {
     onNodeDrag(nodeInfo, event);
   };
 
-  const categories = ['all', ...Array.from(new Set(nodes.map(node => node.category)))];
-  const filteredNodes = selectedCategory === 'all' 
+  const allTags = Array.from(new Set(nodes.flatMap(node => node.tags || [])));
+  const tags = ['all', ...allTags];
+  const filteredNodes = selectedTag === 'all' 
     ? nodes 
-    : nodes.filter(node => node.category === selectedCategory);
+    : nodes.filter(node => node.tags && node.tags.includes(selectedTag));
 
   const groupedNodes = filteredNodes.reduce((groups, node) => {
-    const category = node.category;
-    if (!groups[category]) {
-      groups[category] = [];
+    const primaryTag = node.tags && node.tags.length > 0 ? node.tags[0] : 'untagged';
+    if (!groups[primaryTag]) {
+      groups[primaryTag] = [];
     }
-    groups[category].push(node);
+    groups[primaryTag].push(node);
     return groups;
   }, {} as Record<string, NodeInfo[]>);
 
@@ -87,39 +88,43 @@ const NodePanel = ({ onNodeDrag }: NodePanelProps) => {
         </button>
       </div>
       
-      <div className="category-filter">
+      <div className="tag-filter">
         <select 
-          value={selectedCategory} 
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="category-select"
+          value={selectedTag} 
+          onChange={(e) => setSelectedTag(e.target.value)}
+          className="tag-select"
         >
-          {categories.map(category => (
-            <option key={category} value={category}>
-              {category.charAt(0).toUpperCase() + category.slice(1)}
+          {tags.map(tag => (
+            <option key={tag} value={tag}>
+              {tag.charAt(0).toUpperCase() + tag.slice(1)}
             </option>
           ))}
         </select>
       </div>
 
       <div className="nodes-list">
-        {Object.entries(groupedNodes).map(([category, categoryNodes]) => (
-          <div key={category} className="node-category">
-            {selectedCategory === 'all' && (
-              <h4 className="category-title">
-                {category.charAt(0).toUpperCase() + category.slice(1)}
+        {Object.entries(groupedNodes).map(([tag, tagNodes]) => (
+          <div key={tag} className="node-tag-group">
+            {selectedTag === 'all' && (
+              <h4 className="tag-title">
+                {tag.charAt(0).toUpperCase() + tag.slice(1)}
               </h4>
             )}
-            {categoryNodes.map((node) => (
+            {tagNodes.map((node) => (
               <div
                 key={node.name}
-                className={`node-item node-${node.category}`}
+                className={`node-item node-${node.tags?.[0] || 'untagged'}`}
                 draggable
                 onDragStart={(e) => handleDragStart(node, e)}
                 title={node.description}
               >
                 <div className="node-item-header">
                   <span className="node-name">{node.display_name}</span>
-                  <span className="node-category-badge">{node.category}</span>
+                  <div className="node-tags">
+                    {node.tags && node.tags.map(tag => (
+                      <span key={tag} className="node-tag-badge">{tag}</span>
+                    ))}
+                  </div>
                 </div>
                 {node.description && (
                   <div className="node-description">{node.description}</div>

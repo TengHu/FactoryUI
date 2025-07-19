@@ -160,8 +160,8 @@ const CameraNode = ({ id, data, selected, ...props }: CameraNodeProps) => {
     outputs = [...requiredOutputs, ...optionalOutputs];
   }
 
-  // Get category for styling
-  const category = nodeInfo.category;
+  // Get primary tag for styling
+  const primaryTag = nodeInfo.tags && nodeInfo.tags.length > 0 ? nodeInfo.tags[0] : 'untagged';
 
   const handleContextMenu = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -189,14 +189,18 @@ const CameraNode = ({ id, data, selected, ...props }: CameraNodeProps) => {
     <div className="node-container">
       <div 
         ref={nodeRef}
-        className={`custom-node camera-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} ${nodeState?.state ? `node-${nodeState.state}` : ''} node-${category} ${isResizing ? `resizing resizing-${resizeDirection}` : ''}`}
+        className={`custom-node camera-node ${selected ? 'selected' : ''} ${bypassed ? 'bypassed' : ''} ${nodeState?.state ? `node-${nodeState.state}` : ''} node-${primaryTag} ${isResizing ? `resizing resizing-${resizeDirection}` : ''}`}
         onContextMenu={handleContextMenu}
       >
       {/* Node header */}
       <div className="node-header">
         <div className="node-title">📹 {nodeInfo.display_name}</div>
         <div className="node-header-right">
-          <div className="node-category-badge">{category}</div>
+          <div className="node-tags">
+            {nodeInfo.tags && nodeInfo.tags.map(tag => (
+              <span key={tag} className="node-tag-badge">{tag}</span>
+            ))}
+          </div>
           {nodeInfo.detailed_description && (
             <button 
               className="node-help-button"
