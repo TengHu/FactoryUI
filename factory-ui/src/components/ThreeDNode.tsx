@@ -83,21 +83,12 @@ function RobotScene({
       return;
     }
 
-    console.log('Loading URDF from:', urdfUrl);
     setLoadingState('loading');
 
     const manager = new THREE.LoadingManager();
     const loader = new URDFLoader(manager);
     
-    // Add loading manager callbacks for debugging
-    manager.onLoad = () => {
-      console.log('All resources loaded successfully');
-    };
-    
-    manager.onProgress = (url, itemsLoaded, itemsTotal) => {
-      console.log(`Loading progress: ${itemsLoaded}/${itemsTotal} - ${url}`);
-    };
-    
+    // Loading manager callbacks
     manager.onError = (url) => {
       console.error('Failed to load resource:', url);
     };
@@ -106,34 +97,27 @@ function RobotScene({
     loader.parseCollision = true;
     loader.parseVisual = true;
     loader.loadMeshCb = (path: string, _manager: THREE.LoadingManager, done: (mesh: THREE.Object3D) => void) => {
-      console.log('Loading mesh from path:', path);
-      
       if (path.endsWith('.stl')) {
         stlLoader.load(
           path,
           (geometry: THREE.BufferGeometry) => {
-            console.log('Successfully loaded STL:', path);
             const material = new THREE.MeshLambertMaterial({ color: 0x808080 });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             done(mesh);
           },
-          (progress) => {
-            console.log('STL loading progress:', path, progress);
-          },
+          undefined,
           (error: unknown) => {
             console.error('Failed to load STL:', path, error);
             // Create a placeholder box
             const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
             const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
             const mesh = new THREE.Mesh(geometry, material);
-            console.log('Created placeholder mesh for:', path);
             done(mesh);
           }
         );
       } else {
-        console.log('Using fallback geometry for non-STL file:', path);
         // Fallback for other formats
         const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
         const material = new THREE.MeshLambertMaterial({ color: 0x808080 });
@@ -145,9 +129,6 @@ function RobotScene({
     loader.load(
       urdfUrl,
       (robot: URDFRobot) => {
-        console.log('Successfully loaded URDF robot:', robot);
-        console.log('Robot joints:', robot.joints);
-        
         if (robotRef.current) {
           scene.remove(robotRef.current);
         }
@@ -169,12 +150,9 @@ function RobotScene({
         robot.scale.set(scale, scale, scale);
         scene.add(robot);
         
-        console.log('Robot added to scene with scale:', scale);
         onRobotLoaded(robot);
       },
-      (progress) => {
-        console.log('URDF loading progress:', progress);
-      },
+      undefined,
       (error: unknown) => {
         console.error('Error loading URDF:', urdfUrl, error);
         setLoadingState('error');
@@ -208,28 +186,6 @@ function RobotScene({
     <>
       <OrbitControls target={SO_ARM100_CONFIG.orbitTarget} enablePan={true} enableZoom={true} enableRotate={true} />
       
-      {/* Test cube to verify 3D scene is working */}
-      <mesh position={[0, 1, 0]}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshLambertMaterial color="orange" />
-      </mesh>
-      
-      {/* Loading indicator */}
-      {loadingState === 'loading' && (
-        <mesh position={[2, 1, 0]}>
-          <boxGeometry args={[0.5, 0.5, 0.5]} />
-          <meshLambertMaterial color="blue" />
-        </mesh>
-      )}
-      
-      {/* Error indicator */}
-      {loadingState === 'error' && (
-        <mesh position={[-2, 1, 0]}>
-          <boxGeometry args={[0.5, 0.5, 0.5]} />
-          <meshLambertMaterial color="red" />
-        </mesh>
-      )}
-      
       <directionalLight
         castShadow
         intensity={1}
@@ -244,12 +200,6 @@ function RobotScene({
         shadow-mapSize-height={1024}
       />
       <ambientLight intensity={0.4} />
-      
-      {/* Ground plane for reference */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[20, 20]} />
-        <meshLambertMaterial color="#f0f0f0" />
-      </mesh>
     </>
   );
 }
@@ -435,12 +385,6 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
   // Get URDF URL from inputs or use SO-ARM100 default
   const urdfUrl = inputValues['urdf_path'] || inputValues['urdf_url'] || SO_ARM100_CONFIG.urdfUrl;
   
-  // Debug logging
-  useEffect(() => {
-    console.log('ThreeDNode - Current URDF URL:', urdfUrl);
-    console.log('ThreeDNode - Input values:', inputValues);
-    console.log('ThreeDNode - Robot model state:', robotModel);
-  }, [urdfUrl, inputValues, robotModel]);
 
   return (
     <div className="node-container">
