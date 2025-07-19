@@ -42,7 +42,7 @@
       },
       "width": 280,
       "height": 137,
-      "selected": true,
+      "selected": false,
       "positionAbsolute": {
         "x": 38.9472161517557,
         "y": 228.1063287492885
@@ -488,9 +488,9 @@
     }
   ],
   "metadata": {
-    "name": "grok1",
-    "description": "Auto-saved on 7/19/2025",
-    "created": "2025-07-19T21:49:10.537Z",
+    "name": "grok2",
+    "description": "Renamed workflow on 7/19/2025",
+    "created": "2025-07-19T22:07:13.510Z",
     "version": "1.0.0"
   }
 }
