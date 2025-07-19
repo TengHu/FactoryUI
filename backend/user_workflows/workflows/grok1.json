@@ -4,7 +4,7 @@
       "id": "ConnectRobotNode-1752694258308",
       "type": "customNode",
       "position": {
-        "x": 38.9472161517557,
+        "x": -154.30530768743614,
         "y": 228.1063287492885
       },
       "data": {
@@ -42,7 +42,7 @@
       },
       "width": 280,
       "height": 137,
-      "selected": false,
+      "selected": true,
       "positionAbsolute": {
         "x": 38.9472161517557,
         "y": 228.1063287492885
@@ -57,8 +57,8 @@
       "id": "Grok4Node-1752694263993",
       "type": "customNode",
       "position": {
-        "x": 33.90773357665364,
-        "y": 461.38177678548607
+        "x": -162.27285880555627,
+        "y": 531.6554218179194
       },
       "data": {
         "label": "Grok4 LLM Node",
@@ -260,8 +260,8 @@
       "id": "SO101JointAnglesToPositions-1752694529182",
       "type": "customNode",
       "position": {
-        "x": -288.40458774247315,
-        "y": 868.1602263960386
+        "x": -120.51618246276328,
+        "y": 894.6031070503168
       },
       "data": {
         "label": "SO-101 Joint Angles to Positions",
@@ -347,7 +347,7 @@
       },
       "width": 280,
       "height": 392,
-      "selected": true,
+      "selected": false,
       "positionAbsolute": {
         "x": 27.351278959648653,
         "y": 808.225085031284
@@ -449,54 +449,48 @@
       "sourceHandle": "output",
       "target": "RobotStatusReader-1752694273476",
       "targetHandle": "sdk",
-      "id": "reactflow__edge-ConnectRobotNode-1752694258308output-RobotStatusReader-1752694273476sdk",
-      "className": ""
+      "id": "reactflow__edge-ConnectRobotNode-1752694258308output-RobotStatusReader-1752694273476sdk"
     },
     {
       "source": "Grok4Node-1752694263993",
       "sourceHandle": "output",
       "target": "So101WritePositionNode-1752694285304",
       "targetHandle": "positions",
-      "id": "reactflow__edge-Grok4Node-1752694263993output-So101WritePositionNode-1752694285304positions",
-      "className": ""
+      "id": "reactflow__edge-Grok4Node-1752694263993output-So101WritePositionNode-1752694285304positions"
     },
     {
       "source": "ConnectRobotNode-1752694258308",
       "sourceHandle": "output",
       "target": "So101WritePositionNode-1752694285304",
       "targetHandle": "sdk",
-      "id": "reactflow__edge-ConnectRobotNode-1752694258308output-So101WritePositionNode-1752694285304sdk",
-      "className": ""
+      "id": "reactflow__edge-ConnectRobotNode-1752694258308output-So101WritePositionNode-1752694285304sdk"
     },
     {
       "source": "SO101JointAnglesToPositions-1752694529182",
       "sourceHandle": "output",
       "target": "So101WritePositionNode-1752694285304",
       "targetHandle": "positions",
-      "id": "reactflow__edge-SO101JointAnglesToPositions-1752694529182output-So101WritePositionNode-1752694285304positions",
-      "className": ""
+      "id": "reactflow__edge-SO101JointAnglesToPositions-1752694529182output-So101WritePositionNode-1752694285304positions"
     },
     {
       "source": "So101WritePositionNode-1752694285304",
       "sourceHandle": "output",
       "target": "PrintToConsoleNode-1752694639370",
       "targetHandle": "value",
-      "id": "reactflow__edge-So101WritePositionNode-1752694285304output-PrintToConsoleNode-1752694639370value",
-      "className": ""
+      "id": "reactflow__edge-So101WritePositionNode-1752694285304output-PrintToConsoleNode-1752694639370value"
     },
     {
       "source": "RobotStatusReader-1752694273476",
       "sourceHandle": "output-1",
       "target": "PrintToConsoleNode-1752694795308",
       "targetHandle": "value",
-      "id": "reactflow__edge-RobotStatusReader-1752694273476output-1-PrintToConsoleNode-1752694795308value",
-      "className": ""
+      "id": "reactflow__edge-RobotStatusReader-1752694273476output-1-PrintToConsoleNode-1752694795308value"
     }
   ],
   "metadata": {
-    "name": "grok",
+    "name": "grok1",
     "description": "Auto-saved on 7/19/2025",
-    "created": "2025-07-19T21:41:57.905Z",
+    "created": "2025-07-19T21:49:10.537Z",
     "version": "1.0.0"
   }
 }

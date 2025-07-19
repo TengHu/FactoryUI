@@ -35,6 +35,9 @@
   color: var(--text-secondary);
   border-bottom: 2px solid transparent;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  position: relative;
 }
 
 .tab:hover {
@@ -456,5 +459,31 @@
 
 .websocket-status:hover {
   opacity: 0.8;
+}
+
+/* Tab renaming styles */
+.tab-name {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-rename-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  outline: none;
+  min-width: 80px;
+  max-width: 150px;
+}
+
+.tab-rename-input:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 

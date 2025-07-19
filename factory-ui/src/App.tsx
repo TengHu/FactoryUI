@@ -247,6 +247,10 @@ function App() {
   const [modalSleepTime, setModalSleepTime] = useState('1');
   const [sleepTimeError, setSleepTimeError] = useState<string | null>(null);
 
+  // State for tab renaming
+  const [renamingTabId, setRenamingTabId] = useState<number | null>(null);
+  const [newTabName, setNewTabName] = useState('');
+
 
   const onConnect = useCallback(
     (params: Edge | Connection) => {
@@ -569,6 +573,81 @@ function App() {
     }
   }, []);
 
+  // Start renaming a tab
+  const startRenaming = useCallback((canvasId: number, currentName: string) => {
+    setRenamingTabId(canvasId);
+    setNewTabName(currentName);
+  }, []);
+
+  // Finish renaming a tab
+  const finishRenaming = useCallback(async () => {
+    if (renamingTabId === null || !newTabName.trim()) {
+      setRenamingTabId(null);
+      setNewTabName('');
+      return;
+    }
+
+    const canvasToRename = canvases.find(c => c.id === renamingTabId);
+    if (!canvasToRename) {
+      setRenamingTabId(null);
+      setNewTabName('');
+      return;
+    }
+
+    const oldFilename = canvasToRename.filename;
+    const newFilename = newTabName.trim();
+
+    try {
+      // If there's an old filename, delete the old workflow and create a new one
+      if (oldFilename) {
+        // Get the current workflow data
+        const workflowData = {
+          nodes: canvasToRename.nodes,
+          edges: canvasToRename.edges,
+          metadata: {
+            name: newFilename,
+            description: `Renamed workflow on ${new Date().toLocaleDateString()}`,
+            created: new Date().toISOString(),
+            version: '1.0.0'
+          }
+        };
+
+        // Save with new filename
+        await apiService.saveWorkflowByFilename(newFilename, workflowData);
+        
+        // Delete old workflow if filename is different
+        if (oldFilename !== newFilename) {
+          await apiService.deleteWorkflow(oldFilename);
+        }
+      }
+
+      // Update the canvas
+      setCanvases(prev => prev.map(canvas => 
+        canvas.id === renamingTabId 
+          ? { ...canvas, name: newFilename, filename: newFilename }
+          : canvas
+      ));
+
+      console.log(`Renamed workflow from "${oldFilename}" to "${newFilename}"`);
+    } catch (error) {
+      console.error('Failed to rename workflow:', error);
+      // Just update locally if backend fails
+      setCanvases(prev => prev.map(canvas => 
+        canvas.id === renamingTabId 
+          ? { ...canvas, name: newFilename }
+          : canvas
+      ));
+    }
+
+    setRenamingTabId(null);
+    setNewTabName('');
+  }, [renamingTabId, newTabName, canvases]);
+
+  // Cancel renaming
+  const cancelRenaming = useCallback(() => {
+    setRenamingTabId(null);
+    setNewTabName('');
+  }, []);
 
   const clearCanvas = useCallback(() => {
     if (nodes.length > 0 || edges.length > 0) {
@@ -1399,12 +1478,32 @@ function App() {
       <div className="app-tabs">
         <div className="tab-group">
           {canvases.map((canvas) => (
-            <button
+            <div
               key={canvas.id}
               className={`tab${activeCanvasId === canvas.id ? ' active' : ''}`}
               onClick={() => setActiveCanvasId(canvas.id)}
+              onDoubleClick={() => startRenaming(canvas.id, canvas.name)}
             >
-              {canvas.name}
+              {renamingTabId === canvas.id ? (
+                <input
+                  type="text"
+                  value={newTabName}
+                  onChange={(e) => setNewTabName(e.target.value)}
+                  onBlur={finishRenaming}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      finishRenaming();
+                    } else if (e.key === 'Escape') {
+                      cancelRenaming();
+                    }
+                  }}
+                  autoFocus
+                  className="tab-rename-input"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span className="tab-name">{canvas.name}</span>
+              )}
               {canvases.length > 1 && (
                 <span
                   className="tab-close"
@@ -1434,13 +1533,13 @@ function App() {
                   ×
                 </span>
               )}
-            </button>
+            </div>
           ))}
           <button
             className="tab add-tab"
             onClick={async () => {
               const nextId = Math.max(...canvases.map(c => c.id)) + 1;
-              const newWorkflowFilename = `workflow_${nextId}`;
+              const newWorkflowFilename = `Untitled`;
               
               // Save new workflow to backend
               try {
