@@ -37,13 +37,13 @@
   background: #f1f3f4;
 }
 
-.category-filter {
+.tag-filter {
   padding: 12px 16px;
   border-bottom: 1px solid #e1e4e8;
   background: #fff;
 }
 
-.category-select {
+.tag-select {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #d1d5da;
@@ -58,11 +58,11 @@
   padding: 16px;
 }
 
-.node-category {
+.node-tag-group {
   margin-bottom: 20px;
 }
 
-.category-title {
+.tag-title {
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 600;
@@ -96,7 +96,7 @@
 .node-item-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 4px;
 }
 
@@ -104,16 +104,25 @@
   font-weight: 600;
   font-size: 14px;
   color: #24292e;
+  flex: 1;
 }
 
-.node-category-badge {
+.node-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.node-tag-badge {
   background: #f1f3f4;
   color: #586069;
-  font-size: 11px;
+  font-size: 10px;
   padding: 2px 6px;
   border-radius: 12px;
-  text-transform: uppercase;
+  text-transform: lowercase;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .node-description {
@@ -130,30 +139,35 @@
   color: #8b949e;
 }
 
-/* Category-specific colors */
-.node-input .node-category-badge {
+/* Tag-specific colors */
+.node-input .node-tag-badge {
   background: #ddf4ff;
   color: #0969da;
 }
 
-.node-output .node-category-badge {
+.node-output .node-tag-badge {
   background: #f0fff4;
   color: #1a7f37;
 }
 
-.node-processing .node-category-badge {
+.node-processing .node-tag-badge {
   background: #fff8dc;
   color: #bf8700;
 }
 
-.node-control .node-category-badge {
+.node-control .node-tag-badge {
   background: #fdf2f8;
   color: #bf0e99;
 }
 
-.node-robot .node-category-badge {
+.node-robot .node-tag-badge {
   background: #fff0f5;
   color: #cf222e;
+}
+
+.node-untagged .node-tag-badge {
+  background: #f6f8fa;
+  color: #656d76;
 }
 
 .node-input:hover {
@@ -174,6 +188,10 @@
 
 .node-robot:hover {
   border-color: #cf222e;
+}
+
+.node-untagged:hover {
+  border-color: #656d76;
 }
 
 .loading, .error {
