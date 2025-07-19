@@ -84,7 +84,7 @@ class NodeRegistry:
             "display_name": node_class.DISPLAY_NAME(),
             "description": node_class.DESCRIPTION(),
             "detailed_description": detailed_description,
-            "category": node_class.CATEGORY(),
+            "tags": node_class.TAGS(),
             "input_types": node_class.INPUT_TYPES(),
             "return_types": node_class.RETURN_TYPES(),
             "function": node_class.FUNCTION()

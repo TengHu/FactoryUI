@@ -594,8 +594,8 @@ class Grok4Node(NodeBase):
         return "call_grok4"
 
     @classmethod
-    def TAGS(cls) -> str:
-        return TAG
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
