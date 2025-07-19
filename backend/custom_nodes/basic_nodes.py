@@ -990,68 +990,41 @@ Usage: Use this node to visualize 3D scenes, robot configurations, or any 3D dat
             tuple: (visualization_data, rt_update)
         """
 
-        return (None, None)
-        try:
-            # Process the 3D configuration
-            if isinstance(config, dict):
-                # If config is already a dict, use it directly
-                visualization_data = config
-            else:
-                # If config is an object, extract its data
-                visualization_data = {
-                    "type": "3d_scene",
-                    "objects": getattr(config, 'objects', []),
-                    "camera": getattr(config, 'camera', {}),
-                    "lights": getattr(config, 'lights', []),
-                    "materials": getattr(config, 'materials', {}),
-                    "metadata": {
-                        "timestamp": time.time(),
-                        "node_type": "ThreeDVisualizationNode"
-                    }
-                }
-            
-            # Add default visualization settings if not present
-            if "camera" not in visualization_data:
-                visualization_data["camera"] = {
-                    "position": [0, 5, 10],
-                    "target": [0, 0, 0],
-                    "fov": 75
-                }
-            
-            if "lights" not in visualization_data:
-                visualization_data["lights"] = [
-                    {
-                        "type": "ambient",
-                        "intensity": 0.4
-                    },
-                    {
-                        "type": "directional",
-                        "position": [10, 10, 5],
-                        "intensity": 0.8
-                    }
-                ]
-            
-            # Create real-time update for UI
-            rt_update = {
-                "3d_visualization": visualization_data,
-                "status": "ready"
+        rt_update = [
+            {
+                "name": "Rotation",
+                "angle": 180,
+                "servoId": 1
+            },
+            {
+                "name": "Pitch",
+                "angle": 180,
+                "servoId": 2
+            },
+            {
+                "name": "Elbow",
+                "angle": 180,
+                "servoId": 3
+            },
+            {
+                "name": "Wrist_Pitch",
+                "angle": 180,
+                "servoId": 4
+            },
+            {
+                "name": "Wrist_Roll",
+                "angle": 180,
+                "servoId": 5
+            },
+            {
+                "name": "Jaw",
+                "angle": random.randint(180, 360),
+                "servoId": 6
             }
-            
-            print(f"✓ 3D Visualization ready with {len(visualization_data.get('objects', []))} objects")
-            
-            return (visualization_data, rt_update)
-            
-        except Exception as e:
-            error_data = {
-                "error": f"Failed to process 3D visualization: {str(e)}",
-                "type": "error"
-            }
-            rt_update = {
-                "3d_visualization": error_data,
-                "status": "error"
-            }
-            print(f"❌ 3D Visualization error: {str(e)}")
-            return (error_data, rt_update)
+        ]
+
+        return (None, rt_update)
+        
 
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {

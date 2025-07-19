@@ -6,6 +6,7 @@ import { OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import URDFLoader, { URDFRobot, URDFJoint } from 'urdf-loader';
+import { GroundPlane } from './3d/GroundPlane';
 import './CustomNode.css';
 import './ThreeDNode.css';
 
@@ -96,6 +97,8 @@ function RobotScene({
     // Custom STL loader for URDF
     loader.parseCollision = true;
     loader.parseVisual = true;
+    
+
     loader.loadMeshCb = (path: string, _manager: THREE.LoadingManager, done: (mesh: THREE.Object3D) => void) => {
       if (path.endsWith('.stl')) {
         stlLoader.load(
@@ -143,41 +146,44 @@ function RobotScene({
         
         // Configure robot visualization based on SO-ARM100 config
         robot.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / -2);
-        robot.traverse((child: THREE.Object3D) => {
-          if (child instanceof THREE.Mesh) {
-            // Force all robot parts to be green by creating new materials
-            const greenMaterial = new THREE.MeshLambertMaterial({ 
-              color: 0x00FF00,  // Bright green for better visibility
-              transparent: false,
-              opacity: 1.0
-            });
-            
-            // Replace the material completely
-            child.material = greenMaterial;
-            
-            child.castShadow = true;
-            child.receiveShadow = true;
-            
-            // Debug: log what we're coloring
-            console.log('Colored mesh:', child.name, 'with green material');
-          }
-        });
-        
-        // Also traverse after a short delay to catch any late-loaded meshes
-        setTimeout(() => {
-          robot.traverse((child: THREE.Object3D) => {
+        // Function to recursively color all meshes green
+        const colorAllMeshesGreen = (object: THREE.Object3D) => {
+          object.traverse((child: THREE.Object3D) => {
             if (child instanceof THREE.Mesh) {
+              // Force all robot parts to be green by creating new materials
               const greenMaterial = new THREE.MeshLambertMaterial({ 
-                color: 0x00FF00,
+                color: 0x00FF00,  // Bright green for better visibility
                 transparent: false,
                 opacity: 1.0
               });
+              
+              // Replace the material completely
               child.material = greenMaterial;
+              
               child.castShadow = true;
               child.receiveShadow = true;
+              
+              // Debug: log what we're coloring
+              console.log('Colored mesh:', child.name, 'with green material');
             }
           });
+        };
+        
+        // Color all meshes green
+        colorAllMeshesGreen(robot);
+        
+        // Also traverse after delays to catch any late-loaded meshes
+        setTimeout(() => {
+          colorAllMeshesGreen(robot);
         }, 100);
+        
+        setTimeout(() => {
+          colorAllMeshesGreen(robot);
+        }, 500);
+        
+        setTimeout(() => {
+          colorAllMeshesGreen(robot);
+        }, 1000);
         robot.updateMatrixWorld(true);
         
         const scale = 15; // Use scale from reference implementation
@@ -200,8 +206,8 @@ function RobotScene({
     };
   }, [urdfUrl, scene, onRobotLoaded]);
 
-  // Apply joint states (matching bambot implementation)
   useEffect(() => {
+
     if (robotRef.current && robotRef.current.joints && jointStates) {
       jointStates.forEach((state) => {
         const joint = robotRef.current!.joints[state.name];
@@ -218,14 +224,7 @@ function RobotScene({
       <OrbitControls target={SO_ARM100_CONFIG.orbitTarget} enablePan={true} enableZoom={true} enableRotate={true} />
       
       {/* Ground plane */}
-      <mesh 
-        rotation={[-Math.PI / 2, 0, 0]} 
-        position={[0, 0, 0]}
-        receiveShadow
-      >
-        <planeGeometry args={[20, 20]} />
-        <meshLambertMaterial color="#f5f5f5" />
-      </mesh>
+      <GroundPlane />
       
       <directionalLight
         castShadow
@@ -398,9 +397,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
           const servoInitAngle = (SO_ARM100_CONFIG.urdfInitJointAngles as any)[joint.name] || 0;
           const servoId = (SO_ARM100_CONFIG.jointNameIdMap as any)[joint.name];
           
-          // Convert from servo angle (0-360°) to joint angle (-180° to +180°)
-          // 180° servo angle = 0° joint angle (neutral position)
-          const jointAngle = servoInitAngle - 180;
+          const jointAngle = servoInitAngle
           
           jointStates.push({
             name: joint.name,
@@ -640,7 +637,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
         </div>
         
         {/* Joint Controls */}
-        {robotModel.jointStates.length > 0 && (
+        {/* {robotModel.jointStates.length > 0 && (
           <div className="joint-controls">
             <div className="section-title">Joint Controls</div>
             <div className="joint-controls-grid">
@@ -663,7 +660,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
               ))}
             </div>
           </div>
-        )}
+        )} */}
         
         {/* Detailed Description Modal */}
         {showDetailedDescription && (
