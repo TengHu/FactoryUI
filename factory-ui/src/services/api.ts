@@ -39,6 +39,11 @@ export interface ExecutionResponse {
   error?: string;
 }
 
+export interface WorkflowItem {
+  filename: string;
+  workflow: WorkflowData;
+}
+
 export class ApiService {
   private static instance: ApiService;
 
@@ -275,6 +280,70 @@ export class ApiService {
       return await response.json();
     } catch (error) {
       console.error('Failed to set continuous interval:', error);
+      throw error;
+    }
+  }
+
+  async getAllWorkflows(): Promise<{ success: boolean; workflows: WorkflowItem[] }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/workflows`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch workflows:', error);
+      throw error;
+    }
+  }
+
+  async getWorkflow(filename: string): Promise<{ success: boolean; workflow: WorkflowData }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/workflow/${filename}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`Failed to fetch workflow ${filename}:`, error);
+      throw error;
+    }
+  }
+
+  async saveWorkflowByFilename(filename: string, workflow: WorkflowData): Promise<{ success: boolean; message: string; filename: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/workflow/${filename}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(workflow),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error(`Failed to save workflow ${filename}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteWorkflow(filename: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/workflow/${filename}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error(`Failed to delete workflow ${filename}:`, error);
       throw error;
     }
   }

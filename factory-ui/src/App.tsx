@@ -21,7 +21,7 @@ import CameraNode from './components/CameraNode';
 import ThreeDNode from './components/ThreeDNode';
 import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
 import ThemeToggle from './components/ThemeToggle';
-import { NodeInfo, apiService } from './services/api';
+import { NodeInfo, apiService, WorkflowItem } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
 import { shouldUseCameraNode, shouldUseThreeDNode } from './utils/nodeUtils';
 import { mergeCameraFramesWithInputValues } from './utils/cameraFrameUtils';
@@ -35,6 +35,14 @@ interface WorkflowData {
     created: string;
     version: string;
   };
+}
+
+interface Canvas {
+  id: number;
+  name: string;
+  nodes: Node[];
+  edges: Edge[];
+  filename?: string; // Backend workflow filename
 }
 
 const initialNodes: Node[] = [];
@@ -114,8 +122,8 @@ function App() {
   }, []);
 
   // 1. Multi-canvas state
-  const [canvases, setCanvases] = useState([
-    { id: 1, name: 'Canvas 1', nodes: initialNodes, edges: initialEdges }
+  const [canvases, setCanvases] = useState<Canvas[]>([
+    { id: 1, name: 'New Workflow', nodes: initialNodes, edges: initialEdges }
   ]);
   const [activeCanvasId, setActiveCanvasId] = useState(1);
 
@@ -140,7 +148,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCanvasId]);
 
-  // 4. When nodes/edges change, update the canvases array
+  // 4. When nodes/edges change, update the canvases array and sync with backend
   useEffect(() => {
     console.log('Canvas sync effect triggered. Nodes count:', nodes.length, 'Edges count:', edges.length);
     console.log('Active canvas index:', activeCanvasIndex);
@@ -151,11 +159,39 @@ function App() {
       console.log('Updated canvases:', updated);
       return updated;
     });
+    
+    // Auto-save to backend if the active canvas has a filename
+    const currentActiveCanvas = canvases[activeCanvasIndex];
+    if (currentActiveCanvas?.filename) {
+      const filename = currentActiveCanvas.filename;
+      // Debounce auto-save to avoid too many requests
+      const saveTimeout = setTimeout(async () => {
+        try {
+          const workflowData = {
+            nodes: nodes,
+            edges: edges,
+            metadata: {
+              name: currentActiveCanvas.name,
+              description: `Auto-saved on ${new Date().toLocaleDateString()}`,
+              created: new Date().toISOString(),
+              version: '1.0.0'
+            }
+          };
+
+          await apiService.saveWorkflowByFilename(filename, workflowData);
+          console.log('Auto-saved workflow to backend:', filename);
+        } catch (error) {
+          console.error('Failed to auto-save workflow:', error);
+        }
+      }, 2000); // Auto-save after 2 seconds of inactivity
+
+      return () => clearTimeout(saveTimeout);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges]);
 
   // 5. Update all canvas-related state and actions to use the active canvas
-  const [activeTab, setActiveTab] = useState<'canvas' | 'nodes'>('canvas');
+  const [activeTab] = useState<'canvas' | 'nodes'>('canvas');
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const [isDraggedOver, setIsDraggedOver] = useState(false);
@@ -210,6 +246,7 @@ function App() {
   const [showContinuousExecutionModal, setShowContinuousExecutionModal] = useState(false);
   const [modalSleepTime, setModalSleepTime] = useState('1');
   const [sleepTimeError, setSleepTimeError] = useState<string | null>(null);
+
 
   const onConnect = useCallback(
     (params: Edge | Connection) => {
@@ -431,7 +468,7 @@ function App() {
     [reactFlowInstance, setNodes, handleFileLoad]
   );
 
-  const onNodeDrag = useCallback((nodeInfo: NodeInfo, event: React.DragEvent) => {
+  const onNodeDrag = useCallback((nodeInfo: NodeInfo) => {
     // Optional: Handle node drag start
     console.log('Dragging node:', nodeInfo.display_name);
   }, []);
@@ -443,7 +480,33 @@ function App() {
     }
   }, []);
 
-  const saveWorkflow = useCallback(() => {
+  const saveWorkflow = useCallback(async () => {
+    // Save to backend first if the canvas has a filename
+    if (activeCanvas.filename) {
+      try {
+        const workflowData = {
+          nodes: activeCanvas.nodes,
+          edges: activeCanvas.edges,
+          metadata: {
+            name: activeCanvas.name,
+            description: `Workflow updated on ${new Date().toLocaleDateString()}`,
+            created: new Date().toISOString(),
+            version: '1.0.0'
+          }
+        };
+
+        const response = await apiService.saveWorkflowByFilename(activeCanvas.filename, workflowData);
+        if (response.success) {
+          console.log('Workflow updated in backend:', activeCanvas.filename);
+        } else {
+          console.error('Failed to update workflow in backend');
+        }
+      } catch (error) {
+        console.error('Error updating workflow in backend:', error);
+      }
+    }
+
+    // Always save as JSON file
     const workflowData: WorkflowData = {
       nodes: activeCanvas.nodes,
       edges: activeCanvas.edges,
@@ -483,6 +546,29 @@ function App() {
   const loadWorkflow = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
+
+  // Fetch all saved workflows and load them as canvas tabs
+  const fetchWorkflows = useCallback(async () => {
+    try {
+      const response = await apiService.getAllWorkflows();
+      if (response.success && response.workflows.length > 0) {
+        const workflowCanvases: Canvas[] = response.workflows.map((item, index) => ({
+          id: Date.now() + index, // Generate unique ID for canvas
+          name: item.filename,
+          nodes: item.workflow.nodes || [],
+          edges: item.workflow.edges || [],
+          filename: item.filename
+        }));
+        
+        // Replace the default canvas with workflow canvases
+        setCanvases(workflowCanvases);
+        setActiveCanvasId(workflowCanvases[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching workflows:', error);
+    }
+  }, []);
+
 
   const clearCanvas = useCallback(() => {
     if (nodes.length > 0 || edges.length > 0) {
@@ -777,6 +863,11 @@ function App() {
       alert('Failed to stop continuous execution. Please check the backend server.');
     }
   }, [isContinuousRunning, connectionState.isConnected, websocketService]);
+
+  // Fetch workflows on initialization
+  useEffect(() => {
+    fetchWorkflows();
+  }, [fetchWorkflows]);
 
   // WebSocket connection and event handlers
   useEffect(() => {
@@ -1317,9 +1408,19 @@ function App() {
               {canvases.length > 1 && (
                 <span
                   className="tab-close"
-                  onClick={e => {
+                  onClick={async (e) => {
                     e.stopPropagation();
                     if (canvases.length > 1) {
+                      // Delete from backend if it has a filename
+                      if (canvas.filename) {
+                        try {
+                          await apiService.deleteWorkflow(canvas.filename);
+                          console.log(`Deleted workflow ${canvas.filename} from backend`);
+                        } catch (error) {
+                          console.error('Failed to delete workflow from backend:', error);
+                        }
+                      }
+                      
                       const newCanvases = canvases.filter(c => c.id !== canvas.id);
                       setCanvases(newCanvases);
                       if (activeCanvasId === canvas.id) {
@@ -1327,7 +1428,7 @@ function App() {
                       }
                     }
                   }}
-                  title="Close tab"
+                  title="Close workflow"
                   style={{ marginLeft: 8, cursor: 'pointer' }}
                 >
                   ×
@@ -1337,12 +1438,59 @@ function App() {
           ))}
           <button
             className="tab add-tab"
-            onClick={() => {
+            onClick={async () => {
               const nextId = Math.max(...canvases.map(c => c.id)) + 1;
-              setCanvases(cs => [...cs, { id: nextId, name: `Canvas ${nextId}`, nodes: [], edges: [] }]);
-              setActiveCanvasId(nextId);
+              const newWorkflowFilename = `workflow_${nextId}`;
+              
+              // Save new workflow to backend
+              try {
+                const workflowData = {
+                  nodes: [],
+                  edges: [],
+                  metadata: {
+                    name: newWorkflowFilename,
+                    description: `New workflow created on ${new Date().toLocaleDateString()}`,
+                    created: new Date().toISOString(),
+                    version: '1.0.0'
+                  }
+                };
+
+                const response = await apiService.saveWorkflowByFilename(newWorkflowFilename, workflowData);
+                if (response.success) {
+                  const newCanvas: Canvas = {
+                    id: nextId,
+                    name: newWorkflowFilename,
+                    nodes: [],
+                    edges: [],
+                    filename: newWorkflowFilename
+                  };
+                  setCanvases(cs => [...cs, newCanvas]);
+                  setActiveCanvasId(nextId);
+                } else {
+                  // Fallback to local-only canvas if backend save fails
+                  const newCanvas: Canvas = {
+                    id: nextId,
+                    name: newWorkflowFilename,
+                    nodes: [],
+                    edges: []
+                  };
+                  setCanvases(cs => [...cs, newCanvas]);
+                  setActiveCanvasId(nextId);
+                }
+              } catch (error) {
+                console.error('Failed to create new workflow:', error);
+                // Fallback to local-only canvas
+                const newCanvas: Canvas = {
+                  id: nextId,
+                  name: newWorkflowFilename,
+                  nodes: [],
+                  edges: []
+                };
+                setCanvases(cs => [...cs, newCanvas]);
+                setActiveCanvasId(nextId);
+              }
             }}
-            title="Add new canvas"
+            title="Add new workflow"
           >
             +
           </button>
@@ -1567,6 +1715,7 @@ function App() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
