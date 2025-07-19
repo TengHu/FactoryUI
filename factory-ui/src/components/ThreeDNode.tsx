@@ -68,11 +68,13 @@ const stlLoader = new STLLoader();
 function RobotScene({ 
   urdfUrl, 
   jointStates, 
-  onRobotLoaded 
+  onRobotLoaded,
+  rtUpdate
 }: { 
   urdfUrl: string;
   jointStates: JointState[];
   onRobotLoaded: (robot: URDFRobot) => void;
+  rtUpdate?: any;
 }) {
   const robotRef = useRef<URDFRobot | null>(null);
   const { scene } = useThree();
@@ -218,6 +220,59 @@ function RobotScene({
       });
     }
   }, [jointStates]);
+
+  // Handle rt_update directly without React state changes
+  useEffect(() => {
+    if (robotRef.current && robotRef.current.joints && rtUpdate) {
+      console.log('RobotScene: Processing rt_update directly:', rtUpdate);
+      
+      if (typeof rtUpdate === 'object') {
+        // Handle servo_positions format (servo ID -> position value)
+        if (rtUpdate.servo_positions) {
+          Object.entries(rtUpdate.servo_positions).forEach(([servoIdStr, position]) => {
+            const servoId = parseInt(servoIdStr);
+            
+            // Map servo ID to joint name using SO_ARM100_CONFIG
+            const jointName = Object.keys(SO_ARM100_CONFIG.jointNameIdMap).find(
+              name => (SO_ARM100_CONFIG.jointNameIdMap as any)[name] === servoId
+            );
+            
+            if (jointName && robotRef.current!.joints[jointName]) {
+              const joint = robotRef.current!.joints[jointName];
+              // Convert servo position to angle (assuming 0-4095 range maps to 0-360 degrees)
+              const angle = ((position as number) / 4095) * 360;
+              joint.setJointValue(angle * (Math.PI / 180));
+              console.log(`Updated joint ${jointName} (servo ${servoId}) to ${angle.toFixed(1)}°`);
+            }
+          });
+        }
+        
+        // Handle joint_states format (array of joint state objects)
+        if (Array.isArray(rtUpdate.joint_states)) {
+          rtUpdate.joint_states.forEach((jointState: any) => {
+            if (jointState.name && typeof jointState.angle === 'number') {
+              const joint = robotRef.current!.joints[jointState.name];
+              if (joint) {
+                joint.setJointValue(jointState.angle * (Math.PI / 180));
+                console.log(`Updated joint ${jointState.name} to ${jointState.angle}°`);
+              }
+            }
+          });
+        }
+        
+        // Handle direct joint name -> angle mapping
+        Object.keys(SO_ARM100_CONFIG.jointNameIdMap).forEach(jointName => {
+          if (rtUpdate[jointName] !== undefined && typeof rtUpdate[jointName] === 'number') {
+            const joint = robotRef.current!.joints[jointName];
+            if (joint) {
+              joint.setJointValue(rtUpdate[jointName] * (Math.PI / 180));
+              console.log(`Updated joint ${jointName} to ${rtUpdate[jointName]}°`);
+            }
+          }
+        });
+      }
+    }
+  }, [rtUpdate]);
 
   return (
     <>
@@ -418,14 +473,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
     });
   }, []);
 
-  const handleJointAngleChange = useCallback((jointName: string, angle: number) => {
-    setRobotModel(prev => ({
-      ...prev,
-      jointStates: prev.jointStates.map(state =>
-        state.name === jointName ? { ...state, angle } : state
-      )
-    }));
-  }, []);
+
 
   // Handle local input value changes
   const handleInputValueChange = useCallback((inputName: string, value: string) => {
@@ -631,6 +679,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
               urdfUrl={urdfUrl}
               jointStates={robotModel.jointStates}
               onRobotLoaded={handleRobotLoaded}
+              rtUpdate={nodeState?.data?.rt_update}
             />
           </Canvas>
         </div>
