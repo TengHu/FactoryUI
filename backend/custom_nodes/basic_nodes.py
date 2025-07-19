@@ -1023,7 +1023,7 @@ Usage: Use this node to visualize 3D scenes, robot configurations, or any 3D dat
             }
         ]
 
-        return (None, rt_update)
+        return (None, None)
         
 
 # Node class mappings for registration

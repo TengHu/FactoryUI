@@ -424,6 +424,14 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
     }));
   }, []);
 
+  // Update rt_update when jointStates change
+  useEffect(() => {
+    if (robotModel.jointStates.length > 0 && onInputValueChange) {
+      // Set rt_update to the current jointStates
+      onInputValueChange(id, 'rt_update', JSON.stringify(robotModel.jointStates));
+    }
+  }, [robotModel.jointStates, onInputValueChange, id]);
+
   // Get URDF URL from inputs or use SO-ARM100 default
   const urdfUrl = inputValues['urdf_path'] || inputValues['urdf_url'] || SO_ARM100_CONFIG.urdfUrl;
   
@@ -635,6 +643,34 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
             />
           </Canvas>
         </div>
+        
+        {/* Real-Time Update Display */}
+        {nodeState?.data?.rt_update && (
+          <div className="rt-update-display" style={{ borderWidth: '1px', padding: '1px 1px' }}>
+            <div className="rt-update-content">
+              {typeof nodeState.data.rt_update === 'object' && nodeState.data.rt_update.image_base64 && nodeState.data.rt_update.image_format ? (
+                <img
+                  src={`data:image/${nodeState.data.rt_update.image_format};base64,${nodeState.data.rt_update.image_base64}`}
+                  alt={nodeState.data.rt_update.filename || 'Real-Time Update Image'}
+                  style={{ maxWidth: '100%', maxHeight: 200, display: 'block', margin: '0 auto', borderWidth: '1px' }}
+                />
+              ) : typeof nodeState.data.rt_update === 'object' ? (
+                <pre className="rt-update-json" style={{ borderWidth: '1px' }}>
+                  {JSON.stringify(nodeState.data.rt_update, null, 2)}
+                </pre>
+              ) : (
+                <div className="rt-update-text">
+                  {nodeState.data.rt_update}
+                </div>
+              )}
+            </div>
+            {nodeState.timestamp && (
+              <div className="rt-update-timestamp">
+                Updated: {new Date(nodeState.timestamp * 1000).toLocaleTimeString()}
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Joint Controls */}
         {/* {robotModel.jointStates.length > 0 && (
