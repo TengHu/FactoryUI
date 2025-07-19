@@ -257,6 +257,9 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
     joints: {},
     jointStates: []
   });
+  
+  // Local state for input values
+  const [localInputValues, setLocalInputValues] = useState<Record<string, string>>(inputValues);
 
   // Handle ResizeObserver errors
   useEffect(() => {
@@ -424,16 +427,16 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
     }));
   }, []);
 
-  // Update rt_update when jointStates change
-  useEffect(() => {
-    if (robotModel.jointStates.length > 0 && onInputValueChange) {
-      // Set rt_update to the current jointStates
-      onInputValueChange(id, 'rt_update', JSON.stringify(robotModel.jointStates));
-    }
-  }, [robotModel.jointStates, onInputValueChange, id]);
+  // Handle local input value changes
+  const handleInputValueChange = useCallback((inputName: string, value: string) => {
+    setLocalInputValues(prev => ({
+      ...prev,
+      [inputName]: value
+    }));
+  }, []);
 
   // Get URDF URL from inputs or use SO-ARM100 default
-  const urdfUrl = inputValues['urdf_path'] || inputValues['urdf_url'] || SO_ARM100_CONFIG.urdfUrl;
+  const urdfUrl = localInputValues['urdf_path'] || localInputValues['urdf_url'] || SO_ARM100_CONFIG.urdfUrl;
   
 
   return (
@@ -559,7 +562,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
                 const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
                 const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
                 const inputMode = inputModes[input] || defaultMode;
-                const inputValue = inputValues[input] || '';
+                const inputValue = localInputValues[input] || '';
                 
                 if (inputMode === 'manual') {
                   return (
@@ -571,11 +574,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
                             className="manual-input manual-textarea"
                             value={inputValue}
                             placeholder={`Enter ${typeName.toLowerCase()}`}
-                            onChange={(e) => {
-                              if (onInputValueChange) {
-                                onInputValueChange(id, input, e.target.value);
-                              }
-                            }}
+                            onChange={(e) => handleInputValueChange(input, e.target.value)}
                             onClick={(e) => e.stopPropagation()}
                             rows={1}
                           />
@@ -585,11 +584,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
                             className="manual-input"
                             value={inputValue}
                             placeholder={`Enter ${typeName.toLowerCase()}`}
-                            onChange={(e) => {
-                              if (onInputValueChange) {
-                                onInputValueChange(id, input, e.target.value);
-                              }
-                            }}
+                            onChange={(e) => handleInputValueChange(input, e.target.value)}
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
@@ -598,11 +593,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
                             className="manual-input"
                             value={inputValue}
                             placeholder={`Enter ${typeName.toLowerCase()}`}
-                            onChange={(e) => {
-                              if (onInputValueChange) {
-                                onInputValueChange(id, input, e.target.value);
-                              }
-                            }}
+                            onChange={(e) => handleInputValueChange(input, e.target.value)}
                             onClick={(e) => e.stopPropagation()}
                           />
                         )}

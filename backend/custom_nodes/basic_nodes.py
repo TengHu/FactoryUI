@@ -993,7 +993,7 @@ Usage: Use this node to visualize 3D scenes, robot configurations, or any 3D dat
         rt_update = [
             {
                 "name": "Rotation",
-                "angle": 180,
+                "angle": random.randint(180, 360),
                 "servoId": 1
             },
             {
@@ -1023,7 +1023,7 @@ Usage: Use this node to visualize 3D scenes, robot configurations, or any 3D dat
             }
         ]
 
-        return (None, None)
+        return (None, rt_update)
         
 
 # Node class mappings for registration
