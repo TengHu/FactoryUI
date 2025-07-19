@@ -465,40 +465,18 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
       let newJointStates = [...robotModel.jointStates];
       let hasChanges = false;
       
-      if (typeof rtUpdate === 'object') {
-        // Handle rt_update as direct array of joint states (most common case)
-        if (Array.isArray(rtUpdate)) {
-          console.log('🔄 [DEBUG] Processing rt_update as joint states array:', rtUpdate);
-          rtUpdate.forEach((jointState: any) => {
-            if (jointState.name && typeof jointState.angle === 'number') {
-              const jointIndex = newJointStates.findIndex(joint => joint.name === jointState.name);
-              console.log(`🔍 [DEBUG] Looking for joint ${jointState.name}, found index: ${jointIndex}`);
-              if (jointIndex !== -1) {
-                const oldAngle = newJointStates[jointIndex].angle;
-                newJointStates[jointIndex] = {
-                  ...newJointStates[jointIndex],
-                  angle: jointState.angle,
-                  servoId: jointState.servoId || newJointStates[jointIndex].servoId
-                };
-                hasChanges = true;
-                console.log(`✅ [DEBUG] Updated joint ${jointState.name} from ${oldAngle}° to ${jointState.angle}°`);
-              }
-            }
-          });
-        }
-        // Handle servo_positions format (servo ID -> position value)
-        else if (rtUpdate.servo_positions) {
-          console.log('🔄 [DEBUG] Processing servo_positions:', rtUpdate.servo_positions);
-          Object.entries(rtUpdate.servo_positions).forEach(([servoIdStr, position]) => {
-            const servoId = parseInt(servoIdStr);
+      if (Array.isArray(rtUpdate)) {
+        // Handle rt_update as array of joint state objects
+        rtUpdate.forEach((jointState: any) => {
+          if (jointState && typeof jointState === 'object' && jointState.servoId && jointState.angle !== undefined) {
+            const servoId = jointState.servoId;
+            const angle = jointState.angle;
             
             // Find joint by servo ID and update angle
             const jointIndex = newJointStates.findIndex(joint => joint.servoId === servoId);
             console.log(`🔍 [DEBUG] Looking for servo ${servoId}, found joint index: ${jointIndex}`);
             if (jointIndex !== -1) {
               const oldAngle = newJointStates[jointIndex].angle;
-              // Convert servo position to angle (assuming 0-4095 range maps to 0-360 degrees)
-              const angle = ((position as number) / 4095) * 360;
               newJointStates[jointIndex] = {
                 ...newJointStates[jointIndex],
                 angle: angle
@@ -508,61 +486,49 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
             } else {
               console.log(`❌ [DEBUG] No joint found for servo ID ${servoId}`);
             }
-          });
-        }
-        
-        // Handle joint_states format (array of joint state objects)
-        if (Array.isArray(rtUpdate.joint_states)) {
-          console.log('🔄 [DEBUG] Processing joint_states array:', rtUpdate.joint_states);
-          rtUpdate.joint_states.forEach((jointState: any) => {
-            if (jointState.name && typeof jointState.angle === 'number') {
-              const jointIndex = newJointStates.findIndex(joint => joint.name === jointState.name);
-              console.log(`🔍 [DEBUG] Looking for joint ${jointState.name}, found index: ${jointIndex}`);
-              if (jointIndex !== -1) {
-                const oldAngle = newJointStates[jointIndex].angle;
-                newJointStates[jointIndex] = {
-                  ...newJointStates[jointIndex],
-                  angle: jointState.angle
-                };
-                hasChanges = true;
-                console.log(`✅ [DEBUG] Updated joint ${jointState.name} from ${oldAngle}° to ${jointState.angle}°`);
-              }
-            }
-          });
-        }
-        
-        // Handle direct joint name -> angle mapping
-        console.log('🔄 [DEBUG] Checking direct joint mapping...');
-        Object.keys(SO_ARM100_CONFIG.jointNameIdMap).forEach(jointName => {
-          if (rtUpdate[jointName] !== undefined && typeof rtUpdate[jointName] === 'number') {
-            console.log(`🔍 [DEBUG] Found direct mapping for ${jointName}: ${rtUpdate[jointName]}`);
-            const jointIndex = newJointStates.findIndex(joint => joint.name === jointName);
-            if (jointIndex !== -1) {
-              const oldAngle = newJointStates[jointIndex].angle;
-              newJointStates[jointIndex] = {
-                ...newJointStates[jointIndex],
-                angle: rtUpdate[jointName]
-              };
-              hasChanges = true;
-              console.log(`✅ [DEBUG] Updated joint ${jointName} from ${oldAngle}° to ${rtUpdate[jointName]}°`);
-            }
+          } else {
+            console.log(`⚠️ [DEBUG] Invalid joint state object:`, jointState);
           }
         });
-        
-        // Update robot model with new joint states
-        if (hasChanges) {
-          console.log('🚀 [DEBUG] Updating robotModel.jointStates:', newJointStates);
-          setRobotModel(prev => {
-            const updated = {
-              ...prev,
-              jointStates: newJointStates
+      } else if (typeof rtUpdate === 'object' && !Array.isArray(rtUpdate)) {
+        // Handle rt_update as dictionary of servo positions (legacy format)
+        Object.entries(rtUpdate).forEach(([servoIdStr, position]) => {
+          const servoId = parseInt(servoIdStr);
+          
+          // Find joint by servo ID and update angle
+          const jointIndex = newJointStates.findIndex(joint => joint.servoId === servoId);
+          console.log(`🔍 [DEBUG] Looking for servo ${servoId}, found joint index: ${jointIndex}`);
+          if (jointIndex !== -1) {
+            const oldAngle = newJointStates[jointIndex].angle;
+            // Convert servo position to angle (assuming 0-4095 range maps to 0-360 degrees)
+            const angle = ((position as number) / 4095) * 360;
+            newJointStates[jointIndex] = {
+              ...newJointStates[jointIndex],
+              angle: angle
             };
-            console.log('📊 [DEBUG] New robotModel:', updated);
-            return updated;
-          });
-        } else {
-          console.log('⚠️ [DEBUG] No changes detected, skipping robotModel update');
-        }
+            hasChanges = true;
+            console.log(`✅ [DEBUG] Updated joint ${newJointStates[jointIndex].name} (servo ${servoId}) from ${oldAngle}° to ${angle.toFixed(1)}°`);
+          } else {
+            console.log(`❌ [DEBUG] No joint found for servo ID ${servoId}`);
+          }
+        });
+      }
+
+      console.log('newJointStates', newJointStates)
+      
+      // Update robot model with new joint states
+      if (hasChanges) {
+        console.log('🚀 [DEBUG] Updating robotModel.jointStates:', newJointStates);
+        setRobotModel(prev => {
+          const updated = {
+            ...prev,
+            jointStates: newJointStates
+          };
+          console.log('📊 [DEBUG] New robotModel:', updated);
+          return updated;
+        });
+      } else {
+        console.log('⚠️ [DEBUG] No changes detected, skipping robotModel update');
       }
     } else {
       if (!nodeState?.data?.rt_update) {
@@ -787,95 +753,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
           </Canvas>
         </div>
         
-        {/* Debug Panel */}
-        {process.env.NODE_ENV === 'development' && (
-          <div style={{ 
-            background: '#f0f0f0', 
-            padding: '10px', 
-            margin: '10px 0', 
-            borderRadius: '4px',
-            fontSize: '12px',
-            fontFamily: 'monospace',
-            maxHeight: '200px',
-            overflow: 'auto'
-          }}>
-            <div><strong>🔍 DEBUG INFO:</strong></div>
-            <div>rt_update present: {nodeState?.data?.rt_update ? '✅' : '❌'}</div>
-            <div>Robot loaded: {robotModel.robot ? '✅' : '❌'}</div>
-            <div>Joint states count: {robotModel.jointStates.length}</div>
-            <details>
-              <summary>Current joint states:</summary>
-              <pre>{JSON.stringify(robotModel.jointStates, null, 2)}</pre>
-            </details>
-            {nodeState?.data?.rt_update && (
-              <details>
-                <summary>rt_update data:</summary>
-                <pre>{JSON.stringify(nodeState.data.rt_update, null, 2)}</pre>
-              </details>
-            )}
-            <button 
-              onClick={() => {
-                console.log('🔥 [MANUAL DEBUG] Current state:', {
-                  nodeState: nodeState,
-                  rtUpdate: nodeState?.data?.rt_update,
-                  robotModel: robotModel,
-                  jointStates: robotModel.jointStates
-                });
-              }}
-              style={{margin: '5px', padding: '5px 10px', fontSize: '11px'}}
-            >
-              Log Full State to Console
-            </button>
-            <button 
-              onClick={() => {
-                console.log('🧪 [FORCE TEST] Testing rt_update conversion with sample data...');
-                const testRtUpdate = {
-                  "Rotation": 45,
-                  "Pitch": 30,
-                  "Elbow": 90
-                };
-                console.log('🧪 [FORCE TEST] Sample rt_update:', testRtUpdate);
-                
-                // Manually test the conversion logic
-                if (robotModel.robot) {
-                  let newJointStates = [...robotModel.jointStates];
-                  let hasChanges = false;
-                  
-                  Object.keys(SO_ARM100_CONFIG.jointNameIdMap).forEach(jointName => {
-                    if ((testRtUpdate as any)[jointName] !== undefined) {
-                      console.log(`🧪 [FORCE TEST] Processing ${jointName}: ${(testRtUpdate as any)[jointName]}`);
-                      const jointIndex = newJointStates.findIndex(joint => joint.name === jointName);
-                      console.log(`🧪 [FORCE TEST] Joint index for ${jointName}: ${jointIndex}`);
-                      if (jointIndex !== -1) {
-                        const oldAngle = newJointStates[jointIndex].angle;
-                        newJointStates[jointIndex] = {
-                          ...newJointStates[jointIndex],
-                          angle: (testRtUpdate as any)[jointName]
-                        };
-                        hasChanges = true;
-                        console.log(`🧪 [FORCE TEST] Updated ${jointName} from ${oldAngle}° to ${(testRtUpdate as any)[jointName]}°`);
-                      }
-                    }
-                  });
-                  
-                  if (hasChanges) {
-                    console.log('🧪 [FORCE TEST] Applying changes:', newJointStates);
-                    setRobotModel(prev => ({
-                      ...prev,
-                      jointStates: newJointStates
-                    }));
-                  }
-                } else {
-                  console.log('🧪 [FORCE TEST] Robot not loaded!');
-                }
-              }}
-              style={{margin: '5px', padding: '5px 10px', fontSize: '11px'}}
-            >
-              Force Test Conversion
-            </button>
-            
-          </div>
-        )}
+        
         
         
         {/* Joint Controls */}

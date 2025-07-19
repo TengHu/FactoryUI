@@ -930,13 +930,13 @@ Usage: Use this node to add documentation, comments, or notes to your workflow. 
         return (None,)
 
 class ThreeDVisualizationNode(NodeBase):
-    """A node that takes ThreeDConfig input and provides 3D visualization capabilities."""
+    """A node that takes motor positions and provides 3D visualization capabilities."""
 
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "three_d_config": ("STRING", {})
+                "positions": ("DICT", {})  # Expected format: {1: 1510, 2: 1029, 3: 3010, 4: 967, 5: 638, 6: 2039}
             }
         }
 
@@ -961,70 +961,87 @@ class ThreeDVisualizationNode(NodeBase):
 
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Visualize 3D data and configurations in a 3D viewer."
+        return "Visualize robot positions in 3D by converting motor positions to angles."
 
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
 ThreeDVisualizationNode
 
-Purpose: Takes a ThreeDConfig input and provides 3D visualization capabilities. This node processes 3D configuration data and returns visualization data that can be rendered in a 3D viewer.
+Purpose: Takes motor position data and converts it to joint angles for 3D visualization. This node processes motor position data and returns visualization data that can be rendered in a 3D viewer.
 
 Inputs:
-  - config (ThreeDConfig): 3D configuration data containing objects, transforms, materials, etc.
+  - positions (DICT): Dictionary mapping servo IDs to positions in format:
+    {1: 1510, 2: 1029, 3: 3010, 4: 967, 5: 638, 6: 2039}
 
 Outputs:
-  - visualization_data (DICT): Processed 3D visualization data ready for rendering
+  - None (produces rt_update for 3D visualization)
 
-Usage: Use this node to visualize 3D scenes, robot configurations, or any 3D data. Connect it to nodes that provide ThreeDConfig data to see the 3D representation in the UI.
+Usage: Use this node to visualize robot joint states in 3D. Connect it to nodes that provide motor position data to see the 3D representation of the robot's current configuration in the UI.
         """
 
-    def visualize_3d(self, three_d_config):
+    def visualize_3d(self, positions: dict):
         """
-        Process 3D configuration and return visualization data.
+        Convert motor positions to angles and return 3D visualization data.
         
         Args:
-            config: ThreeDConfig object containing 3D scene data
+            positions: Dictionary mapping servo IDs to positions
             
         Returns:
-            tuple: (visualization_data, rt_update)
+            tuple: (None, rt_update)
         """
 
-        rt_update = [
-            {
-                "name": "Rotation",
-                "angle": random.randint(180, 360),
-                "servoId": 1
-            },
-            {
-                "name": "Pitch",
-                "angle": 180,
-                "servoId": 2
-            },
-            {
-                "name": "Elbow",
-                "angle": 180,
-                "servoId": 3
-            },
-            {
-                "name": "Wrist_Pitch",
-                "angle": 180,
-                "servoId": 4
-            },
-            {
-                "name": "Wrist_Roll",
-                "angle": 180,
-                "servoId": 5
-            },
-            {
-                "name": "Jaw",
-                "angle": random.randint(180, 360),
-                "servoId": 6
-            }
+        angles = {servo_id: (position / 4095.0) * 360.0 for servo_id, position in positions.items()}
+
+        angles = [
+            {'name': 'Rotation', 'angle': 132.7, 'servoId': 1},
+            {'name': 'Pitch', 'angle': 90.4, 'servoId': 2},
+            {'name': 'Elbow', 'angle': 264.6, 'servoId': 3},
+            {'name': 'Wrist_Pitch', 'angle': 79.5, 'servoId': 4}, 
+            {'name': 'Wrist_Roll', 'angle': 39.0, 'servoId': 5},
+            {'name': 'Jaw', 'angle': 230.3, 'servoId': 6}
         ]
 
-        return (None, rt_update)
+        # angles = [
+        #     'Rotation': 132.7,
+        #     'Pitch': 90.4,
+        #     'Elbow': 264.6,
+        #     'Wrist_Pitch': 79.5,
+        #     'Wrist_Roll': 39.0,
+        #     'Jaw': 230.3
+        # ]
+
+        return (None, angles)
+
+
+        # # Define joint names in order corresponding to servo IDs 1-6
+        # joint_names = ['Rotation', 'Pitch', 'Elbow', 'Wrist_Pitch', 'Wrist_Roll', 'Jaw']
         
+        # if not positions:
+        #     raise ValueError("No positions provided")
+        
+        # # Convert positions to angles using the same logic as MotorPositionsToAnglesNode
+        # rt_update = []
+        # for i, joint_name in enumerate(joint_names):
+        #     servo_id = i + 1  # Servo IDs are 1-based
+        #     if servo_id in positions:
+        #         # Convert servo position (0-4095) to angle (0-360 degrees)
+        #         position = positions[servo_id]
+        #         angle = (position / 4095.0) * 360.0
+        #         angle = round(angle, 1)  # Round to 1 decimal place
+        #     else:
+        #         print(f"Warning: No position data for servo {servo_id} ({joint_name})")
+        #         angle = 0.0
+            
+        #     rt_update.append({
+        #         "name": joint_name,
+        #         "angle": angle,
+        #         "servoId": servo_id
+        #     })
+        
+
+        # return (None, rt_update)
+
 
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
@@ -1037,5 +1054,5 @@ NODE_CLASS_MAPPINGS = {
     "CameraNode": CameraNode,
     "DisplayNode": DisplayNode,
     "NoteNode": NoteNode,
-    "ThreeDVisualizationNode": ThreeDVisualizationNode
+    "ThreeDVisualizationNode": ThreeDVisualizationNode,
 }
