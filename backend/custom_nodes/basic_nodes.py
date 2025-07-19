@@ -993,14 +993,13 @@ Usage: Use this node to visualize robot joint states in 3D. Connect it to nodes 
 
         angles = {servo_id: (position / 4095.0) * 360.0 for servo_id, position in positions.items()}
 
+        list_of_angles = ['Rotation', 'Pitch', 'Elbow', 'Wrist_Pitch', 'Wrist_Roll', 'Jaw']
+
         angles = [
-            {'name': 'Rotation', 'angle': 132.7, 'servoId': 1},
-            {'name': 'Pitch', 'angle': 90.4, 'servoId': 2},
-            {'name': 'Elbow', 'angle': 264.6, 'servoId': 3},
-            {'name': 'Wrist_Pitch', 'angle': 79.5, 'servoId': 4}, 
-            {'name': 'Wrist_Roll', 'angle': 39.0, 'servoId': 5},
-            {'name': 'Jaw', 'angle': 230.3, 'servoId': 6}
+            {'name': list_of_angles[servo_id], 'angle': angles[servo_id+1], 'servoId': servo_id + 1}
+            for servo_id in range(len(list_of_angles))
         ]
+
 
         # angles = [
         #     'Rotation': 132.7,
