@@ -929,6 +929,119 @@ Usage: Use this node to add documentation, comments, or notes to your workflow. 
         # Simply consume the text input without producing any output
         return (None,)
 
+class ThreeDVisualizationNode(NodeBase):
+    """A node that takes motor positions and provides 3D visualization capabilities."""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "positions": ("DICT", {})  # Expected format: {1: 1510, 2: 1029, 3: 3010, 4: 967, 5: 638, 6: 2039}
+            }
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+            }
+        }
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "visualize_3d"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "3D Visualization"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Visualize robot positions in 3D by converting motor positions to angles."
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+ThreeDVisualizationNode
+
+Purpose: Takes motor position data and converts it to joint angles for 3D visualization. This node processes motor position data and returns visualization data that can be rendered in a 3D viewer.
+
+Inputs:
+  - positions (DICT): Dictionary mapping servo IDs to positions in format:
+    {1: 1510, 2: 1029, 3: 3010, 4: 967, 5: 638, 6: 2039}
+
+Outputs:
+  - None (produces rt_update for 3D visualization)
+
+Usage: Use this node to visualize robot joint states in 3D. Connect it to nodes that provide motor position data to see the 3D representation of the robot's current configuration in the UI.
+        """
+
+    def visualize_3d(self, positions: dict):
+        """
+        Convert motor positions to angles and return 3D visualization data.
+        
+        Args:
+            positions: Dictionary mapping servo IDs to positions
+            
+        Returns:
+            tuple: (None, rt_update)
+        """
+
+        angles = {servo_id: (position / 4095.0) * 360.0 for servo_id, position in positions.items()}
+
+        list_of_angles = ['Rotation', 'Pitch', 'Elbow', 'Wrist_Pitch', 'Wrist_Roll', 'Jaw']
+
+        angles = [
+            {'name': list_of_angles[servo_id], 'angle': angles[servo_id+1], 'servoId': servo_id + 1}
+            for servo_id in range(len(list_of_angles))
+        ]
+
+
+        # angles = [
+        #     'Rotation': 132.7,
+        #     'Pitch': 90.4,
+        #     'Elbow': 264.6,
+        #     'Wrist_Pitch': 79.5,
+        #     'Wrist_Roll': 39.0,
+        #     'Jaw': 230.3
+        # ]
+
+        return (None, angles)
+
+
+        # # Define joint names in order corresponding to servo IDs 1-6
+        # joint_names = ['Rotation', 'Pitch', 'Elbow', 'Wrist_Pitch', 'Wrist_Roll', 'Jaw']
+        
+        # if not positions:
+        #     raise ValueError("No positions provided")
+        
+        # # Convert positions to angles using the same logic as MotorPositionsToAnglesNode
+        # rt_update = []
+        # for i, joint_name in enumerate(joint_names):
+        #     servo_id = i + 1  # Servo IDs are 1-based
+        #     if servo_id in positions:
+        #         # Convert servo position (0-4095) to angle (0-360 degrees)
+        #         position = positions[servo_id]
+        #         angle = (position / 4095.0) * 360.0
+        #         angle = round(angle, 1)  # Round to 1 decimal place
+        #     else:
+        #         print(f"Warning: No position data for servo {servo_id} ({joint_name})")
+        #         angle = 0.0
+            
+        #     rt_update.append({
+        #         "name": joint_name,
+        #         "angle": angle,
+        #         "servoId": servo_id
+        #     })
+        
+
+        # return (None, rt_update)
+
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
@@ -939,5 +1052,6 @@ NODE_CLASS_MAPPINGS = {
     "ShowImageNode": ShowImageNode,
     "CameraNode": CameraNode,
     "DisplayNode": DisplayNode,
-    "NoteNode": NoteNode
+    "NoteNode": NoteNode,
+    "ThreeDVisualizationNode": ThreeDVisualizationNode,
 }

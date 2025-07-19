@@ -18,11 +18,12 @@ import './App.css';
 import NodePanel from './components/NodePanel';
 import CustomNode from './components/CustomNode';
 import CameraNode from './components/CameraNode';
+import ThreeDNode from './components/ThreeDNode';
 import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
 import ThemeToggle from './components/ThemeToggle';
 import { NodeInfo, apiService } from './services/api';
 import { canConnect, getConnectionError } from './utils/typeMatching';
-import { shouldUseCameraNode } from './utils/nodeUtils';
+import { shouldUseCameraNode, shouldUseThreeDNode } from './utils/nodeUtils';
 import { mergeCameraFramesWithInputValues } from './utils/cameraFrameUtils';
 import { websocketService, ConnectionState } from './services/websocket';
 
@@ -51,6 +52,13 @@ const createCameraNodeWithContextMenu = (
   onInputValueChange: (nodeId: string, inputName: string, value: string) => void
 ) => {
   return (props: any) => <CameraNode {...props} onContextMenu={onContextMenu} onInputValueChange={onInputValueChange} />;
+};
+
+const createThreeDNodeWithContextMenu = (
+  onContextMenu: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void,
+  onInputValueChange: (nodeId: string, inputName: string, value: string) => void
+) => {
+  return (props: any) => <ThreeDNode {...props} onContextMenu={onContextMenu} onInputValueChange={onInputValueChange} />;
 };
 
 // Safe expression evaluator for sleep time calculations
@@ -394,7 +402,7 @@ function App() {
 
         const newNode: Node = {
           id: `${nodeInfo.name}-${Date.now()}`,
-          type: shouldUseCameraNode(nodeInfo) ? 'cameraNode' : 'customNode',
+          type: shouldUseCameraNode(nodeInfo) ? 'cameraNode' : shouldUseThreeDNode(nodeInfo) ? 'threeDNode' : 'customNode',
           position,
           data: { 
             label: nodeInfo.display_name,
@@ -1291,6 +1299,7 @@ function App() {
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
     cameraNode: createCameraNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
+    threeDNode: createThreeDNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
   }), [handleNodeContextMenu, handleInputValueChange]);
 
 
