@@ -99,13 +99,14 @@
       "sourceHandle": "output",
       "target": "UnlockRemoteNode-1752963252608",
       "targetHandle": "sdk",
-      "id": "xy-edge__ConnectRobotNode-1752694507773output-UnlockRemoteNode-1752963252608sdk"
+      "id": "xy-edge__ConnectRobotNode-1752694507773output-UnlockRemoteNode-1752963252608sdk",
+      "className": "animated"
     }
   ],
   "metadata": {
     "name": "unlock_robot",
-    "description": "Renamed workflow on 7/19/2025",
-    "created": "2025-07-19T22:14:28.792Z",
+    "description": "Auto-saved on 7/19/2025",
+    "created": "2025-07-19T22:39:03.021Z",
     "version": "1.0.0"
   }
 }

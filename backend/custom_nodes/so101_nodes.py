@@ -22,13 +22,9 @@ class RobotStatusReader(NodeBase):
         return {
             "required": {
                 "sdk": ("ScsServoSDK", {}),
-                "servo_ids": ("STRING", {"default": "1,2,3,4,5"}),
             },
             "optional": {
-                "read_positions": ("BOOLEAN", {"default": True}),
-                "read_modes": ("BOOLEAN", {"default": False}),
-                "stream_results": ("BOOLEAN", {"default": True}),
-                "update_interval": ("FLOAT", {"default": 0.1, "min": 0.01, "max": 5.0}),
+                
             }
         }
     
@@ -51,7 +47,7 @@ class RobotStatusReader(NodeBase):
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
-        return "Robot Status Reader"
+        return "SO101 Robot Status Reader"
     
     @classmethod
     def DESCRIPTION(cls) -> str:
@@ -63,81 +59,64 @@ class RobotStatusReader(NodeBase):
             """
             RobotStatusReader Node
 
-            Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk with real-time streaming support.
+            Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk.
 
             Inputs:
               - sdk (ScsServoSDK): The SDK instance for communicating with servos.
-              - servo_ids (STRING): Comma-separated list of servo IDs to read (e.g., '1,2,3,4,5').
-              - read_positions (BOOLEAN, optional): Whether to read servo positions (default: True).
-              - read_modes (BOOLEAN, optional): Whether to read servo modes (default: False).
-              - stream_results (BOOLEAN, optional): Enable real-time streaming to frontend (default: True).
-              - update_interval (FLOAT, optional): Time between updates in seconds (default: 0.1, range: 0.01-5.0).
 
             Outputs:
-              - status_data (DICT): Dictionary containing read positions, modes (if requested), servo_ids, timestamp, and connection status.
+              - status_data (DICT): Dictionary containing read positions, modes, servo_ids, timestamp, and connection status.
               - positions (DICT): Dictionary of servo positions keyed by servo ID.
 
-            Real-time Features:
-              - When stream_results is enabled, robot status is continuously broadcast to the frontend
-              - The node displays live servo positions and modes in the UI
-              - Update frequency is configurable via update_interval
-              - Streaming runs for a maximum of 10 seconds per execution
-              - Real-time indicators show streaming status (Live, Complete, Error)
+            Features:
+              - Automatically reads positions for servos 1-6
+              - Reads servo modes for each connected servo
+              - Provides timestamp and connection status information
+              - Handles errors gracefully with detailed error messages
+              - Returns both comprehensive status data and positions separately
 
             Usage:
               - Connect the ScsServoSDK output from a robot connection node
-              - Specify servo IDs to monitor (e.g., "1,2,3,4,5,6")
-              - Enable streaming for real-time monitoring
-              - Adjust update_interval for performance vs. responsiveness balance
-              - Monitor the node UI for live robot status updates
+              - The node automatically reads from servos 1-6
+              - Use status_data for comprehensive robot state information
+              - Use positions for direct access to servo position values
+              - Monitor connection status and error handling
             """
         )
     
-    def read_robot_status(self, sdk: ScsServoSDK, servo_ids: str,
-                         read_positions: bool = True, read_modes: bool = False,
-                         stream_results: bool = True, update_interval: float = 0.1) -> tuple:
+    def read_robot_status(self, sdk: ScsServoSDK) -> tuple:
         """Read status from robot servos using a provided ScsServoSDK instance"""
         
-        # Parse servo IDs
-        try:
-            servo_id_list = [int(id.strip()) for id in servo_ids.split(",")]
-        except ValueError:
-            raise ValueError(f"Invalid servo_ids format: {servo_ids}. Use comma-separated integers like '1,2,3'")
-        
-        result = self._read_robot_status_once(sdk, servo_id_list, read_positions, read_modes)
+        servo_id_list = [1,2,3,4,5,6]
+        result = self._read_robot_status_once(sdk, servo_id_list)
 
-        if stream_results:
-            return (result, result)
-        else:
-            return result
+        return (result, result)
     
-    def _read_robot_status_once(self, sdk: ScsServoSDK, servo_id_list: List[int], 
-                              read_positions: bool, read_modes: bool) -> tuple:
+    def _read_robot_status_once(self, sdk: ScsServoSDK, servo_id_list: List[int]) -> tuple:
         """Read robot status once (non-streaming)"""
         
         status_data = {}
         
         try:
             # Read positions if requested
-            if read_positions:
-                try:
-                    positions = sdk.sync_read_positions(servo_id_list)
-                    status_data["positions"] = positions
-                except Exception as e:
-                    print(f"Warning: Failed to read positions: {e}")
-                    status_data["positions"] = {}
+        
+            try:
+                positions = sdk.sync_read_positions(servo_id_list)
+                status_data["positions"] = positions
+            except Exception as e:
+                print(f"Warning: Failed to read positions: {e}")
+                status_data["positions"] = {}
             
             # Read modes if requested
-            if read_modes:
-                modes = {}
-                for servo_id in servo_id_list:
-                    try:
-                        mode = sdk.read_mode(servo_id)
-                        modes[servo_id] = mode
-                    except Exception as e:
-                        print(f"Warning: Failed to read mode for servo {servo_id}: {e}")
-                        modes[servo_id] = None
-                status_data["modes"] = modes
+            modes = {}
+            for servo_id in servo_id_list:
+                try:
+                    mode = sdk.read_mode(servo_id)
+                    modes[servo_id] = mode
+                except Exception as e:
+                    print(f"Warning: Failed to read mode for servo {servo_id}: {e}")
+                    modes[servo_id] = None
+            status_data["modes"] = modes
             
             # Add metadata
             status_data["servo_ids"] = servo_id_list
@@ -201,7 +180,33 @@ class SO101JointAnglesToPositions(NodeBase):
     def get_detailed_description(cls) -> str:
         return (
             """
-            
+            SO101JointAnglesToPositions Node
+
+            Purpose: Converts joint angles to servo positions for the SO-101 robot arm.
+
+            Inputs:
+              - rotation (FLOAT): Base rotation angle in degrees (range: -180.0 to 180.0, default: 0.0)
+              - pitch (FLOAT): Shoulder pitch angle in degrees (range: -90.0 to 90.0, default: 0.0)
+              - elbow (FLOAT): Elbow joint angle in degrees (range: -120.0 to 120.0, default: 0.0)
+              - wrist_pitch (FLOAT): Wrist pitch angle in degrees (range: -90.0 to 90.0, default: 0.0)
+              - wrist_roll (FLOAT): Wrist roll angle in degrees (range: -180.0 to 180.0, default: 0.0)
+              - jaw (FLOAT): Gripper jaw angle in degrees (range: 0.0 to 90.0, default: 0.0)
+
+            Outputs:
+              - positions (DICT): Dictionary mapping servo IDs (1-6) to calculated servo positions.
+
+            Conversion Details:
+              - Converts degrees to servo positions using 0-4096 range
+              - Maps joint angles to servos: rotation→1, pitch→2, elbow→3, wrist_pitch→4, wrist_roll→5, jaw→6
+              - Applies bounds checking to ensure positions stay within valid range
+              - Uses linear conversion: position = (angle * 4096) / 360
+
+            Usage:
+              - Input desired joint angles for each robot joint
+              - The node converts angles to servo positions automatically
+              - Connect the positions output to a write position node
+              - Ensure all angles are within their specified ranges
+              - Use with SO101 robot arm for precise joint control
             """
         )
     
@@ -279,13 +284,30 @@ class So101WritePositionNode(NodeBase):
     def get_detailed_description(cls) -> str:
         return (
             """
-            So101WritePositionNode Node\n\n"
-            "Purpose: Writes multiple servo positions to the robot using ScsServoSDK.\n"
-            "Inputs:\n"
-            "  - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n"
-            "  - positions (DICT): Dictionary mapping servo IDs to target positions.\n"
-            "Outputs:\n"
-            "  - write_result (DICT): Dictionary reflecting the positions written to the servos.\n"
+            So101WritePositionNode
+
+            Purpose: Writes multiple servo positions to the robot using ScsServoSDK.
+
+            Inputs:
+              - sdk (ScsServoSDK): The SDK instance for communicating with servos.
+              - positions (DICT): Dictionary mapping servo IDs to target positions (e.g., {1: 2048, 2: 1024}).
+
+            Outputs:
+              - write_result (DICT): Dictionary reflecting the positions written to the servos.
+
+            Features:
+              - Writes positions to multiple servos simultaneously
+              - Uses sync_write_positions for efficient communication
+              - Provides detailed error messages with stack traces
+              - Returns the positions that were successfully written
+              - Handles connection errors and servo communication failures
+
+            Usage:
+              - Connect the ScsServoSDK output from a robot connection node
+              - Provide positions dictionary with servo ID to position mapping
+              - The node will attempt to write all positions to the robot
+              - Monitor the write_result for confirmation of successful writes
+              - Use with position data from joint angle conversion nodes
             """
         )
 
@@ -300,132 +322,8 @@ class So101WritePositionNode(NodeBase):
             raise Exception(f"Failed to write positions: {error_msg}")
 
 
-class UnlockRemoteNode(NodeBase):
-    """Node for unlocking remote control of the SO-101 robot"""
-
-    @classmethod
-    def INPUT_TYPES(cls) -> Dict[str, Any]:
-        return {
-            "required": {
-                "sdk": ("ScsServoSDK", {}),
-            },
-            "optional": {}
-        }
-
-    @classmethod
-    def RETURN_TYPES(cls) -> Dict[str, Any]:
-        return {}
-
-    @classmethod
-    def FUNCTION(cls) -> str:
-        return "unlock_remote"
-
-    @classmethod
-    def TAGS(cls) -> List[str]:
-        return MODULE_TAGS
-
-    @classmethod
-    def DISPLAY_NAME(cls) -> str:
-        return "Unlock Remote"
-
-    @classmethod
-    def DESCRIPTION(cls) -> str:
-        return "Unlock remote control for the SO-101 robot using ScsServoSDK"
-
-    @classmethod
-    def get_detailed_description(cls) -> str:
-        return """
-UnlockRemoteNode
-
-Purpose: Unlocks remote control functionality for the SO-101 robot, allowing manual or programmatic control of the servos.
-
-Inputs:
-  - sdk (ScsServoSDK): The SDK instance for communicating with the robot servos
-
-Outputs:
-  - None (this node has no outputs)
-
-Usage: Use this node to enable remote control mode on the SO-101 robot. This is typically required before sending position commands or reading servo status. Place this node early in your workflow before other robot control nodes.
-
-Note: This operation may be required to establish proper communication with the robot's servo controller and enable command execution.
-        """
-
-    def unlock_remote(self, sdk: ScsServoSDK) -> tuple:
-        """Unlock remote control for the robot using _unlock_servo method"""
-        import traceback
-        try:
-            # Use the specific _unlock_servo method from ScsServoSDK
-            for servo_id in range(1, 7):
-                sdk.write_torque_enable(servo_id, False)
-            
-            return ()  # Return empty tuple since no outputs
-            
-        except Exception as e:
-            error_msg = str(e) + "\n" + traceback.format_exc()
-            print(f"❌ Failed to unlock remote: {error_msg}")
-            raise Exception(f"Failed to unlock remote control: {error_msg}")
-
-
-class DisconnectRobotNode(NodeBase):
-    """Node for disconnecting from the robot using ScsServoSDK"""
-
-    @classmethod
-    def INPUT_TYPES(cls) -> Dict[str, Any]:
-        return {
-            "required": {
-                "sdk": ("ScsServoSDK", {}),
-            },
-            "optional": {}
-        }
-
-    @classmethod
-    def RETURN_TYPES(cls) -> Dict[str, Any]:
-        return {}
-
-    @classmethod
-    def FUNCTION(cls) -> str:
-        return "disconnect_robot"
-
-    @classmethod
-    def TAGS(cls) -> List[str]:
-        return MODULE_TAGS
-
-    @classmethod
-    def DISPLAY_NAME(cls) -> str:
-        return "Disconnect Robot"
-
-    @classmethod
-    def DESCRIPTION(cls) -> str:
-        return "Disconnect from the robot using ScsServoSDK."
-
-    @classmethod
-    def get_detailed_description(cls) -> str:
-        return (
-            """
-            DisconnectRobotNode\n\n"
-            "Purpose: Disconnects from the robot by calling the disconnect() method on the provided ScsServoSDK instance.\n"
-            "Inputs:\n"
-            "  - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n"
-            "Outputs:\n"
-            "  - None (this node has no outputs)\n"
-            """
-        )
-
-    def disconnect_robot(self, sdk: ScsServoSDK) -> tuple:
-        import traceback
-        try:
-            sdk.disconnect()
-            return ()  # No outputs
-        except Exception as e:
-            error_msg = str(e) + "\n" + traceback.format_exc()
-            print(f"❌ Failed to disconnect robot: {error_msg}")
-            raise Exception(f"Failed to disconnect robot: {error_msg}")
-
-
 NODE_CLASS_MAPPINGS = {
-    "RobotStatusReader": RobotStatusReader,
+    "SO101RobotStatusReader": RobotStatusReader,
     "SO101JointAnglesToPositions": SO101JointAnglesToPositions,
     "So101WritePositionNode": So101WritePositionNode,
-    "UnlockRemoteNode": UnlockRemoteNode,
-    "DisconnectRobotNode": DisconnectRobotNode
 }

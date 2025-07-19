@@ -567,80 +567,7 @@ Usage: Use this node at the beginning of robot workflows to establish communicat
         self.port2sdk[port_name] = sdk
 
         return (sdk,)
-            
-
-class Grok4Node(NodeBase):
-    """Node for calling Grok4 LLM to get a position dict from a prompt and instruction"""
-
-    @classmethod
-    def INPUT_TYPES(cls) -> Dict[str, Any]:
-        return {
-            "required": {
-                "system_prompt": ("STRING", {"default": "You are a robot arm controller."}),
-                "instruction": ("STRING", {"default": "Move to home position."}),
-            }
-        }
-
-    @classmethod
-    def RETURN_TYPES(cls) -> Dict[str, Any]:
-        return {
-            "required": {
-                "positions": ("DICT", {})
-            }
-        }
-
-    @classmethod
-    def FUNCTION(cls) -> str:
-        return "call_grok4"
-
-    @classmethod
-    def TAGS(cls) -> List[str]:
-        return [MODULE_TAG]
-
-    @classmethod
-    def DISPLAY_NAME(cls) -> str:
-        return "Grok4 LLM Node"
-
-    @classmethod
-    def DESCRIPTION(cls) -> str:
-        return "Call Grok4 LLM with a system prompt and instruction, return a position dict."
-
-    @classmethod
-    def get_detailed_description(cls) -> str:
-        return (
-            """
-            Grok4Node
-
-            Purpose: Calls the Grok4 LLM API with a system prompt and instruction, and returns a dict of positions.
-
-            Inputs:
-              - system_prompt (STRING): The system prompt for the LLM.
-              - instruction (STRING): The user instruction for the LLM.
-
-            Outputs:
-              - positions (DICT): The parsed position dictionary from the LLM response.
-
-            Usage:
-              - Use this node to generate robot arm positions from natural language instructions using Grok4.
-            """
-        )
-
-    def call_grok4(self, system_prompt: str, instruction: str) -> tuple:
-        
-        try:
-            positions = {
-                1: 1506,
-                2: 1034,
-                3: 3019,
-                4: random.randint(300, 1000),
-                5: random.randint(300, 1000),
-                6: random.randint(30, 4000)
-            }
-            
-            return (positions, "success")
-        except Exception as e:
-            return ({"error": str(e)},)
-
+     
 class ShowImageNode(NodeBase):
     """A node that shows an image (takes image input, no output)."""
 
@@ -776,6 +703,17 @@ class CameraNode(NodeBase):
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
+CameraNode
+
+Purpose: Takes a camera image stream and outputs it as an image for processing or display.
+
+Inputs:
+  - image_stream (CAMERA): Camera image stream data from the frontend
+
+Outputs:
+  - image (IMAGE): The image from the camera stream
+
+Usage: Use this node to capture and process images from a camera. Connect it to camera input from the frontend to get live image data for further processing or display.
         """
 
     def open_camera(self, image_stream):
@@ -823,9 +761,9 @@ Inputs:
   - value (ANY): Any value to display
 
 Outputs:
-  - None
+  - value (ANY): The same value that was input, for display purposes
 
-Usage: Use this node to inspect values in your workflow. It prints the value to the backend console.
+Usage: Use this node to inspect values in your workflow. It prints the value to the backend console and passes it through for display in the UI.
         """
 
     def display(self, value: Any):
@@ -957,15 +895,147 @@ Usage: Use this node to visualize robot joint states in 3D. Connect it to nodes 
         return (None, angles)
 
 
+class UnlockRemoteNode(NodeBase):
+    """Node for unlocking remote control of the robot"""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "sdk": ("ScsServoSDK", {}),
+            },
+            "optional": {}
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {}
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "unlock_remote"
+
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Unlock Remote"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Unlock remote control for the robot using ScsServoSDK"
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+UnlockRemoteNode
+
+Purpose: Unlocks remote control functionality for the robot, allowing manual or programmatic control of the servos.
+
+Inputs:
+  - sdk (ScsServoSDK): The SDK instance for communicating with the robot servos
+
+Outputs:
+  - None (this node has no outputs)
+
+Usage: Use this node to enable remote control mode on the robot. This is typically required before sending position commands or reading servo status. Place this node early in your workflow before other robot control nodes.
+
+Note: This operation may be required to establish proper communication with the robot's servo controller and enable command execution.
+        """
+
+    def unlock_remote(self, sdk: ScsServoSDK) -> tuple:
+        """Unlock remote control for the robot using _unlock_servo method"""
+        import traceback
+        try:
+            # Use the specific _unlock_servo method from ScsServoSDK
+            for servo_id in range(1, 7):
+                sdk.write_torque_enable(servo_id, False)
+            
+            return ()  # Return empty tuple since no outputs
+            
+        except Exception as e:
+            error_msg = str(e) + "\n" + traceback.format_exc()
+            print(f"❌ Failed to unlock remote: {error_msg}")
+            raise Exception(f"Failed to unlock remote control: {error_msg}")
+
+
+class DisconnectRobotNode(NodeBase):
+    """Node for disconnecting from the robot using ScsServoSDK"""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "sdk": ("ScsServoSDK", {}),
+            },
+            "optional": {}
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {}
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "disconnect_robot"
+
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Disconnect Robot"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Disconnect from the robot using ScsServoSDK."
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+DisconnectRobotNode
+
+Purpose: Disconnects from the robot by calling the disconnect() method on the provided ScsServoSDK instance.
+
+Inputs:
+  - sdk (ScsServoSDK): The SDK instance for communicating with servos.
+
+Outputs:
+  - None (this node has no outputs)
+
+Usage: Use this node at the end of your robot workflow to properly close the connection to the robot. This ensures clean disconnection and frees up system resources.
+        """
+
+    def disconnect_robot(self, sdk: ScsServoSDK) -> tuple:
+        import traceback
+        try:
+            sdk.disconnect()
+            return ()  # No outputs
+        except Exception as e:
+            error_msg = str(e) + "\n" + traceback.format_exc()
+            print(f"❌ Failed to disconnect robot: {error_msg}")
+            raise Exception(f"Failed to disconnect robot: {error_msg}")
+
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
+    "OutputNode": OutputNode,
+    "TextProcessorNode": TextProcessorNode,
+    "DelayNode": DelayNode,
+    "RandomNumberNode": RandomNumberNode,
+    "MathNode": MathNode,
     "PrintToConsoleNode": PrintToConsoleNode,
+    "ConcatNode": ConcatNode,
     "ConnectRobotNode": ConnectRobotNode,
-    "Grok4Node": Grok4Node,
     "ShowImageNode": ShowImageNode,
     "CameraNode": CameraNode,
     "DisplayNode": DisplayNode,
     "NoteNode": NoteNode,
     "ThreeDVisualizationNode": ThreeDVisualizationNode,
+    "UnlockRemoteNode": UnlockRemoteNode,
+    "DisconnectRobotNode": DisconnectRobotNode,
 }
