@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test RT Update Joint States</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 5px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>RT Update Joint States Test</h1>
+    
+    <div class="test-case">
+        <h3>Test 1: Servo Positions Format</h3>
+        <p>This tests the servo_positions format where servo IDs map to position values (0-4095)</p>
+        <button onclick="testServoPositions()">Send Servo Positions</button>
+        <pre id="servo-data"></pre>
+    </div>
+    
+    <div class="test-case">
+        <h3>Test 2: Joint States Array Format</h3>
+        <p>This tests the joint_states array format with explicit joint names and angles</p>
+        <button onclick="testJointStatesArray()">Send Joint States Array</button>
+        <pre id="joint-array-data"></pre>
+    </div>
+    
+    <div class="test-case">
+        <h3>Test 3: Direct Joint Mapping Format</h3>
+        <p>This tests direct joint name to angle mapping</p>
+        <button onclick="testDirectMapping()">Send Direct Joint Mapping</button>
+        <pre id="direct-mapping-data"></pre>
+    </div>
+    
+    <div class="test-case">
+        <h3>Test 4: Real-time Animation Test</h3>
+        <p>This continuously animates the robot joints to demonstrate smooth real-time updates</p>
+        <button onclick="startAnimation()" id="animateBtn">Start Animation</button>
+        <button onclick="stopAnimation()" id="stopBtn" disabled>Stop Animation</button>
+        <pre id="animation-data"></pre>
+    </div>
+    
+    <div class="test-case">
+        <h3>Instructions:</h3>
+        <ol>
+            <li>Start the backend server: <code>cd backend && python -m uvicorn app.main:app --reload</code></li>
+            <li>Start the frontend: <code>cd factory-ui && npm start</code></li>
+            <li>Create a ThreeDNode in the UI</li>
+            <li>Note the node ID from the browser console or UI</li>
+            <li>Update the nodeId variable below and click the test buttons</li>
+            <li>Watch the 3D robot move in real-time WITHOUT component re-renders!</li>
+            <li>Open browser console to see direct joint manipulation logs</li>
+        </ol>
+        <p><strong>Key Features:</strong></p>
+        <ul>
+            <li>rt_update data is converted to jointStates format</li>
+            <li>Robot updates through standard jointStates prop to RobotScene</li>
+            <li>No JSON display - rt_update manifests as 3D robot movement</li>
+            <li>Clean React state management with proper prop flow</li>
+            <li>Status indicator shows "🔄 Real-time updates active" when receiving data</li>
+        </ul>
+    </div>
+
+    <script>
+        // Update this with actual node ID from your UI
+        const nodeId = "ThreeDNode-12345"; // Change this to match your actual node ID
+        
+        const ws = new WebSocket('ws://localhost:8000/ws');
+        
+        ws.onopen = function() {
+            console.log('WebSocket connected');
+        };
+        
+        ws.onmessage = function(event) {
+            console.log('Received:', event.data);
+        };
+        
+        function sendNodeState(rtUpdate, description) {
+            const message = {
+                "type": "node_state",
+                "timestamp": Date.now() / 1000,
+                "data": {
+                    "node_id": nodeId,
+                    "state": "executing",
+                    "data": {
+                        "rt_update": rtUpdate
+                    }
+                }
+            };
+            
+            ws.send(JSON.stringify(message));
+            console.log(`Sent ${description}:`, rtUpdate);
+        }
+        
+        function testServoPositions() {
+            const rtUpdate = {
+                "servo_positions": {
+                    "1": 2048,  // Rotation: 180 degrees (middle position)
+                    "2": 1024,  // Pitch: 90 degrees
+                    "3": 3072,  // Elbow: 270 degrees
+                    "4": 2560,  // Wrist_Pitch: 225 degrees
+                    "5": 1536,  // Wrist_Roll: 135 degrees
+                    "6": 2048   // Jaw: 180 degrees
+                },
+                "temperature": 42.5,
+                "status": "moving"
+            };
+            
+            document.getElementById('servo-data').textContent = JSON.stringify(rtUpdate, null, 2);
+            sendNodeState(rtUpdate, "Servo Positions");
+        }
+        
+        function testJointStatesArray() {
+            const rtUpdate = {
+                "joint_states": [
+                    {"name": "Rotation", "angle": 45},
+                    {"name": "Pitch", "angle": 30},
+                    {"name": "Elbow", "angle": 90},
+                    {"name": "Wrist_Pitch", "angle": 60},
+                    {"name": "Wrist_Roll", "angle": 0},
+                    {"name": "Jaw", "angle": 15}
+                ],
+                "execution_time": 0.123
+            };
+            
+            document.getElementById('joint-array-data').textContent = JSON.stringify(rtUpdate, null, 2);
+            sendNodeState(rtUpdate, "Joint States Array");
+        }
+        
+        function testDirectMapping() {
+            const rtUpdate = {
+                "Rotation": 315,
+                "Pitch": 270,
+                "Elbow": 45,
+                "Wrist_Pitch": 135,
+                "Wrist_Roll": 270,
+                "Jaw": 90,
+                "robot_status": "operational"
+            };
+            
+            document.getElementById('direct-mapping-data').textContent = JSON.stringify(rtUpdate, null, 2);
+            sendNodeState(rtUpdate, "Direct Joint Mapping");
+        }
+        
+        let animationInterval = null;
+        let animationTime = 0;
+        
+        function startAnimation() {
+            if (animationInterval) return;
+            
+            document.getElementById('animateBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            animationInterval = setInterval(() => {
+                animationTime += 0.1;
+                
+                // Create smooth sinusoidal movements for each joint
+                const rtUpdate = {
+                    "Rotation": 180 + Math.sin(animationTime) * 90,
+                    "Pitch": 180 + Math.sin(animationTime * 1.2) * 60,
+                    "Elbow": 180 + Math.sin(animationTime * 0.8) * 90,
+                    "Wrist_Pitch": 180 + Math.sin(animationTime * 1.5) * 45,
+                    "Wrist_Roll": 180 + Math.sin(animationTime * 2) * 60,
+                    "Jaw": 180 + Math.sin(animationTime * 0.5) * 30,
+                    "timestamp": Date.now(),
+                    "animation_frame": Math.floor(animationTime * 10)
+                };
+                
+                // Show current animation state
+                document.getElementById('animation-data').textContent = 
+                    `Animation Time: ${animationTime.toFixed(1)}s\n` +
+                    JSON.stringify(rtUpdate, null, 2);
+                
+                sendNodeState(rtUpdate, "Animation Frame");
+            }, 100); // 10 FPS for smooth animation
+        }
+        
+        function stopAnimation() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+                animationTime = 0;
+            }
+            
+            document.getElementById('animateBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            // Return to home position
+            const homePosition = {
+                "Rotation": 180,
+                "Pitch": 180,
+                "Elbow": 180,
+                "Wrist_Pitch": 180,
+                "Wrist_Roll": 180,
+                "Jaw": 180,
+                "status": "stopped"
+            };
+            
+            sendNodeState(homePosition, "Home Position");
+            document.getElementById('animation-data').textContent = 
+                'Animation stopped. Robot returned to home position.\n' +
+                JSON.stringify(homePosition, null, 2);
+        }
+    </script>
+</body>
+</html>

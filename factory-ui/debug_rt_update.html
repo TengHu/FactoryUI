@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug RT Update - Simple Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 20px 0; padding: 15px; border: 2px solid #ccc; border-radius: 8px; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 12px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🔍 RT Update Debug Tool</h1>
+    
+    <div class="status info">
+        <strong>📋 Instructions:</strong><br>
+        1. Start backend: <code>cd backend && python -m uvicorn app.main:app --reload</code><br>
+        2. Start frontend: <code>cd factory-ui && npm start</code><br>
+        3. Create a ThreeDNode in the UI<br>
+        4. Update nodeId below and test each format individually<br>
+        5. Check browser console for detailed debug logs<br>
+        6. Check the debug panel in the ThreeDNode for live updates
+    </div>
+    
+    <div>
+        <label>Node ID: <input type="text" id="nodeIdInput" value="ThreeDNode-12345" style="width: 200px; padding: 5px;"></label>
+        <button onclick="updateNodeId()">Update Node ID</button>
+    </div>
+    
+    <div id="connectionStatus" class="status">Connecting...</div>
+    
+    <div class="test-case">
+        <h3>🎯 Test 1: Direct Joint Mapping (Simplest)</h3>
+        <p>Tests direct joint name → angle mapping</p>
+        <button onclick="testDirectMapping()">Send Direct Mapping</button>
+        <pre id="direct-result">Click button to test</pre>
+    </div>
+    
+    <div class="test-case">
+        <h3>🔧 Test 2: Servo Positions</h3>
+        <p>Tests servo_positions format</p>
+        <button onclick="testServoPositions()">Send Servo Positions</button>
+        <pre id="servo-result">Click button to test</pre>
+    </div>
+    
+    <div class="test-case">
+        <h3>📋 Test 3: Joint States Array</h3>
+        <p>Tests joint_states array format</p>
+        <button onclick="testJointStatesArray()">Send Joint States Array</button>
+        <pre id="array-result">Click button to test</pre>
+    </div>
+    
+    <div class="test-case">
+        <h3>🔄 Test 4: Incremental Updates</h3>
+        <p>Tests small incremental changes</p>
+        <button onclick="startIncremental()" id="incrementalBtn">Start Incremental</button>
+        <button onclick="stopIncremental()" id="stopBtn" disabled>Stop</button>
+        <pre id="incremental-result">Click start to begin</pre>
+    </div>
+
+    <script>
+        let nodeId = "ThreeDNode-12345";
+        let ws = null;
+        let incrementalInterval = null;
+        let incrementalAngle = 180;
+        
+        function updateNodeId() {
+            nodeId = document.getElementById('nodeIdInput').value;
+            console.log('Updated node ID to:', nodeId);
+        }
+        
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8000/ws');
+            
+            ws.onopen = function() {
+                console.log('✅ WebSocket connected');
+                document.getElementById('connectionStatus').innerHTML = '<strong>✅ Connected</strong> - Ready to send rt_update data';
+                document.getElementById('connectionStatus').className = 'status success';
+            };
+            
+            ws.onclose = function() {
+                console.log('❌ WebSocket disconnected');
+                document.getElementById('connectionStatus').innerHTML = '<strong>❌ Disconnected</strong> - Attempting to reconnect...';
+                document.getElementById('connectionStatus').className = 'status error';
+                setTimeout(connectWebSocket, 2000);
+            };
+            
+            ws.onerror = function(error) {
+                console.log('❌ WebSocket error:', error);
+                document.getElementById('connectionStatus').innerHTML = '<strong>❌ Connection Error</strong> - Check if backend is running';
+                document.getElementById('connectionStatus').className = 'status error';
+            };
+            
+            ws.onmessage = function(event) {
+                console.log('📨 Received:', event.data);
+            };
+        }
+        
+        function sendRtUpdate(rtUpdate, description, resultId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('WebSocket not connected! Check backend server.');
+                return;
+            }
+            
+            const message = {
+                "type": "node_state",
+                "timestamp": Date.now() / 1000,
+                "data": {
+                    "node_id": nodeId,
+                    "state": "executing",
+                    "data": {
+                        "rt_update": rtUpdate
+                    }
+                }
+            };
+            
+            ws.send(JSON.stringify(message));
+            console.log(`🚀 Sent ${description}:`, rtUpdate);
+            
+            document.getElementById(resultId).textContent = 
+                `✅ Sent at ${new Date().toLocaleTimeString()}\n` +
+                JSON.stringify(rtUpdate, null, 2);
+        }
+        
+        function testDirectMapping() {
+            const rtUpdate = {
+                "Rotation": 45,
+                "Pitch": 30,
+                "Elbow": 90
+            };
+            sendRtUpdate(rtUpdate, "Direct Joint Mapping", "direct-result");
+        }
+        
+        function testServoPositions() {
+            const rtUpdate = {
+                "servo_positions": {
+                    "1": 1024,  // Rotation: 25% of range
+                    "2": 2048,  // Pitch: 50% of range  
+                    "3": 3072   // Elbow: 75% of range
+                }
+            };
+            sendRtUpdate(rtUpdate, "Servo Positions", "servo-result");
+        }
+        
+        function testJointStatesArray() {
+            const rtUpdate = {
+                "joint_states": [
+                    {"name": "Rotation", "angle": 270},
+                    {"name": "Pitch", "angle": 135},
+                    {"name": "Elbow", "angle": 225}
+                ]
+            };
+            sendRtUpdate(rtUpdate, "Joint States Array", "array-result");
+        }
+        
+        function startIncremental() {
+            if (incrementalInterval) return;
+            
+            document.getElementById('incrementalBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            incrementalInterval = setInterval(() => {
+                incrementalAngle += 5;
+                if (incrementalAngle > 360) incrementalAngle = 0;
+                
+                const rtUpdate = {
+                    "Rotation": incrementalAngle,
+                    "timestamp": Date.now()
+                };
+                
+                sendRtUpdate(rtUpdate, "Incremental Update", "incremental-result");
+            }, 500);
+        }
+        
+        function stopIncremental() {
+            if (incrementalInterval) {
+                clearInterval(incrementalInterval);
+                incrementalInterval = null;
+            }
+            
+            document.getElementById('incrementalBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            // Return to neutral position
+            const rtUpdate = { "Rotation": 180, "Pitch": 180, "Elbow": 180 };
+            sendRtUpdate(rtUpdate, "Reset to Neutral", "incremental-result");
+        }
+        
+        // Auto-connect on page load
+        connectWebSocket();
+    </script>
+</body>
+</html>
