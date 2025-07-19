@@ -101,8 +101,12 @@ function RobotScene({
         stlLoader.load(
           path,
           (geometry: THREE.BufferGeometry) => {
-            // Use green color from URDF material definition (rgba="0.06 0.4 0.1 1.0")
-            const material = new THREE.MeshLambertMaterial({ color: 0x0F6619 });
+            // Force bright green color for all STL meshes
+            const material = new THREE.MeshLambertMaterial({ 
+              color: 0x00FF00,  // Bright green
+              transparent: false,
+              opacity: 1.0
+            });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
@@ -119,9 +123,9 @@ function RobotScene({
           }
         );
       } else {
-        // Fallback for other formats - use green
+        // Fallback for other formats - use bright green
         const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-        const material = new THREE.MeshLambertMaterial({ color: 0x0F6619 });
+        const material = new THREE.MeshLambertMaterial({ color: 0x00FF00 });
         const mesh = new THREE.Mesh(geometry, material);
         done(mesh);
       }
@@ -141,10 +145,39 @@ function RobotScene({
         robot.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / -2);
         robot.traverse((child: THREE.Object3D) => {
           if (child instanceof THREE.Mesh) {
+            // Force all robot parts to be green by creating new materials
+            const greenMaterial = new THREE.MeshLambertMaterial({ 
+              color: 0x00FF00,  // Bright green for better visibility
+              transparent: false,
+              opacity: 1.0
+            });
+            
+            // Replace the material completely
+            child.material = greenMaterial;
+            
             child.castShadow = true;
             child.receiveShadow = true;
+            
+            // Debug: log what we're coloring
+            console.log('Colored mesh:', child.name, 'with green material');
           }
         });
+        
+        // Also traverse after a short delay to catch any late-loaded meshes
+        setTimeout(() => {
+          robot.traverse((child: THREE.Object3D) => {
+            if (child instanceof THREE.Mesh) {
+              const greenMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x00FF00,
+                transparent: false,
+                opacity: 1.0
+              });
+              child.material = greenMaterial;
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+        }, 100);
         robot.updateMatrixWorld(true);
         
         const scale = 15; // Use scale from reference implementation
