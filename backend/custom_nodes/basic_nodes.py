@@ -929,6 +929,130 @@ Usage: Use this node to add documentation, comments, or notes to your workflow. 
         # Simply consume the text input without producing any output
         return (None,)
 
+class ThreeDVisualizationNode(NodeBase):
+    """A node that takes ThreeDConfig input and provides 3D visualization capabilities."""
+
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "config": ("THREE_D_CONFIG", {})
+            }
+        }
+
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+            }
+        }
+
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "visualize_3d"
+
+    @classmethod
+    def CATEGORY(cls) -> str:
+        return NodeCategory.UTILITY.value if hasattr(NodeCategory, 'UTILITY') else NodeCategory.PROCESSING.value
+
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "3D Visualization"
+
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Visualize 3D data and configurations in a 3D viewer."
+
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+ThreeDVisualizationNode
+
+Purpose: Takes a ThreeDConfig input and provides 3D visualization capabilities. This node processes 3D configuration data and returns visualization data that can be rendered in a 3D viewer.
+
+Inputs:
+  - config (ThreeDConfig): 3D configuration data containing objects, transforms, materials, etc.
+
+Outputs:
+  - visualization_data (DICT): Processed 3D visualization data ready for rendering
+
+Usage: Use this node to visualize 3D scenes, robot configurations, or any 3D data. Connect it to nodes that provide ThreeDConfig data to see the 3D representation in the UI.
+        """
+
+    def visualize_3d(self, config):
+        """
+        Process 3D configuration and return visualization data.
+        
+        Args:
+            config: ThreeDConfig object containing 3D scene data
+            
+        Returns:
+            tuple: (visualization_data, rt_update)
+        """
+
+        return (None, None)
+        try:
+            # Process the 3D configuration
+            if isinstance(config, dict):
+                # If config is already a dict, use it directly
+                visualization_data = config
+            else:
+                # If config is an object, extract its data
+                visualization_data = {
+                    "type": "3d_scene",
+                    "objects": getattr(config, 'objects', []),
+                    "camera": getattr(config, 'camera', {}),
+                    "lights": getattr(config, 'lights', []),
+                    "materials": getattr(config, 'materials', {}),
+                    "metadata": {
+                        "timestamp": time.time(),
+                        "node_type": "ThreeDVisualizationNode"
+                    }
+                }
+            
+            # Add default visualization settings if not present
+            if "camera" not in visualization_data:
+                visualization_data["camera"] = {
+                    "position": [0, 5, 10],
+                    "target": [0, 0, 0],
+                    "fov": 75
+                }
+            
+            if "lights" not in visualization_data:
+                visualization_data["lights"] = [
+                    {
+                        "type": "ambient",
+                        "intensity": 0.4
+                    },
+                    {
+                        "type": "directional",
+                        "position": [10, 10, 5],
+                        "intensity": 0.8
+                    }
+                ]
+            
+            # Create real-time update for UI
+            rt_update = {
+                "3d_visualization": visualization_data,
+                "status": "ready"
+            }
+            
+            print(f"✓ 3D Visualization ready with {len(visualization_data.get('objects', []))} objects")
+            
+            return (visualization_data, rt_update)
+            
+        except Exception as e:
+            error_data = {
+                "error": f"Failed to process 3D visualization: {str(e)}",
+                "type": "error"
+            }
+            rt_update = {
+                "3d_visualization": error_data,
+                "status": "error"
+            }
+            print(f"❌ 3D Visualization error: {str(e)}")
+            return (error_data, rt_update)
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
@@ -939,5 +1063,6 @@ NODE_CLASS_MAPPINGS = {
     "ShowImageNode": ShowImageNode,
     "CameraNode": CameraNode,
     "DisplayNode": DisplayNode,
-    "NoteNode": NoteNode
+    "NoteNode": NoteNode,
+    "ThreeDVisualizationNode": ThreeDVisualizationNode
 }

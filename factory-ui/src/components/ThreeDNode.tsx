@@ -1,9 +1,10 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeInfo } from '../services/api';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { Canvas, useThree } from '@react-three/fiber';
+import { OrbitControls, Environment, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import URDFLoader, { URDFRobot, URDFJoint } from 'urdf-loader';
 import './CustomNode.css';
 import './ThreeDNode.css';
@@ -39,7 +40,7 @@ interface RobotModel {
   jointStates: JointState[];
 }
 
-const STLLoader = new THREE.STLLoader();
+const stlLoader = new STLLoader();
 
 function RobotScene({ 
   urdfUrl, 
@@ -64,9 +65,9 @@ function RobotScene({
     loader.parseVisual = true;
     loader.loadMeshCb = (path: string, manager: THREE.LoadingManager, done: (mesh: THREE.Object3D) => void) => {
       if (path.endsWith('.stl')) {
-        STLLoader.load(
+        stlLoader.load(
           path,
-          (geometry) => {
+          (geometry: THREE.BufferGeometry) => {
             const material = new THREE.MeshLambertMaterial({ color: 0x808080 });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.castShadow = true;
@@ -74,7 +75,7 @@ function RobotScene({
             done(mesh);
           },
           undefined,
-          (error) => {
+          (error: unknown) => {
             console.error('Failed to load STL:', path, error);
             // Create a placeholder box
             const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
@@ -94,7 +95,7 @@ function RobotScene({
 
     loader.load(
       urdfUrl,
-      (robot) => {
+      (robot: URDFRobot) => {
         if (robotRef.current) {
           scene.remove(robotRef.current);
         }
@@ -103,7 +104,7 @@ function RobotScene({
         
         // Configure robot visualization
         robot.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / -2);
-        robot.traverse((child) => {
+        robot.traverse((child: THREE.Object3D) => {
           if (child instanceof THREE.Mesh) {
             child.castShadow = true;
             child.receiveShadow = true;
@@ -118,7 +119,7 @@ function RobotScene({
         onRobotLoaded(robot);
       },
       undefined,
-      (error) => console.error('Error loading URDF:', error)
+      (error: unknown) => console.error('Error loading URDF:', error)
     );
 
     return () => {
@@ -306,7 +307,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
     const jointStates: JointState[] = [];
 
     if (robot.joints) {
-      Object.values(robot.joints).forEach((joint) => {
+      Object.values(robot.joints).forEach((joint: any) => {
         if (joint.jointType === 'revolute' || joint.jointType === 'continuous') {
           joints[joint.name] = joint;
           jointStates.push({
@@ -522,7 +523,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
           <Canvas
             shadows
             camera={{ position: [-30, 25, 28], fov: 25 }}
-            onCreated={({ scene }) => {
+            onCreated={({ scene }: { scene: THREE.Scene }) => {
               scene.background = new THREE.Color(0x263238);
             }}
           >

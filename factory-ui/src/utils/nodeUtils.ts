@@ -44,3 +44,29 @@ export function shouldUseCameraNode(nodeInfo: NodeInfo): boolean {
   // Return true if there is exactly one CAMERA input and one CAMERA output
   return cameraInputCount === 1 && cameraOutputCount === 1;
 }
+
+/**
+ * Determines if a node should use the specialized ThreeDNode component
+ * based on its input types - returns true if there is exactly one required input of type ThreeDConfig
+ */
+export function shouldUseThreeDNode(nodeInfo: NodeInfo): boolean {
+  const requiredInputs = nodeInfo.input_types.required || {};
+  const optionalInputs = nodeInfo.input_types.optional || {};
+  
+  // Check that optional inputs are empty
+  if (Object.keys(optionalInputs).length > 0) {
+    return false;
+  }
+  
+  // Count ThreeDConfig types in required inputs
+  let threeDConfigInputCount = 0;
+  for (const [, typeInfo] of Object.entries(requiredInputs)) {
+    const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+    if (typeName === 'THREE_D_CONFIG') {
+      threeDConfigInputCount++;
+    }
+  }
+  
+  // Return true if there is exactly one ThreeDConfig input
+  return threeDConfigInputCount === 1;
+}
