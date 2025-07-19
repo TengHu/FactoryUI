@@ -2,7 +2,7 @@ import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeInfo } from '../services/api';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Environment, useGLTF } from '@react-three/drei';
+import { OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import URDFLoader, { URDFRobot, URDFJoint } from 'urdf-loader';
@@ -40,6 +40,28 @@ interface RobotModel {
   jointStates: JointState[];
 }
 
+const SO_ARM100_CONFIG = {
+  urdfUrl: "/URDFs/so101.urdf",
+  camera: { position: [-30, 10, 30] as [number, number, number], fov: 12 },
+  orbitTarget: [1, 2, 0] as [number, number, number],
+  jointNameIdMap: {
+    Rotation: 1,
+    Pitch: 2,
+    Elbow: 3,
+    Wrist_Pitch: 4,
+    Wrist_Roll: 5,
+    Jaw: 6,
+  } as const,
+  urdfInitJointAngles: {
+    Rotation: 180,
+    Pitch: 180,
+    Elbow: 180,
+    Wrist_Pitch: 180,
+    Wrist_Roll: 180,
+    Jaw: 180,
+  } as const,
+};
+
 const stlLoader = new STLLoader();
 
 function RobotScene({ 
@@ -53,38 +75,65 @@ function RobotScene({
 }) {
   const robotRef = useRef<URDFRobot | null>(null);
   const { scene } = useThree();
+  const [loadingState, setLoadingState] = useState<'loading' | 'loaded' | 'error' | 'idle'>('idle');
 
   useEffect(() => {
-    if (!urdfUrl) return;
+    if (!urdfUrl) {
+      console.log('No URDF URL provided');
+      return;
+    }
+
+    console.log('Loading URDF from:', urdfUrl);
+    setLoadingState('loading');
 
     const manager = new THREE.LoadingManager();
     const loader = new URDFLoader(manager);
+    
+    // Add loading manager callbacks for debugging
+    manager.onLoad = () => {
+      console.log('All resources loaded successfully');
+    };
+    
+    manager.onProgress = (url, itemsLoaded, itemsTotal) => {
+      console.log(`Loading progress: ${itemsLoaded}/${itemsTotal} - ${url}`);
+    };
+    
+    manager.onError = (url) => {
+      console.error('Failed to load resource:', url);
+    };
 
     // Custom STL loader for URDF
     loader.parseCollision = true;
     loader.parseVisual = true;
-    loader.loadMeshCb = (path: string, manager: THREE.LoadingManager, done: (mesh: THREE.Object3D) => void) => {
+    loader.loadMeshCb = (path: string, _manager: THREE.LoadingManager, done: (mesh: THREE.Object3D) => void) => {
+      console.log('Loading mesh from path:', path);
+      
       if (path.endsWith('.stl')) {
         stlLoader.load(
           path,
           (geometry: THREE.BufferGeometry) => {
+            console.log('Successfully loaded STL:', path);
             const material = new THREE.MeshLambertMaterial({ color: 0x808080 });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             done(mesh);
           },
-          undefined,
+          (progress) => {
+            console.log('STL loading progress:', path, progress);
+          },
           (error: unknown) => {
             console.error('Failed to load STL:', path, error);
             // Create a placeholder box
             const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
             const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
             const mesh = new THREE.Mesh(geometry, material);
+            console.log('Created placeholder mesh for:', path);
             done(mesh);
           }
         );
       } else {
+        console.log('Using fallback geometry for non-STL file:', path);
         // Fallback for other formats
         const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
         const material = new THREE.MeshLambertMaterial({ color: 0x808080 });
@@ -96,13 +145,17 @@ function RobotScene({
     loader.load(
       urdfUrl,
       (robot: URDFRobot) => {
+        console.log('Successfully loaded URDF robot:', robot);
+        console.log('Robot joints:', robot.joints);
+        
         if (robotRef.current) {
           scene.remove(robotRef.current);
         }
         
         robotRef.current = robot;
+        setLoadingState('loaded');
         
-        // Configure robot visualization
+        // Configure robot visualization based on SO-ARM100 config
         robot.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / -2);
         robot.traverse((child: THREE.Object3D) => {
           if (child instanceof THREE.Mesh) {
@@ -112,14 +165,20 @@ function RobotScene({
         });
         robot.updateMatrixWorld(true);
         
-        const scale = 10;
+        const scale = 15; // Use scale from reference implementation
         robot.scale.set(scale, scale, scale);
         scene.add(robot);
         
+        console.log('Robot added to scene with scale:', scale);
         onRobotLoaded(robot);
       },
-      undefined,
-      (error: unknown) => console.error('Error loading URDF:', error)
+      (progress) => {
+        console.log('URDF loading progress:', progress);
+      },
+      (error: unknown) => {
+        console.error('Error loading URDF:', urdfUrl, error);
+        setLoadingState('error');
+      }
     );
 
     return () => {
@@ -135,7 +194,11 @@ function RobotScene({
       jointStates.forEach((state) => {
         const joint = robotRef.current!.joints[state.name];
         if (joint) {
-          joint.setJointValue(state.angle * (Math.PI / 180)); // Convert degrees to radians
+          // Convert servo angle (0-360°) to joint angle for URDF
+          // SO-ARM100 uses 180° as neutral position
+          const servoAngle = state.angle;
+          const jointAngle = (servoAngle - 180) * (Math.PI / 180); // Convert to radians with offset
+          joint.setJointValue(jointAngle);
         }
       });
     }
@@ -143,8 +206,30 @@ function RobotScene({
 
   return (
     <>
-      <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
-      <Environment preset="studio" />
+      <OrbitControls target={SO_ARM100_CONFIG.orbitTarget} enablePan={true} enableZoom={true} enableRotate={true} />
+      
+      {/* Test cube to verify 3D scene is working */}
+      <mesh position={[0, 1, 0]}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshLambertMaterial color="orange" />
+      </mesh>
+      
+      {/* Loading indicator */}
+      {loadingState === 'loading' && (
+        <mesh position={[2, 1, 0]}>
+          <boxGeometry args={[0.5, 0.5, 0.5]} />
+          <meshLambertMaterial color="blue" />
+        </mesh>
+      )}
+      
+      {/* Error indicator */}
+      {loadingState === 'error' && (
+        <mesh position={[-2, 1, 0]}>
+          <boxGeometry args={[0.5, 0.5, 0.5]} />
+          <meshLambertMaterial color="red" />
+        </mesh>
+      )}
+      
       <directionalLight
         castShadow
         intensity={1}
@@ -153,11 +238,18 @@ function RobotScene({
         shadow-mapSize-height={1024}
       />
       <directionalLight
-        intensity={0.5}
+        intensity={1}
         position={[-2, 20, -5]}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
       />
-      <ambientLight intensity={0.3} />
-      <gridHelper args={[20, 20]} />
+      <ambientLight intensity={0.4} />
+      
+      {/* Ground plane for reference */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[20, 20]} />
+        <meshLambertMaterial color="#f0f0f0" />
+      </mesh>
     </>
   );
 }
@@ -310,10 +402,15 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
       Object.values(robot.joints).forEach((joint: any) => {
         if (joint.jointType === 'revolute' || joint.jointType === 'continuous') {
           joints[joint.name] = joint;
+          
+          // Get initial angle from SO-ARM100 config or default to 0
+          const initialAngle = (SO_ARM100_CONFIG.urdfInitJointAngles as any)[joint.name] || 0;
+          const servoId = (SO_ARM100_CONFIG.jointNameIdMap as any)[joint.name];
+          
           jointStates.push({
             name: joint.name,
-            angle: 0,
-            servoId: undefined
+            angle: initialAngle,
+            servoId: servoId
           });
         }
       });
@@ -335,8 +432,15 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
     }));
   }, []);
 
-  // Get URDF URL from inputs
-  const urdfUrl = inputValues['urdf_path'] || inputValues['urdf_url'] || '';
+  // Get URDF URL from inputs or use SO-ARM100 default
+  const urdfUrl = inputValues['urdf_path'] || inputValues['urdf_url'] || SO_ARM100_CONFIG.urdfUrl;
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('ThreeDNode - Current URDF URL:', urdfUrl);
+    console.log('ThreeDNode - Input values:', inputValues);
+    console.log('ThreeDNode - Robot model state:', robotModel);
+  }, [urdfUrl, inputValues, robotModel]);
 
   return (
     <div className="node-container">
@@ -520,9 +624,20 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
         
         {/* 3D Visualization */}
         <div className="threed-viewport">
+          <div className="threed-status">
+            <small>URDF: {urdfUrl}</small>
+            {robotModel.robot ? (
+              <small style={{color: 'green'}}>✓ Robot loaded ({Object.keys(robotModel.joints).length} joints)</small>
+            ) : (
+              <small style={{color: 'orange'}}>Loading robot model...</small>
+            )}
+          </div>
           <Canvas
             shadows
-            camera={{ position: [-30, 25, 28], fov: 25 }}
+            camera={{ 
+              position: SO_ARM100_CONFIG.camera.position, 
+              fov: SO_ARM100_CONFIG.camera.fov 
+            }}
             onCreated={({ scene }: { scene: THREE.Scene }) => {
               scene.background = new THREE.Color(0x263238);
             }}
@@ -542,11 +657,14 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
             <div className="joint-controls-grid">
               {robotModel.jointStates.map((jointState) => (
                 <div key={jointState.name} className="joint-control-item">
-                  <label className="joint-label">{jointState.name}:</label>
+                  <label className="joint-label">
+                    {jointState.name}
+                    {jointState.servoId && <span className="servo-id"> (ID:{jointState.servoId})</span>}:
+                  </label>
                   <input
                     type="range"
-                    min="-180"
-                    max="180"
+                    min="0"
+                    max="360"
                     value={jointState.angle}
                     onChange={(e) => handleJointAngleChange(jointState.name, parseFloat(e.target.value))}
                     className="joint-slider"

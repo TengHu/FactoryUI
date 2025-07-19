@@ -936,7 +936,7 @@ class ThreeDVisualizationNode(NodeBase):
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "config": ("THREE_D_CONFIG", {})
+                "three_d_config": ("STRING", {})
             }
         }
 
@@ -979,7 +979,7 @@ Outputs:
 Usage: Use this node to visualize 3D scenes, robot configurations, or any 3D data. Connect it to nodes that provide ThreeDConfig data to see the 3D representation in the UI.
         """
 
-    def visualize_3d(self, config):
+    def visualize_3d(self, three_d_config):
         """
         Process 3D configuration and return visualization data.
         

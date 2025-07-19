@@ -50,6 +50,11 @@ export function shouldUseCameraNode(nodeInfo: NodeInfo): boolean {
  * based on its input types - returns true if there is exactly one required input of type ThreeDConfig
  */
 export function shouldUseThreeDNode(nodeInfo: NodeInfo): boolean {
+
+  if (nodeInfo.name === 'ThreeDVisualizationNode') {
+    return true;
+  }
+
   const requiredInputs = nodeInfo.input_types.required || {};
   const optionalInputs = nodeInfo.input_types.optional || {};
   
