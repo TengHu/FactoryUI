@@ -9,7 +9,9 @@ feetech_path = os.path.join(os.path.dirname(__file__), 'feetech-servo-sdk')
 sys.path.insert(0, feetech_path)
 
 from feetech_servo import ScsServoSDK
-from core.node_base import NodeBase, NodeCategory
+from core.node_base import NodeBase
+
+MODULE_TAGS = ["SO101", "SO100"]
 
 
 class RobotStatusReader(NodeBase):
@@ -44,8 +46,8 @@ class RobotStatusReader(NodeBase):
         return "read_robot_status"
     
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.ROBOT.value
+    def TAGS(cls) -> List[str]:
+        return MODULE_TAGS
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -184,8 +186,8 @@ class SO101JointAnglesToPositions(NodeBase):
         return "angles_to_positions"
     
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.ROBOT.value
+    def TAGS(cls) -> List[str]:
+        return MODULE_TAGS
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -262,8 +264,8 @@ class So101WritePositionNode(NodeBase):
         return "write_positions"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.ROBOT.value
+    def TAGS(cls) -> List[str]:
+        return MODULE_TAGS
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -319,8 +321,8 @@ class UnlockRemoteNode(NodeBase):
         return "unlock_remote"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.ROBOT.value
+    def TAGS(cls) -> List[str]:
+        return MODULE_TAGS
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
@@ -385,8 +387,8 @@ class DisconnectRobotNode(NodeBase):
         return "disconnect_robot"
 
     @classmethod
-    def CATEGORY(cls) -> str:
-        return NodeCategory.ROBOT.value
+    def TAGS(cls) -> List[str]:
+        return MODULE_TAGS
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:

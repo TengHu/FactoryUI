@@ -2,13 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from enum import Enum
 
-class NodeCategory(Enum):
-    INPUT = "input"
-    OUTPUT = "output"
-    PROCESSING = "processing"
-    CONTROL = "control"
-    ROBOT = "robot"
-
 class NodeBase(ABC):
     """Base class for all nodes in the workflow system"""
     
@@ -32,8 +25,7 @@ class NodeBase(ABC):
     
     @classmethod
     @abstractmethod
-    def CATEGORY(cls) -> str:
-        """Category of the node"""
+    def TAGS(cls) -> List[str]:
         pass
     
     @classmethod
