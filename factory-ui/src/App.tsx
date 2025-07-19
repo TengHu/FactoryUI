@@ -43,6 +43,7 @@ interface Canvas {
   nodes: Node[];
   edges: Edge[];
   filename?: string; // Backend workflow filename
+  hasUnsavedChanges?: boolean; // Track if workflow has unsaved changes
 }
 
 const initialNodes: Node[] = [];
@@ -123,7 +124,7 @@ function App() {
 
   // 1. Multi-canvas state
   const [canvases, setCanvases] = useState<Canvas[]>([
-    { id: 1, name: 'New Workflow', nodes: initialNodes, edges: initialEdges }
+    { id: 1, name: 'New Workflow', nodes: initialNodes, edges: initialEdges, hasUnsavedChanges: false }
   ]);
   const [activeCanvasId, setActiveCanvasId] = useState(1);
 
@@ -132,9 +133,13 @@ function App() {
   const activeCanvas = canvases[activeCanvasIndex] || canvases[0];
   const [nodes, setNodes, onNodesChange] = useNodesState(activeCanvas.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(activeCanvas.edges);
+  
+  // Track whether we're programmatically loading vs user making changes
+  const isLoadingRef = useRef(false);
 
   // 3. Sync ReactFlow state with canvases when switching tabs
   useEffect(() => {
+    isLoadingRef.current = true;
     // When switching tabs, update the previous canvas's nodes/edges
     setCanvases(prev => prev.map((c, i) =>
       i === activeCanvasIndex ? { ...c, nodes, edges } : c
@@ -145,6 +150,10 @@ function App() {
       setNodes(canvases[newIndex].nodes);
       setEdges(canvases[newIndex].edges);
     }
+    // Set loading flag to false after a short delay to allow state updates
+    setTimeout(() => {
+      isLoadingRef.current = false;
+    }, 100);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCanvasId]);
 
@@ -154,7 +163,12 @@ function App() {
     console.log('Active canvas index:', activeCanvasIndex);
     setCanvases(prev => {
       const updated = prev.map((c, i) =>
-        i === activeCanvasIndex ? { ...c, nodes, edges } : c
+        i === activeCanvasIndex ? { 
+          ...c, 
+          nodes, 
+          edges, 
+          hasUnsavedChanges: isLoadingRef.current ? c.hasUnsavedChanges : true 
+        } : c
       );
       console.log('Updated canvases:', updated);
       return updated;
@@ -180,6 +194,13 @@ function App() {
 
           await apiService.saveWorkflowByFilename(filename, workflowData);
           console.log('Auto-saved workflow to backend:', filename);
+          
+          // Clear unsaved changes flag after successful auto-save
+          setCanvases(prev => prev.map(canvas => 
+            canvas.id === activeCanvasId 
+              ? { ...canvas, hasUnsavedChanges: false }
+              : canvas
+          ));
         } catch (error) {
           console.error('Failed to auto-save workflow:', error);
         }
@@ -361,8 +382,21 @@ function App() {
           return;
         }
 
+        isLoadingRef.current = true;
         setNodes(workflowData.nodes);
         setEdges(workflowData.edges);
+        
+        // Clear unsaved changes flag when loading a file
+        setCanvases(prev => prev.map(canvas => 
+          canvas.id === activeCanvasId 
+            ? { ...canvas, hasUnsavedChanges: false }
+            : canvas
+        ));
+        
+        // Clear loading flag after state updates
+        setTimeout(() => {
+          isLoadingRef.current = false;
+        }, 100);
         
         console.log('Workflow loaded:', workflowData.metadata?.name || 'Unknown');
         
@@ -485,6 +519,45 @@ function App() {
   }, []);
 
   const saveWorkflow = useCallback(async () => {
+    if (!activeCanvas.filename) {
+      alert('No filename available. Please use Download to save as a new file.');
+      return;
+    }
+
+    try {
+      const workflowData = {
+        nodes: activeCanvas.nodes,
+        edges: activeCanvas.edges,
+        metadata: {
+          name: activeCanvas.name,
+          description: `Workflow saved on ${new Date().toLocaleDateString()}`,
+          created: new Date().toISOString(),
+          version: '1.0.0'
+        }
+      };
+
+      const response = await apiService.saveWorkflowByFilename(activeCanvas.filename, workflowData);
+      if (response.success) {
+        console.log('Workflow saved successfully:', activeCanvas.filename);
+        alert('Workflow saved successfully!');
+        
+        // Clear the unsaved changes flag
+        setCanvases(prev => prev.map(canvas => 
+          canvas.id === activeCanvasId 
+            ? { ...canvas, hasUnsavedChanges: false }
+            : canvas
+        ));
+      } else {
+        console.error('Failed to save workflow:', response.message);
+        alert(`Failed to save workflow: ${response.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error saving workflow:', error);
+      alert('Failed to save workflow. Please check the backend server.');
+    }
+  }, [activeCanvas]);
+
+  const downloadWorkflow = useCallback(async () => {
     // Save to backend first if the canvas has a filename
     if (activeCanvas.filename) {
       try {
@@ -561,7 +634,8 @@ function App() {
           name: item.filename,
           nodes: item.workflow.nodes || [],
           edges: item.workflow.edges || [],
-          filename: item.filename
+          filename: item.filename,
+          hasUnsavedChanges: false
         }));
         
         // Replace the default canvas with workflow canvases
@@ -1502,7 +1576,7 @@ function App() {
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span className="tab-name">{canvas.name}</span>
+                <span className="tab-name">{canvas.name}{canvas.hasUnsavedChanges ? '*' : ''}</span>
               )}
               {canvases.length > 1 && (
                 <span
@@ -1510,15 +1584,7 @@ function App() {
                   onClick={async (e) => {
                     e.stopPropagation();
                     if (canvases.length > 1) {
-                      // Delete from backend if it has a filename
-                      if (canvas.filename) {
-                        try {
-                          await apiService.deleteWorkflow(canvas.filename);
-                          console.log(`Deleted workflow ${canvas.filename} from backend`);
-                        } catch (error) {
-                          console.error('Failed to delete workflow from backend:', error);
-                        }
-                      }
+                      
                       
                       const newCanvases = canvases.filter(c => c.id !== canvas.id);
                       setCanvases(newCanvases);
@@ -1561,7 +1627,8 @@ function App() {
                     name: newWorkflowFilename,
                     nodes: [],
                     edges: [],
-                    filename: newWorkflowFilename
+                    filename: newWorkflowFilename,
+                    hasUnsavedChanges: false
                   };
                   setCanvases(cs => [...cs, newCanvas]);
                   setActiveCanvasId(nextId);
@@ -1571,7 +1638,8 @@ function App() {
                     id: nextId,
                     name: newWorkflowFilename,
                     nodes: [],
-                    edges: []
+                    edges: [],
+                    hasUnsavedChanges: false
                   };
                   setCanvases(cs => [...cs, newCanvas]);
                   setActiveCanvasId(nextId);
@@ -1583,7 +1651,8 @@ function App() {
                   id: nextId,
                   name: newWorkflowFilename,
                   nodes: [],
-                  edges: []
+                  edges: [],
+                  hasUnsavedChanges: false
                 };
                 setCanvases(cs => [...cs, newCanvas]);
                 setActiveCanvasId(nextId);
@@ -1704,10 +1773,18 @@ function App() {
           <button 
             className="toolbar-btn" 
             onClick={saveWorkflow} 
-            disabled={nodes.length === 0}
-            title="Save workflow as JSON file"
+            disabled={nodes.length === 0 || !activeCanvas.filename}
+            title="Save workflow to backend"
           >
             💾 Save
+          </button>
+          <button 
+            className="toolbar-btn" 
+            onClick={downloadWorkflow} 
+            disabled={nodes.length === 0}
+            title="Download workflow as JSON file"
+          >
+            📥 Download
           </button>
           <button 
             className="toolbar-btn danger" 

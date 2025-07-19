@@ -1,0 +1,111 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectRobotNode-1752694507773",
+      "type": "customNode",
+      "position": {
+        "x": 159.47660885213043,
+        "y": 332.0082989099732
+      },
+      "data": {
+        "label": "Connect Robot",
+        "nodeInfo": {
+          "name": "ConnectRobotNode",
+          "display_name": "Connect Robot",
+          "description": "Connect to a robot using ScsServoSDK.connect() and return SDK instance",
+          "detailed_description": "\nConnectRobotNode\n\nPurpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.\n\nInputs:\n  - port_name (STRING): The serial port name to connect to (leave empty for auto-detection)\n\nOutputs:\n  - sdk (ScsServoSDK): The connected SDK instance that can be used by other robot control nodes\n\nUsage: Use this node at the beginning of robot workflows to establish communication. The SDK output should be connected to other robot nodes that require servo control. If port_name is empty, the system will attempt to auto-detect the robot.\n        ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "port_name": [
+                "STRING",
+                {
+                  "default": ""
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectRobotNode",
+        "inputValues": {
+          "port_name": "/dev/tty.usbmodem5A7A0558831"
+        }
+      },
+      "width": 280,
+      "height": 137,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 159.47660885213043,
+        "y": 332.0082989099732
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 137
+      }
+    },
+    {
+      "id": "UnlockRemoteNode-1752963252608",
+      "type": "customNode",
+      "position": {
+        "x": 503.69847482510943,
+        "y": 343.3505665539988
+      },
+      "data": {
+        "label": "Unlock Remote",
+        "nodeInfo": {
+          "name": "UnlockRemoteNode",
+          "display_name": "Unlock Remote",
+          "description": "Unlock remote control for the SO-101 robot using ScsServoSDK",
+          "detailed_description": "\nUnlockRemoteNode\n\nPurpose: Unlocks remote control functionality for the SO-101 robot, allowing manual or programmatic control of the servos.\n\nInputs:\n  - sdk (ScsServoSDK): The SDK instance for communicating with the robot servos\n\nOutputs:\n  - None (this node has no outputs)\n\nUsage: Use this node to enable remote control mode on the SO-101 robot. This is typically required before sending position commands or reading servo status. Place this node early in your workflow before other robot control nodes.\n\nNote: This operation may be required to establish proper communication with the robot's servo controller and enable command execution.\n        ",
+          "tags": [
+            "SO101",
+            "SO100"
+          ],
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {},
+          "function": "unlock_remote"
+        },
+        "type": "UnlockRemoteNode"
+      },
+      "measured": {
+        "width": 361,
+        "height": 122
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "ConnectRobotNode-1752694507773",
+      "sourceHandle": "output",
+      "target": "UnlockRemoteNode-1752963252608",
+      "targetHandle": "sdk",
+      "id": "xy-edge__ConnectRobotNode-1752694507773output-UnlockRemoteNode-1752963252608sdk"
+    }
+  ],
+  "metadata": {
+    "name": "unlock_robot",
+    "description": "Renamed workflow on 7/19/2025",
+    "created": "2025-07-19T22:14:28.792Z",
+    "version": "1.0.0"
+  }
+}
