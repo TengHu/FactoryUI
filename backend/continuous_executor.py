@@ -243,13 +243,13 @@ class ContinuousExecutor:
                 self.log_message("error", f"Error in execution loop: {str(e)}")
                 self.log_message("error", f"Traceback: {traceback.format_exc()}")
 
-                
-                
-                # Broadcast error
+                # Broadcast workflow error event
                 if self.websocket_manager:
-                    self._broadcast_sync(self.websocket_manager.broadcast_continuous_update(
-                        self.count_of_iterations, "error", {"error": str(e)}
-                    ))
+                    self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("workflow_error", {
+                        "workflow_id": id(self.current_workflow),
+                        "error": str(e)
+                    }))
+                
                 self.stop_continuous_execution()
                 return
     

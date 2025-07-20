@@ -884,8 +884,7 @@ function App() {
         console.log('Workflow executed successfully:', result);
         alert('Workflow executed successfully! Check the console for details.');
       } else {
-        console.error('Workflow execution failed:', result);
-        alert(`Workflow execution failed: ${result.error || 'Unknown error'}`);
+        // do nothing, status will be updated by websocket workflow_event
       }
     } catch (error) {
       console.error('Error executing workflow:', error);
@@ -1093,6 +1092,8 @@ function App() {
 
       websocketService.on('workflow_event', (data) => {
         console.log('Workflow event received:', data);
+
+
         if (data.event === 'continuous_started') {
           setIsContinuousRunning(true);
           console.log('✅ Continuous execution started (confirmed by WebSocket)');
@@ -1106,8 +1107,11 @@ function App() {
           
           // Clear any pending fallback timeouts since we got confirmation
           console.log('✅ WebSocket stop confirmation received - state updated');
+        } else if (data.event === 'workflow_error') {
+          console.error('Workflow error:', data.error);
+          alert(`Workflow error: ${data.error}`);
         } else {
-          console.log('🔄 Unknown workflow event:', data.event);
+          console.log('🔄 Unknown workflow event:', data);
         }
       }),
 
@@ -1157,7 +1161,8 @@ function App() {
             }
           }));
         }
-      })
+      }),
+
     ];
 
     // Cleanup on unmount

@@ -57,8 +57,8 @@
       "id": "SO101RobotStatusReader-1752975092612",
       "type": "customNode",
       "position": {
-        "x": 137.78255901189237,
-        "y": 339.7610893770039
+        "x": 481.42206400594074,
+        "y": 36.663323736185994
       },
       "data": {
         "label": "SO101 Robot Status Reader",
@@ -104,19 +104,19 @@
       "dragging": false
     },
     {
-      "id": "NgrokWebSocketSenderNode-1752975219677",
+      "id": "NgrokHttpSenderNode-1752976762551",
       "type": "customNode",
       "position": {
-        "x": 714.7296171730077,
-        "y": 327.02022024157816
+        "x": 1019.7865616857641,
+        "y": 75.89988836754824
       },
       "data": {
-        "label": "Ngrok WebSocket Sender",
+        "label": "Ngrok HTTP Sender",
         "nodeInfo": {
-          "name": "NgrokWebSocketSenderNode",
-          "display_name": "Ngrok WebSocket Sender",
-          "description": "Send data through ngrok websocket to external clients",
-          "detailed_description": "\nNgrokWebSocketSenderNode\n\nPurpose: Sends data through a ngrok websocket URL to external clients. This node establishes a websocket connection to the specified ngrok URL and sends the input data.\n\nInputs:\n  - data (ANY): The data to send through the websocket (will be JSON serialized)\n  - ngrok_url (STRING): The ngrok websocket URL (e.g., wss://abc123.ngrok.io)\n  - message_type (STRING): The type of message to send (default: \"data\")\n\nOutputs:\n  - success (BOOLEAN): True if the data was sent successfully, False otherwise\n  - message (STRING): Status message describing the result\n\nUsage: Use this node to send data to external clients through ngrok. Make sure your ngrok tunnel is running and the URL is correct. The data will be sent as a JSON message with the specified message type.\n        ",
+          "name": "NgrokHttpSenderNode",
+          "display_name": "Ngrok HTTP Sender",
+          "description": "Send data through ngrok HTTP to external clients",
+          "detailed_description": "\nNgrokHttpSenderNode\n\nPurpose: Sends data through a ngrok HTTP URL to external clients. This node makes an HTTP POST request to the specified ngrok URL with the input data.\n\nInputs:\n  - data (ANY): The data to send through HTTP (will be JSON serialized)\n  - ngrok_url (STRING): The ngrok HTTP URL (e.g., https://abc123.ngrok.io)\n\nOutputs:\n  - success (BOOLEAN): True if the data was sent successfully, False otherwise\n  - message (STRING): Status message describing the result\n\nUsage: Use this node to send data to external clients through ngrok. Make sure your ngrok tunnel is running and the URL is correct. The data will be sent as a JSON POST request.\n        ",
           "tags": [
             "Basic"
           ],
@@ -129,13 +129,7 @@
               "ngrok_url": [
                 "STRING",
                 {
-                  "default": "wss://your-ngrok-url.ngrok.io"
-                }
-              ],
-              "message_type": [
-                "STRING",
-                {
-                  "default": "data"
+                  "default": "https://your-ngrok-url.ngrok.io"
                 }
               ]
             }
@@ -152,13 +146,13 @@
               ]
             }
           },
-          "function": "send_websocket"
+          "function": "send_http"
         },
-        "type": "NgrokWebSocketSenderNode"
+        "type": "NgrokHttpSenderNode"
       },
       "measured": {
-        "width": 886,
-        "height": 356
+        "width": 287,
+        "height": 232
       },
       "selected": true,
       "dragging": false
@@ -176,16 +170,16 @@
     {
       "source": "SO101RobotStatusReader-1752975092612",
       "sourceHandle": "output-1",
-      "target": "NgrokWebSocketSenderNode-1752975219677",
+      "target": "NgrokHttpSenderNode-1752976762551",
       "targetHandle": "data",
-      "id": "xy-edge__SO101RobotStatusReader-1752975092612output-1-NgrokWebSocketSenderNode-1752975219677data",
+      "id": "xy-edge__SO101RobotStatusReader-1752975092612output-1-NgrokHttpSenderNode-1752976762551data",
       "className": ""
     }
   ],
   "metadata": {
     "name": "Untitled",
     "description": "Auto-saved on 7/19/2025",
-    "created": "2025-07-20T01:35:27.909Z",
+    "created": "2025-07-20T02:32:09.268Z",
     "version": "1.0.0"
   }
 }

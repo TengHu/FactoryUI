@@ -81,9 +81,11 @@ class WebSocketManager:
         """Broadcast workflow-related events"""
         message = {
             "type": "workflow_event",
-            "event": event_type,
-            "timestamp": asyncio.get_event_loop().time(),
-            "data": data
+            "data": {
+                "event": event_type,
+                "timestamp": asyncio.get_event_loop().time(),
+                "data": data
+            }
         }
         await self.broadcast(message)
         
@@ -96,32 +98,6 @@ class WebSocketManager:
                 "execution_count": execution_count,
                 "status": status,
                 "data": data or {}
-            }
-        }
-        await self.broadcast(message)
-        
-    async def broadcast_robot_status(self, status: Dict[str, Any]):
-        """Broadcast robot status updates"""
-        message = {
-            "type": "robot_status",
-            "timestamp": asyncio.get_event_loop().time(),
-            "data": status
-        }
-        await self.broadcast(message)
-        
-    async def broadcast_robot_status_stream(self, node_id: str, status: Dict[str, Any], 
-                                          stream_update: bool = False, stream_complete: bool = False,
-                                          stream_error: bool = False):
-        """Broadcast robot status streaming updates"""
-        message = {
-            "type": "robot_status_stream",
-            "timestamp": asyncio.get_event_loop().time(),
-            "data": {
-                "node_id": node_id,
-                "status": status,
-                "stream_update": stream_update,
-                "stream_complete": stream_complete,
-                "stream_error": stream_error
             }
         }
         await self.broadcast(message)
