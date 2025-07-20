@@ -75,3 +75,11 @@ export function shouldUseThreeDNode(nodeInfo: NodeInfo): boolean {
   // Return true if there is exactly one ThreeDConfig input
   return threeDConfigInputCount === 1;
 }
+
+/**
+ * Determines if a node should use the specialized NoteNode component
+ * based on its name - returns true if the name is exactly 'note'
+ */
+export function shouldUseNoteNode(nodeInfo: NodeInfo): boolean {
+  return nodeInfo.name === 'NoteNode';
+}

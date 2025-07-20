@@ -98,7 +98,7 @@
       },
       "measured": {
         "width": 479,
-        "height": 138
+        "height": 320
       },
       "selected": false,
       "dragging": false
@@ -136,8 +136,8 @@
         "type": "ThreeDVisualizationNode"
       },
       "measured": {
-        "width": 500,
-        "height": 400
+        "width": 760,
+        "height": 600
       },
       "selected": true,
       "dragging": false
@@ -174,7 +174,7 @@
       },
       "measured": {
         "width": 362,
-        "height": 122
+        "height": 280
       },
       "selected": false,
       "dragging": false
@@ -209,7 +209,7 @@
   "metadata": {
     "name": "read_robot_status",
     "description": "Auto-saved on 7/20/2025",
-    "created": "2025-07-20T04:49:51.515Z",
+    "created": "2025-07-20T15:11:17.038Z",
     "version": "1.0.0"
   }
 }

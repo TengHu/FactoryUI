@@ -6,22 +6,29 @@
   max-height: 600px;
   width: 500px;
   height: 400px;
+  display: flex;
+  flex-direction: column;
 }
 
 .threed-viewport {
   width: 100%;
-  height: 200px;
+  height: calc(100% - 200px); /* Take up remaining space after other elements */
+  min-height: 200px; /* Minimum height */
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   margin: 8px 0;
   background: #263238;
   position: relative;
   overflow: hidden;
+  flex: 1; /* Allow it to grow */
+  display: flex;
+  flex-direction: column;
 }
 
 .threed-viewport canvas {
   width: 100% !important;
   height: 100% !important;
+  display: block !important;
 }
 
 .joint-controls {
@@ -126,6 +133,29 @@
   pointer-events: none;
 }
 
+/* Ensure the 3D viewport takes up remaining space */
+.threed-node .threed-viewport {
+  flex: 1;
+  min-height: 200px;
+}
+
+/* Override manual inputs section to not take up too much space */
+.threed-node .manual-inputs-section {
+  flex-shrink: 0 !important;
+  flex: none !important;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.threed-node .threed-viewport > div:first-child {
+  flex-shrink: 0; /* Status bar doesn't shrink */
+}
+
+.threed-node .threed-viewport canvas {
+  flex: 1; /* Canvas takes remaining space */
+  min-height: 0; /* Allow canvas to shrink */
+}
+
 /* Animation states for 3D node */
 .threed-node.node-executing .threed-viewport {
   border-color: #fd7e14;
@@ -201,4 +231,5 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  pointer-events: none; /* Don't interfere with canvas interactions */
 }

@@ -60,6 +60,27 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     window.addEventListener('error', handleResizeObserverError);
     return () => window.removeEventListener('error', handleResizeObserverError);
   }, []);
+
+  // Auto-resize textareas when content changes
+  useEffect(() => {
+    const autoResizeTextareas = () => {
+      const textareas = nodeRef.current?.querySelectorAll('.auto-expand-textarea') as NodeListOf<HTMLTextAreaElement>;
+      textareas?.forEach((textarea) => {
+        const container = textarea.closest('.custom-node') as HTMLElement;
+        const containerHeight = container ? container.offsetHeight : 0;
+        const maxHeight = Math.max(120, containerHeight - 100);
+        
+        textarea.style.height = 'auto';
+        const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+        textarea.style.height = `${newHeight}px`;
+        textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+      });
+    };
+
+    // Small delay to ensure DOM is updated
+    const timeoutId = setTimeout(autoResizeTextareas, 0);
+    return () => clearTimeout(timeoutId);
+  }, [inputValues]);
   
   // Custom resize functionality
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -316,7 +337,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                             <div className="manual-input-container">
                               <span className="input-label">{input}:</span>
                               <textarea
-                                className="manual-input manual-textarea"
+                                className="manual-input manual-textarea auto-expand-textarea"
                                 value={inputValue}
                                 placeholder={`Enter ${typeName.toLowerCase()}`}
                                 onChange={(e) => {
@@ -327,15 +348,24 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                                 onClick={(e) => e.stopPropagation()}
                                 rows={1}
                                 style={{
-                                  resize: 'vertical',
+                                  resize: 'none',
                                   minHeight: '32px',
-                                  overflow: 'hidden'
+                                  overflow: 'hidden',
+                                  height: 'auto'
                                 }}
                                 onInput={(e) => {
-                                  // Auto-resize the textarea
+                                  // Auto-resize the textarea to content, respecting node boundary
                                   const target = e.target as HTMLTextAreaElement;
+                                  const container = target.closest('.custom-node') as HTMLElement;
+                                  const containerHeight = container ? container.offsetHeight : 0;
+                                  const maxHeight = Math.max(120, containerHeight - 100); // Leave space for other elements
+                                  
                                   target.style.height = 'auto';
-                                  target.style.height = `${target.scrollHeight}px`;
+                                  const newHeight = Math.min(target.scrollHeight, maxHeight);
+                                  target.style.height = `${newHeight}px`;
+                                  
+                                  // Show scrollbar if content exceeds max height
+                                  target.style.overflowY = target.scrollHeight > maxHeight ? 'auto' : 'hidden';
                                 }}
                               />
                             </div>
@@ -359,21 +389,59 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                             </div>
                           );
                         default:
+                          // Use textarea for expandable text inputs, regular input for short content
+                          const shouldUseTextarea = inputValue.length > 50 || inputValue.includes('\n');
+                          
                           return (
                             <div className="manual-input-container">
                               <span className="input-label">{input}:</span>
-                              <input
-                                type="text"
-                                className="manual-input"
-                                value={inputValue}
-                                placeholder={`Enter ${typeName.toLowerCase()}`}
-                                onChange={(e) => {
-                                  if (onInputValueChange) {
-                                    onInputValueChange(id, input, e.target.value);
-                                  }
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              />
+                              {shouldUseTextarea ? (
+                                <textarea
+                                  className="manual-input manual-textarea auto-expand-textarea"
+                                  value={inputValue}
+                                  placeholder={`Enter ${typeName.toLowerCase()}`}
+                                  onChange={(e) => {
+                                    if (onInputValueChange) {
+                                      onInputValueChange(id, input, e.target.value);
+                                    }
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  rows={1}
+                                  style={{
+                                    resize: 'none',
+                                    minHeight: '32px',
+                                    overflow: 'hidden',
+                                    height: 'auto'
+                                  }}
+                                  onInput={(e) => {
+                                    // Auto-resize the textarea to content, respecting node boundary
+                                    const target = e.target as HTMLTextAreaElement;
+                                    const container = target.closest('.custom-node') as HTMLElement;
+                                    const containerHeight = container ? container.offsetHeight : 0;
+                                    const maxHeight = Math.max(120, containerHeight - 100); // Leave space for other elements
+                                    
+                                    target.style.height = 'auto';
+                                    const newHeight = Math.min(target.scrollHeight, maxHeight);
+                                    target.style.height = `${newHeight}px`;
+                                    
+                                    // Show scrollbar if content exceeds max height
+                                    target.style.overflowY = target.scrollHeight > maxHeight ? 'auto' : 'hidden';
+                                  }}
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  className="manual-input"
+                                  value={inputValue}
+                                  placeholder={`Enter ${typeName.toLowerCase()}`}
+                                  onChange={(e) => {
+                                    if (onInputValueChange) {
+                                      onInputValueChange(id, input, e.target.value);
+                                    }
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              )}
                             </div>
                           );
                       }
