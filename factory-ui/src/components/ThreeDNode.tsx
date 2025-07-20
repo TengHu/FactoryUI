@@ -280,7 +280,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
   // Local state for input values
   const [localInputValues, setLocalInputValues] = useState<Record<string, string>>(inputValues);
 
-  // Handle ResizeObserver errors
+  // Handle ResizeObserver errors and canvas resizing
   useEffect(() => {
     const handleResizeObserverError = (e: ErrorEvent) => {
       if (e.message.includes('ResizeObserver loop completed with undelivered notifications')) {
@@ -291,6 +291,30 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
     };
 
     window.addEventListener('error', handleResizeObserverError);
+    
+    // Set up resize observer for the 3D viewport
+    const viewportElement = nodeRef.current?.querySelector('.threed-viewport');
+    if (viewportElement) {
+      const resizeObserver = new ResizeObserver(() => {
+        // Force canvas to update its size
+        const canvas = viewportElement.querySelector('canvas');
+        if (canvas) {
+          // Trigger a resize event on the canvas
+          canvas.dispatchEvent(new Event('resize'));
+          
+          // Also trigger a window resize event to ensure React Three Fiber updates
+          window.dispatchEvent(new Event('resize'));
+        }
+      });
+      
+      resizeObserver.observe(viewportElement);
+      
+      return () => {
+        window.removeEventListener('error', handleResizeObserverError);
+        resizeObserver.disconnect();
+      };
+    }
+    
     return () => window.removeEventListener('error', handleResizeObserverError);
   }, []);
   
@@ -745,8 +769,20 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
               position: SO_ARM100_CONFIG.camera.position, 
               fov: SO_ARM100_CONFIG.camera.fov 
             }}
-            onCreated={({ scene }: { scene: THREE.Scene }) => {
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'block'
+            }}
+            gl={{
+              antialias: true,
+              alpha: false,
+              powerPreference: "high-performance"
+            }}
+            onCreated={({ scene, gl }: { scene: THREE.Scene; gl: THREE.WebGLRenderer }) => {
               scene.background = new THREE.Color(0x263238);
+              // Ensure the renderer handles resize properly
+              gl.setSize(gl.domElement.clientWidth, gl.domElement.clientHeight);
             }}
           >
             <RobotScene
