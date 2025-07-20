@@ -55,14 +55,6 @@ class WebSocketManager:
         for connection in disconnected:
             self.disconnect(connection)
             
-    async def broadcast_execution_status(self, status: Dict[str, Any]):
-        """Broadcast execution status update"""
-        message = {
-            "type": "execution_status",
-            "timestamp": status.get("timestamp"),
-            "data": status
-        }
-        await self.broadcast(message)
         
     async def broadcast_node_state(self, node_id: str, state: str, data: Dict[str, Any] = None):
         """Broadcast node state change"""

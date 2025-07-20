@@ -1032,7 +1032,7 @@ function App() {
         websocketService.startHeartbeat();
         
         // Subscribe to events
-        websocketService.subscribe(['execution_status', 'node_state', 'workflow_event', 'continuous_update', 'robot_status']);
+        websocketService.subscribe(['node_state', 'workflow_event', 'continuous_update']);
         
         // Request current status to sync state on connection
         websocketService.send('get_status', {});
@@ -1049,10 +1049,6 @@ function App() {
 
     // Set up event handlers, each returns a function to unsubscribe
     const unsubscribeHandlers = [
-      websocketService.on('execution_status', (data) => {
-        console.log('Execution status update:', data);
-        setExecutionResults(data);
-      }),
       
       websocketService.on('status_response', (data) => {
         console.log('Status response received:', data);
@@ -1139,29 +1135,6 @@ function App() {
         });
       }),
 
-      websocketService.on('robot_status', (data) => {
-        console.log('Robot status update:', data);
-        // Handle robot status updates
-      }),
-
-      websocketService.on('robot_status_stream', (data) => {
-        console.log('Robot status stream:', data);
-        
-        // Update node state with streaming robot status data
-        if (data.node_id) {
-          throttledSetNodeStates(prev => ({
-            ...prev,
-            [data.node_id]: {
-              ...prev[data.node_id],
-              robotStatus: data.status,
-              streamUpdate: data.stream_update,
-              streamComplete: data.stream_complete,
-              streamError: data.stream_error,
-              timestamp: data.timestamp
-            }
-          }));
-        }
-      }),
 
     ];
 
