@@ -73,9 +73,9 @@ class WebSocketManager:
         """Broadcast workflow-related events"""
         message = {
             "type": "workflow_event",
+            "timestamp": asyncio.get_event_loop().time(),
             "data": {
                 "event": event_type,
-                "timestamp": asyncio.get_event_loop().time(),
                 "data": data
             }
         }

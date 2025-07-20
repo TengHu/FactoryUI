@@ -1089,7 +1089,6 @@ function App() {
       websocketService.on('workflow_event', (data) => {
         console.log('Workflow event received:', data);
 
-
         if (data.event === 'continuous_started') {
           setIsContinuousRunning(true);
           console.log('✅ Continuous execution started (confirmed by WebSocket)');
@@ -1098,14 +1097,12 @@ function App() {
           setContinuousStatus(null);
           console.log('✅ Continuous execution stopped (confirmed by WebSocket)');
           
-          // User feedback
-          alert('Continuous execution stopped successfully.');
           
           // Clear any pending fallback timeouts since we got confirmation
           console.log('✅ WebSocket stop confirmation received - state updated');
         } else if (data.event === 'workflow_error') {
-          console.error('Workflow error:', data.error);
-          alert(`Workflow error: ${data.error}`);
+          console.error('Workflow error:', data.data);
+          alert(`Workflow error: ${data.data.error}`);
         } else {
           console.log('🔄 Unknown workflow event:', data);
         }
