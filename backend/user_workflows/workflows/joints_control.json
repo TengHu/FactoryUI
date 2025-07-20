@@ -57,8 +57,8 @@
       "id": "SO101JointAnglesToPositions-1752679439906",
       "type": "customNode",
       "position": {
-        "x": 165.03839786039492,
-        "y": 466.72754313727825
+        "x": 168.7656269515582,
+        "y": 469.2123625313871
       },
       "data": {
         "label": "SO-101 Joint Angles to Positions",
@@ -138,7 +138,7 @@
           "elbow": "210",
           "wrist_pitch": "238",
           "wrist_roll": "170",
-          "jaw": "220"
+          "jaw": "232"
         }
       },
       "width": 280,
@@ -158,8 +158,8 @@
       "id": "So101WritePositionNode-1752679460972",
       "type": "customNode",
       "position": {
-        "x": 555.5688818092813,
-        "y": 370.27081093296994
+        "x": 563.0233399916077,
+        "y": 316.8471939596299
       },
       "data": {
         "label": "SO101 Write Position",
@@ -211,8 +211,8 @@
       "id": "ThreeDVisualizationNode-1752986965332",
       "type": "threeDNode",
       "position": {
-        "x": 508.55060399547654,
-        "y": 592.2475136966456
+        "x": 559.2709395146442,
+        "y": 563.5559284229919
       },
       "data": {
         "label": "3D Visualization",
@@ -253,27 +253,30 @@
       "sourceHandle": "output",
       "target": "So101WritePositionNode-1752679460972",
       "targetHandle": "sdk",
-      "id": "reactflow__edge-ConnectRobotNode-1752615634005output-So101WritePositionNode-1752679460972sdk"
+      "id": "reactflow__edge-ConnectRobotNode-1752615634005output-So101WritePositionNode-1752679460972sdk",
+      "className": ""
     },
     {
       "source": "SO101JointAnglesToPositions-1752679439906",
       "sourceHandle": "output",
       "target": "So101WritePositionNode-1752679460972",
       "targetHandle": "positions",
-      "id": "reactflow__edge-SO101JointAnglesToPositions-1752679439906output-So101WritePositionNode-1752679460972positions"
+      "id": "reactflow__edge-SO101JointAnglesToPositions-1752679439906output-So101WritePositionNode-1752679460972positions",
+      "className": ""
     },
     {
       "source": "SO101JointAnglesToPositions-1752679439906",
       "sourceHandle": "output",
       "target": "ThreeDVisualizationNode-1752986965332",
       "targetHandle": "positions",
-      "id": "xy-edge__SO101JointAnglesToPositions-1752679439906output-ThreeDVisualizationNode-1752986965332positions"
+      "id": "xy-edge__SO101JointAnglesToPositions-1752679439906output-ThreeDVisualizationNode-1752986965332positions",
+      "className": ""
     }
   ],
   "metadata": {
     "name": "joints_control",
     "description": "Auto-saved on 7/20/2025",
-    "created": "2025-07-20T04:49:47.996Z",
+    "created": "2025-07-20T14:32:34.976Z",
     "version": "1.0.0"
   }
 }

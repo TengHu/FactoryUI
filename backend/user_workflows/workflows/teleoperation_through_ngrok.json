@@ -107,7 +107,7 @@
       "id": "DisplayNode-1752983719616",
       "type": "customNode",
       "position": {
-        "x": 326.445288428994,
+        "x": 358.3816085658397,
         "y": 607.1952657282742
       },
       "data": {
@@ -184,8 +184,8 @@
       "id": "ThreeDVisualizationNode-1752985392275",
       "type": "threeDNode",
       "position": {
-        "x": 292.7945591469669,
-        "y": 935.1587544020083
+        "x": 376.99031223501476,
+        "y": 898.867481519229
       },
       "data": {
         "label": "3D Visualization",
@@ -217,7 +217,7 @@
         "width": 500,
         "height": 400
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     },
     {
@@ -312,15 +312,15 @@
         "width": 287,
         "height": 232
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
       "id": "ProxyHttpClientNode-1752986434375",
       "type": "customNode",
       "position": {
-        "x": -147.59422018886187,
-        "y": 591.944457546238
+        "x": -82.26992899985925,
+        "y": 594.8477593768604
       },
       "data": {
         "label": "Proxy HTTP Client",
@@ -425,8 +425,8 @@
   ],
   "metadata": {
     "name": "teleoperation_through_ngrok",
-    "description": "Auto-saved on 7/20/2025",
-    "created": "2025-07-20T04:48:00.809Z",
+    "description": "Workflow saved on 7/20/2025",
+    "created": "2025-07-20T14:34:02.931Z",
     "version": "1.0.0"
   }
 }
