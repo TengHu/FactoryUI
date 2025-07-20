@@ -622,9 +622,18 @@
   font-family: inherit;
   line-height: 1.4;
   padding: 6px 8px;
-  transition: all 0.2s ease;
-  max-height: 120px;
-  overflow-y: auto;
+  transition: border-color 0.2s ease;
+  max-height: none; /* Remove fixed max-height for auto-expanding */
+  overflow-y: hidden; /* Will be set by JS when needed */
+}
+
+/* Auto-expanding textarea specific styles */
+.auto-expand-textarea {
+  resize: none !important;
+  overflow: hidden;
+  min-height: 32px;
+  height: auto;
+  transition: height 0.1s ease-out;
 }
 
 .manual-textarea:focus {

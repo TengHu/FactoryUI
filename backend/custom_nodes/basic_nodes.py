@@ -763,7 +763,6 @@ Usage: Use this node to add documentation, comments, or notes to your workflow. 
         """
 
     def note(self):
-
         pass
 
 class ThreeDVisualizationNode(NodeBase):

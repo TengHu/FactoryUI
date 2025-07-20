@@ -136,10 +136,10 @@
         "type": "ThreeDVisualizationNode"
       },
       "measured": {
-        "width": 500,
-        "height": 400
+        "width": 464,
+        "height": 468
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -187,7 +187,7 @@
       "target": "SO101RobotStatusReader-1752985250384",
       "targetHandle": "sdk",
       "id": "xy-edge__ConnectRobotNode-1752694507773output-SO101RobotStatusReader-1752985250384sdk",
-      "className": ""
+      "className": "animated"
     },
     {
       "source": "SO101RobotStatusReader-1752985250384",
@@ -195,7 +195,7 @@
       "target": "ThreeDVisualizationNode-1752985258317",
       "targetHandle": "positions",
       "id": "xy-edge__SO101RobotStatusReader-1752985250384output-1-ThreeDVisualizationNode-1752985258317positions",
-      "className": ""
+      "className": "animated"
     },
     {
       "source": "SO101RobotStatusReader-1752985250384",
@@ -203,13 +203,13 @@
       "target": "DisplayNode-1752985280003",
       "targetHandle": "value",
       "id": "xy-edge__SO101RobotStatusReader-1752985250384output-1-DisplayNode-1752985280003value",
-      "className": ""
+      "className": "animated"
     }
   ],
   "metadata": {
     "name": "read_robot_status",
     "description": "Auto-saved on 7/20/2025",
-    "created": "2025-07-20T14:33:42.858Z",
+    "created": "2025-07-20T15:07:43.618Z",
     "version": "1.0.0"
   }
 }

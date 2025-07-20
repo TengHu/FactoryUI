@@ -310,7 +310,7 @@
       },
       "measured": {
         "width": 287,
-        "height": 232
+        "height": 246
       },
       "selected": false,
       "dragging": false
@@ -425,8 +425,8 @@
   ],
   "metadata": {
     "name": "teleoperation_through_ngrok",
-    "description": "Workflow saved on 7/20/2025",
-    "created": "2025-07-20T14:34:02.931Z",
+    "description": "Auto-saved on 7/20/2025",
+    "created": "2025-07-20T15:06:28.997Z",
     "version": "1.0.0"
   }
 }

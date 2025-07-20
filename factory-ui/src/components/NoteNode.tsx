@@ -6,7 +6,6 @@ import './NoteNode.css';
 
 export interface NoteNodeProps extends NodeProps {
   onContextMenu?: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void;
-  onInputValueChange?: (nodeId: string, inputName: string, value: string) => void;
 }
 
 interface NoteNodeData {
@@ -21,7 +20,6 @@ const NoteNode = ({ id, data, selected, ...props }: NoteNodeProps) => {
   const nodeData = data as unknown as NoteNodeData;
   const { nodeInfo, inputValues = {}, bypassed = false } = nodeData;
   const onContextMenu = (props as any).onContextMenu;
-  const onInputValueChange = (props as any).onInputValueChange;
   
   const nodeRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -117,16 +115,13 @@ const NoteNode = ({ id, data, selected, ...props }: NoteNodeProps) => {
   // Auto-resize textarea
   const handleTextChange = useCallback((value: string) => {
     setText(value);
-    if (onInputValueChange) {
-      onInputValueChange(id, 'note', value);
-    }
     
     // Auto-resize textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
-  }, [id, onInputValueChange]);
+  }, []);
 
   // Initial resize
   useEffect(() => {

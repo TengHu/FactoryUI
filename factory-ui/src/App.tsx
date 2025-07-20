@@ -72,10 +72,9 @@ const createThreeDNodeWithContextMenu = (
 };
 
 const createNoteNodeWithContextMenu = (
-  onContextMenu: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void,
-  onInputValueChange: (nodeId: string, inputName: string, value: string) => void
+  onContextMenu: (event: React.MouseEvent, nodeId: string, nodeInfo: NodeInfo) => void
 ) => {
-  return (props: any) => <NoteNode {...props} onContextMenu={onContextMenu} onInputValueChange={onInputValueChange} />;
+  return (props: any) => <NoteNode {...props} onContextMenu={onContextMenu} />;
 };
 
 // Safe expression evaluator for sleep time calculations
@@ -1533,7 +1532,7 @@ function App() {
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
     cameraNode: createCameraNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
     threeDNode: createThreeDNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
-    noteNode: createNoteNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
+    noteNode: createNoteNodeWithContextMenu(handleNodeContextMenu),
   }), [handleNodeContextMenu, handleInputValueChange]);
 
 

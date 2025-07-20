@@ -4,8 +4,8 @@
       "id": "ConnectRobotNode-1752986044978",
       "type": "customNode",
       "position": {
-        "x": -19.384922504373378,
-        "y": 226.89992312773416
+        "x": -293.3849225043734,
+        "y": 250.89992312773416
       },
       "data": {
         "label": "Connect Robot",
@@ -92,11 +92,11 @@
       "dragging": false
     },
     {
-      "id": "NoteNode-1753023091918",
+      "id": "NoteNode-1753023969824",
       "type": "noteNode",
       "position": {
-        "x": -568.9511057612863,
-        "y": -2.038104425061931
+        "x": -509.07732718980236,
+        "y": 86.53981050508386
       },
       "data": {
         "label": "Note",
@@ -114,10 +114,7 @@
           "return_types": {},
           "function": "note"
         },
-        "type": "NoteNode",
-        "inputValues": {
-          "note": "Unlock your robot"
-        }
+        "type": "NoteNode"
       },
       "measured": {
         "width": 200,
@@ -132,13 +129,14 @@
       "sourceHandle": "output",
       "target": "UnlockRobotNode-1752986048873",
       "targetHandle": "sdk",
-      "id": "xy-edge__ConnectRobotNode-1752986044978output-UnlockRobotNode-1752986048873sdk"
+      "id": "xy-edge__ConnectRobotNode-1752986044978output-UnlockRobotNode-1752986048873sdk",
+      "className": ""
     }
   ],
   "metadata": {
     "name": "unlock_robot",
     "description": "Auto-saved on 7/20/2025",
-    "created": "2025-07-20T14:51:53.870Z",
+    "created": "2025-07-20T15:06:56.503Z",
     "version": "1.0.0"
   }
 }
