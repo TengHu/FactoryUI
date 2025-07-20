@@ -13,7 +13,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.node_registry import node_registry
 from continuous_executor import ContinuousExecutor
 from websocket_manager import websocket_manager
-from user import UserWorkflowRepository
 
 app = FastAPI(title="Factory UI Backend", version="1.0.0")
 
@@ -61,8 +60,7 @@ robot_state = {
 # This single executor handles both continuous and single workflow execution
 executor = ContinuousExecutor(loop_interval=1, websocket_manager=websocket_manager)
 
-# Initialize workflow repository
-workflow_repository = UserWorkflowRepository()
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -92,75 +90,6 @@ async def get_node_info(node_name: str):
     if not node_info:
         raise HTTPException(status_code=404, detail=f"Node {node_name} not found")
     return node_info
-
-@app.get("/workflows")
-async def get_all_workflows():
-    """Get all saved workflows"""
-    try:
-        workflows = workflow_repository.get_all_workflows()
-        return {
-            "success": True,
-            "workflows": workflows
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve workflows: {str(e)}")
-
-@app.post("/workflow/{filename}")
-async def save_workflow(filename: str, workflow: WorkflowRequest):
-    """Save a workflow with the given filename"""
-    try:
-        # Convert to dictionary format
-        workflow_data = {
-            "nodes": workflow.nodes,
-            "edges": workflow.edges,
-            "metadata": workflow.metadata or {}
-        }
-        
-        # Save the workflow
-        saved_filename = workflow_repository.save_workflow(filename, workflow_data)
-        
-        return {
-            "success": True,
-            "message": "Workflow saved successfully",
-            "filename": saved_filename
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@app.get("/workflow/{filename}")
-async def get_workflow(filename: str):
-    """Get a specific workflow by filename"""
-    try:
-        workflow = workflow_repository.get_workflow(filename)
-        if workflow is None:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        
-        return {
-            "success": True,
-            "workflow": workflow
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve workflow: {str(e)}")
-
-@app.delete("/workflow/{filename}")
-async def delete_workflow(filename: str):
-    """Delete a workflow by filename"""
-    try:
-        success = workflow_repository.delete_workflow(filename)
-        
-        if not success:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        
-        return {
-            "success": True,
-            "message": "Workflow deleted successfully"
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete workflow: {str(e)}")
 
 @app.post("/run", response_model=ExecutionResponse)
 async def run_workflow(workflow: WorkflowRequest):
