@@ -359,9 +359,14 @@ function App() {
       // Connection is valid, proceed
       console.log(`Valid connection: ${outputType} → ${inputType}`);
       setEdges((eds) => {
-        const newEdge = addEdge(params, eds);
+        // Remove any existing edge connected to the target input
+        const filteredEdges = eds.filter(edge => 
+          !(edge.target === params.target && edge.targetHandle === params.targetHandle)
+        );
+        
+        const newEdge = addEdge(params, filteredEdges);
         // If continuous execution is running, add animation to new edges
-        if (isContinuousRunning && newEdge.length > eds.length) {
+        if (isContinuousRunning && newEdge.length > filteredEdges.length) {
           const latestEdge = newEdge[newEdge.length - 1];
           latestEdge.className = 'animated';
         }

@@ -256,8 +256,8 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                     style={{
                       background: isRequired ? '#ef4444' : '#94a3b8',
                       border: '2px solid white',
-                      width: '10px',
-                      height: '10px',
+                      width: '16px',
+                      height: '16px',
                     }}
                     title={`${input} (${typeName}) - ${isRequired ? 'required' : 'optional'}`}
                   />
@@ -291,8 +291,8 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                   style={{
                     background: isRequired ? '#22c55e' : '#10b981',
                     border: '2px solid white',
-                    width: '10px',
-                    height: '10px',
+                    width: '16px',
+                    height: '16px',
                   }}
                   title={`${output.name} (${output.type}) - ${isRequired ? 'required' : 'optional'}`}
                 />
