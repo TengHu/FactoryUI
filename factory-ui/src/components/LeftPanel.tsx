@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import NodePanel from './NodePanel';
 import WorkflowExplorer from './WorkflowExplorer';
 import { NodeInfo } from '../services/api';
+import { WorkflowItem } from '../services/localFileService';
 import './LeftPanel.css';
 
 interface LeftPanelProps {
   onNodeDrag: (nodeInfo: NodeInfo, event: React.DragEvent) => void;
   onWorkflowSelect: (filename: string, workflowName: string) => void;
+  onWorkflowLoad?: (workflow: WorkflowItem) => void;
 }
 
-const LeftPanel: React.FC<LeftPanelProps> = ({ onNodeDrag, onWorkflowSelect }) => {
+const LeftPanel: React.FC<LeftPanelProps> = ({ onNodeDrag, onWorkflowSelect, onWorkflowLoad }) => {
   const [activeTab, setActiveTab] = useState<'nodes' | 'workflows'>('workflows');
 
   return (
@@ -31,7 +33,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ onNodeDrag, onWorkflowSelect }) =
       
       <div className="left-panel-content">
         {activeTab === 'workflows' && (
-          <WorkflowExplorer onWorkflowSelect={onWorkflowSelect} />
+          <WorkflowExplorer 
+            onWorkflowSelect={onWorkflowSelect}
+            onWorkflowLoad={onWorkflowLoad}
+          />
         )}
         {activeTab === 'nodes' && (
           <NodePanel onNodeDrag={onNodeDrag} />
