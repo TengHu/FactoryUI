@@ -645,6 +645,32 @@ function App() {
     }
   }, [canvases]);
 
+  // Fetch all saved workflows and load them as canvas tabs
+  const fetchWorkflows = useCallback(async () => {
+    try {
+      const response = await localFileService.getAllWorkflows();
+      if (response.success && response.workflows.length > 0) {
+        // Filter to only filename == 'unlock_robot'
+        const filtered = response.workflows.filter(item => item.filename === 'unlock_robot.json');
+        if (filtered.length > 0) {
+          const workflowCanvases: Canvas[] = filtered.map((item, index) => ({
+            id: Date.now() + index, // Generate unique ID for canvas
+            name: item.filename,
+            nodes: item.workflow.nodes || [],
+            edges: item.workflow.edges || [],
+            filename: item.filename,
+            hasUnsavedChanges: false
+          }));
+
+          // Replace the default canvas with filtered workflow canvases
+          setCanvases(workflowCanvases);
+          setActiveCanvasId(workflowCanvases[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching workflows:', error);
+    }
+  }, []);
 
   // Start renaming a tab
   const startRenaming = useCallback((canvasId: number, currentName: string) => {
@@ -1015,7 +1041,10 @@ function App() {
     }
   }, [isContinuousRunning, connectionState.isConnected, websocketService]);
 
- 
+  // Fetch workflows on initialization
+  useEffect(() => {
+    fetchWorkflows();
+  }, [fetchWorkflows]);
 
   // WebSocket connection and event handlers
   useEffect(() => {
