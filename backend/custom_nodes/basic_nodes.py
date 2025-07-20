@@ -1168,36 +1168,31 @@ Usage: Use this node to receive data from external clients. The endpoint_url out
     def receive_http(self, endpoint: str) -> tuple:
         """Receive data from HTTP endpoint"""
         import traceback
+        import requests
         
         try:
-            # Prepare output data
-            if self.received_messages:
-                # Group messages by type
-                grouped_messages = {}
-                for msg in self.received_messages:
-                    msg_type = msg.get("type", "unknown")
-                    if msg_type not in grouped_messages:
-                        grouped_messages[msg_type] = []
-                    grouped_messages[msg_type].append(msg)
-                
-                output_data = {
-                    "messages": self.received_messages,
-                    "grouped_by_type": grouped_messages,
-                    "latest_message": self.received_messages[-1] if self.received_messages else None
-                }
+            # Fetch messages from the webhook endpoint
+            response = requests.get(f"http://localhost:8000/webhook/messages", timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                output_data = data
+                message_count = data.get("message_count", 0)
             else:
                 output_data = {
                     "messages": [],
                     "grouped_by_type": {},
-                    "latest_message": None
+                    "latest_message": None,
+                    "error": f"Failed to fetch messages: {response.status_code}"
                 }
+                message_count = 0
             
             # Create endpoint URL (assuming backend runs on port 8000)
             endpoint_url = f"http://localhost:8000{endpoint}"
             
             return (
                 output_data,
-                len(self.received_messages),
+                message_count,
                 endpoint_url
             )
             

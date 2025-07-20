@@ -1,0 +1,289 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectRobotNode-1752981247094",
+      "type": "customNode",
+      "position": {
+        "x": -90.47214823923906,
+        "y": 269.21765058222684
+      },
+      "data": {
+        "label": "Connect Robot",
+        "nodeInfo": {
+          "name": "ConnectRobotNode",
+          "display_name": "Connect Robot",
+          "description": "Connect to a robot using ScsServoSDK.connect() and return SDK instance",
+          "detailed_description": "\nConnectRobotNode\n\nPurpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.\n\nInputs:\n  - port_name (STRING): The serial port name to connect to (leave empty for auto-detection)\n\nOutputs:\n  - sdk (ScsServoSDK): The connected SDK instance that can be used by other robot control nodes\n\nUsage: Use this node at the beginning of robot workflows to establish communication. The SDK output should be connected to other robot nodes that require servo control. If port_name is empty, the system will attempt to auto-detect the robot.\n        ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "port_name": [
+                "STRING",
+                {
+                  "default": ""
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectRobotNode",
+        "inputValues": {
+          "port_name": "/dev/tty.usbmodem5A7A0558831"
+        }
+      },
+      "width": 280,
+      "height": 137,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 159.47660885213043,
+        "y": 332.0082989099732
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 137
+      }
+    },
+    {
+      "id": "SO101RobotStatusReader-1752981261656",
+      "type": "customNode",
+      "position": {
+        "x": 267.0994466529175,
+        "y": 273.9697767956164
+      },
+      "data": {
+        "label": "SO101 Robot Status Reader",
+        "nodeInfo": {
+          "name": "SO101RobotStatusReader",
+          "display_name": "SO101 Robot Status Reader",
+          "description": "Read status (positions, modes) from connected robot servos using feetech-servo-sdk",
+          "detailed_description": "\n            RobotStatusReader Node\n\n            Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk.\n\n            Inputs:\n              - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n\n            Outputs:\n              - status_data (DICT): Dictionary containing read positions, modes, servo_ids, timestamp, and connection status.\n              - positions (DICT): Dictionary of servo positions keyed by servo ID.\n\n            Features:\n              - Automatically reads positions for servos 1-6\n              - Reads servo modes for each connected servo\n              - Provides timestamp and connection status information\n              - Handles errors gracefully with detailed error messages\n              - Returns both comprehensive status data and positions separately\n\n            Usage:\n              - Connect the ScsServoSDK output from a robot connection node\n              - The node automatically reads from servos 1-6\n              - Use status_data for comprehensive robot state information\n              - Use positions for direct access to servo position values\n              - Monitor connection status and error handling\n            ",
+          "tags": [
+            "SO101",
+            "SO100"
+          ],
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "status_data": [
+                "DICT",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "read_robot_status"
+        },
+        "type": "SO101RobotStatusReader"
+      },
+      "measured": {
+        "width": 479,
+        "height": 320
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "NgrokHttpSenderNode-1752981275603",
+      "type": "customNode",
+      "position": {
+        "x": 839.7288920091684,
+        "y": 288.8432688827915
+      },
+      "data": {
+        "label": "Ngrok HTTP Sender",
+        "nodeInfo": {
+          "name": "NgrokHttpSenderNode",
+          "display_name": "Ngrok HTTP Sender",
+          "description": "Send data through ngrok HTTP to external clients",
+          "detailed_description": "\nNgrokHttpSenderNode\n\nPurpose: Sends data through a ngrok HTTP URL to external clients. This node makes an HTTP POST request to the specified ngrok URL with the input data.\n\nInputs:\n  - data (ANY): The data to send through HTTP (will be JSON serialized)\n  - ngrok_url (STRING): The ngrok HTTP URL (e.g., https://abc123.ngrok.io)\n\nOutputs:\n  - success (BOOLEAN): True if the data was sent successfully, False otherwise\n  - message (STRING): Status message describing the result\n\nUsage: Use this node to send data to external clients through ngrok. Make sure your ngrok tunnel is running and the URL is correct. The data will be sent as a JSON POST request.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "data": [
+                "ANY",
+                {}
+              ],
+              "ngrok_url": [
+                "STRING",
+                {
+                  "default": "https://your-ngrok-url.ngrok.io"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "success": [
+                "BOOLEAN",
+                {}
+              ],
+              "message": [
+                "STRING",
+                {}
+              ]
+            }
+          },
+          "function": "send_http"
+        },
+        "type": "NgrokHttpSenderNode",
+        "inputValues": {
+          "ngrok_url": "https://2d269edb62d1.ngrok-free.app"
+        }
+      },
+      "measured": {
+        "width": 287,
+        "height": 300
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "NgrokHttpReceiverNode-1752981642123",
+      "type": "customNode",
+      "position": {
+        "x": -51.44117554742115,
+        "y": 731.3296584762581
+      },
+      "data": {
+        "label": "Ngrok HTTP Receiver",
+        "nodeInfo": {
+          "name": "NgrokHttpReceiverNode",
+          "display_name": "Ngrok HTTP Receiver",
+          "description": "Receive data from external clients through ngrok HTTP",
+          "detailed_description": "\nNgrokHttpReceiverNode\n\nPurpose: Receives data from external clients through HTTP webhooks that can be exposed via ngrok. This node provides an endpoint URL that external clients can POST to.\n\nInputs:\n  - endpoint (STRING): The endpoint path for receiving data (default: /webhook)\n\nOutputs:\n  - received_data (DICT): Dictionary containing all received messages with timestamps\n  - message_count (INT): Number of messages received\n  - endpoint_url (STRING): The full endpoint URL for external clients to use\n\nUsage: Use this node to receive data from external clients. The endpoint_url output will show the full URL that external clients should POST to. Use 'ngrok http 8000' to expose the backend server.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "endpoint": [
+                "STRING",
+                {
+                  "default": "/webhook"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "received_data": [
+                "DICT",
+                {}
+              ],
+              "message_count": [
+                "INT",
+                {}
+              ],
+              "endpoint_url": [
+                "STRING",
+                {}
+              ]
+            }
+          },
+          "function": "receive_http"
+        },
+        "type": "NgrokHttpReceiverNode",
+        "inputValues": {
+          "endpoint": "http://localhost:8081"
+        }
+      },
+      "measured": {
+        "width": 315,
+        "height": 264
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "DisplayNode-1752981658121",
+      "type": "customNode",
+      "position": {
+        "x": 336.5090763930691,
+        "y": 753.6398966070211
+      },
+      "data": {
+        "label": "Display",
+        "nodeInfo": {
+          "name": "DisplayNode",
+          "display_name": "Display",
+          "description": "Display the input value (ANY type) for debugging or monitoring.",
+          "detailed_description": "\nDisplayNode\n\nPurpose: Takes any input value and displays it (prints to console). Useful for debugging or monitoring workflow data.\n\nInputs:\n  - value (ANY): Any value to display\n\nOutputs:\n  - value (ANY): The same value that was input, for display purposes\n\nUsage: Use this node to inspect values in your workflow. It prints the value to the backend console and passes it through for display in the UI.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "value": [
+                "ANY",
+                {}
+              ]
+            }
+          },
+          "return_types": {},
+          "function": "display"
+        },
+        "type": "DisplayNode"
+      },
+      "measured": {
+        "width": 784,
+        "height": 210
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "ConnectRobotNode-1752981247094",
+      "sourceHandle": "output",
+      "target": "SO101RobotStatusReader-1752981261656",
+      "targetHandle": "sdk",
+      "id": "xy-edge__ConnectRobotNode-1752981247094output-SO101RobotStatusReader-1752981261656sdk",
+      "className": ""
+    },
+    {
+      "source": "SO101RobotStatusReader-1752981261656",
+      "sourceHandle": "output-1",
+      "target": "NgrokHttpSenderNode-1752981275603",
+      "targetHandle": "data",
+      "id": "xy-edge__SO101RobotStatusReader-1752981261656output-1-NgrokHttpSenderNode-1752981275603data",
+      "className": ""
+    },
+    {
+      "source": "NgrokHttpReceiverNode-1752981642123",
+      "sourceHandle": "output-0",
+      "target": "DisplayNode-1752981658121",
+      "targetHandle": "value",
+      "id": "xy-edge__NgrokHttpReceiverNode-1752981642123output-0-DisplayNode-1752981658121value"
+    }
+  ],
+  "metadata": {
+    "name": "teleoperation_through_ngrok",
+    "description": "Auto-saved on 7/19/2025",
+    "created": "2025-07-20T03:22:05.143Z",
+    "version": "1.0.0"
+  }
+}

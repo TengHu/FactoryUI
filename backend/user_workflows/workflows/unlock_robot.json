@@ -42,7 +42,7 @@
       },
       "width": 280,
       "height": 137,
-      "selected": false,
+      "selected": true,
       "positionAbsolute": {
         "x": 159.47660885213043,
         "y": 332.0082989099732
@@ -89,7 +89,7 @@
         "width": 361,
         "height": 122
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     }
   ],
@@ -100,14 +100,13 @@
       "target": "UnlockRemoteNode-1752963252608",
       "targetHandle": "sdk",
       "id": "xy-edge__ConnectRobotNode-1752694507773output-UnlockRemoteNode-1752963252608sdk",
-
-      "className": ""
+      "className": "animated"
     }
   ],
   "metadata": {
     "name": "unlock_robot",
-    "description": "Auto-saved on 7/19/2025",
-    "created": "2025-07-20T02:41:38.465Z",
+    "description": "Workflow saved on 7/19/2025",
+    "created": "2025-07-20T03:21:52.029Z",
     "version": "1.0.0"
   }
 }
