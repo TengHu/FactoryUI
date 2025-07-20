@@ -1,0 +1,282 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectRobotNode-1752615634005",
+      "type": "customNode",
+      "position": {
+        "x": 156.498022016508,
+        "y": 178.3529998845991
+      },
+      "data": {
+        "label": "Connect Robot",
+        "nodeInfo": {
+          "name": "ConnectRobotNode",
+          "display_name": "Connect Robot",
+          "description": "Connect to a robot using ScsServoSDK.connect() and return SDK instance",
+          "detailed_description": "\nConnectRobotNode\n\nPurpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.\n\nInputs:\n  - port_name (STRING): The serial port name to connect to (leave empty for auto-detection)\n\nOutputs:\n  - sdk (ScsServoSDK): The connected SDK instance that can be used by other robot control nodes\n\nUsage: Use this node at the beginning of robot workflows to establish communication. The SDK output should be connected to other robot nodes that require servo control. If port_name is empty, the system will attempt to auto-detect the robot.\n        ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "port_name": [
+                "STRING",
+                {
+                  "default": ""
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectRobotNode",
+        "inputValues": {
+          "port_name": "/dev/tty.usbmodem5A7A0558831"
+        }
+      },
+      "width": 280,
+      "height": 137,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 156.498022016508,
+        "y": 178.3529998845991
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 137
+      }
+    },
+    {
+      "id": "SO101JointAnglesToPositions-1752679439906",
+      "type": "customNode",
+      "position": {
+        "x": 157.54776429020666,
+        "y": 483.36143299130765
+      },
+      "data": {
+        "label": "SO-101 Joint Angles to Positions",
+        "nodeInfo": {
+          "name": "SO101JointAnglesToPositions",
+          "display_name": "SO-101 Joint Angles to Positions",
+          "description": "Convert joint angles to servo positions for the SO-101 robot",
+          "detailed_description": "\n            \n            ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "rotation": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -180,
+                  "max": 180
+                }
+              ],
+              "pitch": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -90,
+                  "max": 90
+                }
+              ],
+              "elbow": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -120,
+                  "max": 120
+                }
+              ],
+              "wrist_pitch": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -90,
+                  "max": 90
+                }
+              ],
+              "wrist_roll": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -180,
+                  "max": 180
+                }
+              ],
+              "jaw": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": 0,
+                  "max": 90
+                }
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "angles_to_positions"
+        },
+        "type": "SO101JointAnglesToPositions",
+        "inputValues": {
+          "rotation": "252",
+          "pitch": "137",
+          "elbow": "210",
+          "wrist_pitch": "319",
+          "wrist_roll": "212",
+          "jaw": "23"
+        }
+      },
+      "width": 280,
+      "height": 392,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 158.44136484547164,
+        "y": 379.70376858056636
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 392
+      }
+    },
+    {
+      "id": "So101WritePositionNode-1752679460972",
+      "type": "customNode",
+      "position": {
+        "x": 555.5688818092813,
+        "y": 370.27081093296994
+      },
+      "data": {
+        "label": "SO101 Write Position",
+        "nodeInfo": {
+          "name": "So101WritePositionNode",
+          "display_name": "SO101 Write Position",
+          "description": "Write multiple servo positions to the robot using ScsServoSDK.",
+          "detailed_description": "\n            So101WritePositionNode Node\n\n\"\n            \"Purpose: Writes multiple servo positions to the robot using ScsServoSDK.\n\"\n            \"Inputs:\n\"\n            \"  - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n\"\n            \"  - positions (DICT): Dictionary mapping servo IDs to target positions.\n\"\n            \"Outputs:\n\"\n            \"  - write_result (DICT): Dictionary reflecting the positions written to the servos.\n\"\n            ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "write_result": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "write_positions"
+        },
+        "type": "So101WritePositionNode"
+      },
+      "width": 280,
+      "height": 158,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 555.5688818092813,
+        "y": 370.27081093296994
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 158
+      }
+    },
+    {
+      "id": "ThreeDVisualizationNode-1752980687001",
+      "type": "threeDNode",
+      "position": {
+        "x": 603.1037450944707,
+        "y": 579.9584111028603
+      },
+      "data": {
+        "label": "3D Visualization",
+        "nodeInfo": {
+          "name": "ThreeDVisualizationNode",
+          "display_name": "3D Visualization",
+          "description": "Visualize robot positions in 3D by converting motor positions to angles.",
+          "detailed_description": "\nThreeDVisualizationNode\n\nPurpose: Takes motor position data and converts it to joint angles for 3D visualization. This node processes motor position data and returns visualization data that can be rendered in a 3D viewer.\n\nInputs:\n  - positions (DICT): Dictionary mapping servo IDs to positions in format:\n    {1: 1510, 2: 1029, 3: 3010, 4: 967, 5: 638, 6: 2039}\n\nOutputs:\n  - None (produces rt_update for 3D visualization)\n\nUsage: Use this node to visualize robot joint states in 3D. Connect it to nodes that provide motor position data to see the 3D representation of the robot's current configuration in the UI.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "return_types": {
+            "required": {}
+          },
+          "function": "visualize_3d"
+        },
+        "type": "ThreeDVisualizationNode"
+      },
+      "measured": {
+        "width": 500,
+        "height": 400
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "ConnectRobotNode-1752615634005",
+      "sourceHandle": "output",
+      "target": "So101WritePositionNode-1752679460972",
+      "targetHandle": "sdk",
+      "id": "reactflow__edge-ConnectRobotNode-1752615634005output-So101WritePositionNode-1752679460972sdk",
+      "className": ""
+    },
+    {
+      "source": "SO101JointAnglesToPositions-1752679439906",
+      "sourceHandle": "output",
+      "target": "So101WritePositionNode-1752679460972",
+      "targetHandle": "positions",
+      "id": "reactflow__edge-SO101JointAnglesToPositions-1752679439906output-So101WritePositionNode-1752679460972positions",
+      "className": ""
+    },
+    {
+      "source": "SO101JointAnglesToPositions-1752679439906",
+      "sourceHandle": "output",
+      "target": "ThreeDVisualizationNode-1752980687001",
+      "targetHandle": "positions",
+      "id": "xy-edge__SO101JointAnglesToPositions-1752679439906output-ThreeDVisualizationNode-1752980687001positions",
+      "className": ""
+    }
+  ],
+  "metadata": {
+    "name": "joints_control",
+    "description": "Auto-saved on 7/19/2025",
+    "created": "2025-07-20T03:05:48.589Z",
+    "version": "1.0.0"
+  }
+}
