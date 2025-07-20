@@ -136,8 +136,8 @@
         "type": "ThreeDVisualizationNode"
       },
       "measured": {
-        "width": 760,
-        "height": 600
+        "width": 500,
+        "height": 400
       },
       "selected": true,
       "dragging": false
@@ -209,7 +209,7 @@
   "metadata": {
     "name": "read_robot_status",
     "description": "Auto-saved on 7/20/2025",
-    "created": "2025-07-20T15:11:17.038Z",
+    "created": "2025-07-20T21:22:30.418Z",
     "version": "1.0.0"
   }
 }

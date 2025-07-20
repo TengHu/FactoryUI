@@ -1,0 +1,316 @@
+.workflow-explorer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-right: 1px solid #e0e0e0;
+}
+
+[data-theme="dark"] .workflow-explorer {
+  background: #1e1e1e;
+  border-right-color: #333;
+}
+
+.workflow-explorer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+[data-theme="dark"] .workflow-explorer-header {
+  background: #252526;
+  border-bottom-color: #333;
+}
+
+.workflow-explorer-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+[data-theme="dark"] .workflow-explorer-header h3 {
+  color: #cccccc;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.refresh-btn,
+.paste-btn,
+.folder-btn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+}
+
+.refresh-btn:hover,
+.paste-btn:hover:not(:disabled),
+.folder-btn:hover {
+  background: #e9ecef;
+}
+
+[data-theme="dark"] .refresh-btn:hover,
+[data-theme="dark"] .paste-btn:hover:not(:disabled),
+[data-theme="dark"] .folder-btn:hover {
+  background: #3e3e42;
+}
+
+.paste-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.directory-selection {
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.directory-selection p {
+  margin-bottom: 16px;
+  color: #666;
+  font-size: 14px;
+}
+
+[data-theme="dark"] .directory-selection p {
+  color: #999;
+}
+
+.directory-selection button {
+  padding: 12px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.directory-selection button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.directory-selection button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.directory-selection .error-message {
+  margin-top: 12px;
+  color: #dc3545;
+  font-size: 13px;
+}
+
+.directory-selection .loading {
+  margin-top: 12px;
+  color: #666;
+  font-size: 13px;
+}
+
+[data-theme="dark"] .directory-selection .loading {
+  color: #999;
+}
+
+.workflow-tree-container {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 0;
+}
+
+.workflow-tree-node {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 4px;
+  margin: 1px 4px;
+}
+
+.workflow-tree-node:hover {
+  background: #f0f0f0;
+}
+
+[data-theme="dark"] .workflow-tree-node:hover {
+  background: #2a2a2a;
+}
+
+.workflow-tree-node.selected {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+[data-theme="dark"] .workflow-tree-node.selected {
+  background: #1e3a5f;
+  color: #64b5f6;
+}
+
+.workflow-tree-node.workflow {
+  margin-left: 20px;
+}
+
+.node-icon {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.node-name {
+  font-size: 13px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loading,
+.error,
+.empty-state {
+  padding: 16px;
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+}
+
+[data-theme="dark"] .loading,
+[data-theme="dark"] .error,
+[data-theme="dark"] .empty-state {
+  color: #999;
+}
+
+.error button,
+.empty-state button {
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.error button:hover,
+.empty-state button:hover {
+  background: #0056b3;
+}
+
+.status-bar {
+  padding: 8px 16px;
+  border-top: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  font-size: 12px;
+  color: #666;
+}
+
+[data-theme="dark"] .status-bar {
+  background: #252526;
+  border-top-color: #333;
+  color: #999;
+}
+
+/* Context Menu Styles */
+.workflow-context-menu {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 120px;
+  font-size: 13px;
+}
+
+[data-theme="dark"] .workflow-context-menu {
+  background: #2d2d30;
+  border-color: #454545;
+  color: #cccccc;
+}
+
+.context-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-menu-item:hover:not([data-disabled]) {
+  background: #f0f0f0;
+}
+
+[data-theme="dark"] .context-menu-item:hover:not([data-disabled]) {
+  background: #3e3e42;
+}
+
+.context-menu-item[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.context-menu-item.danger {
+  color: #dc3545;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 4px 0;
+}
+
+[data-theme="dark"] .context-menu-separator {
+  background: #454545;
+}
+
+/* React Arborist overrides */
+.workflow-tree-container .react-arborist-tree {
+  height: 100%;
+}
+
+.workflow-tree-container .react-arborist-tree-view {
+  outline: none;
+}
+
+/* Scrollbar styling */
+.workflow-tree-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.workflow-tree-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+[data-theme="dark"] .workflow-tree-container::-webkit-scrollbar-track {
+  background: #2d2d30;
+}
+
+.workflow-tree-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.workflow-tree-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+[data-theme="dark"] .workflow-tree-container::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+[data-theme="dark"] .workflow-tree-container::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}

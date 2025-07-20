@@ -6,7 +6,6 @@ import os
 import sys
 import json
 import logging
-import time
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,7 +13,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.node_registry import node_registry
 from continuous_executor import ContinuousExecutor
 from websocket_manager import websocket_manager
-from user_workflows import UserWorkflowRepository
 
 app = FastAPI(title="Factory UI Backend", version="1.0.0")
 
@@ -62,12 +60,7 @@ robot_state = {
 # This single executor handles both continuous and single workflow execution
 executor = ContinuousExecutor(loop_interval=1, websocket_manager=websocket_manager)
 
-# Initialize workflow repository
-workflow_repository = UserWorkflowRepository()
 
-# Global storage for webhook messages
-webhook_messages = []
-MAX_WEBHOOK_MESSAGES = 1000  # Keep last 1000 messages
 
 @app.on_event("startup")
 async def startup_event():
@@ -97,75 +90,6 @@ async def get_node_info(node_name: str):
     if not node_info:
         raise HTTPException(status_code=404, detail=f"Node {node_name} not found")
     return node_info
-
-@app.get("/workflows")
-async def get_all_workflows():
-    """Get all saved workflows"""
-    try:
-        workflows = workflow_repository.get_all_workflows()
-        return {
-            "success": True,
-            "workflows": workflows
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve workflows: {str(e)}")
-
-@app.post("/workflow/{filename}")
-async def save_workflow(filename: str, workflow: WorkflowRequest):
-    """Save a workflow with the given filename"""
-    try:
-        # Convert to dictionary format
-        workflow_data = {
-            "nodes": workflow.nodes,
-            "edges": workflow.edges,
-            "metadata": workflow.metadata or {}
-        }
-        
-        # Save the workflow
-        saved_filename = workflow_repository.save_workflow(filename, workflow_data)
-        
-        return {
-            "success": True,
-            "message": "Workflow saved successfully",
-            "filename": saved_filename
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@app.get("/workflow/{filename}")
-async def get_workflow(filename: str):
-    """Get a specific workflow by filename"""
-    try:
-        workflow = workflow_repository.get_workflow(filename)
-        if workflow is None:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        
-        return {
-            "success": True,
-            "workflow": workflow
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve workflow: {str(e)}")
-
-@app.delete("/workflow/{filename}")
-async def delete_workflow(filename: str):
-    """Delete a workflow by filename"""
-    try:
-        success = workflow_repository.delete_workflow(filename)
-        
-        if not success:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        
-        return {
-            "success": True,
-            "message": "Workflow deleted successfully"
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete workflow: {str(e)}")
 
 @app.post("/run", response_model=ExecutionResponse)
 async def run_workflow(workflow: WorkflowRequest):
@@ -312,66 +236,6 @@ async def stop_continuous_execution():
 async def get_continuous_status():
     """Get continuous execution status"""
     return executor.get_status()
-
-@app.post("/webhook")
-async def webhook_endpoint(request: Dict[str, Any]):
-    """Receive webhook data from external clients"""
-    global webhook_messages
-    
-    try:
-        # Add timestamp if not present
-        if "timestamp" not in request:
-            request["timestamp"] = time.time()
-        
-        # Add to message storage
-        webhook_messages.append(request)
-        
-        # Keep only the last MAX_WEBHOOK_MESSAGES
-        if len(webhook_messages) > MAX_WEBHOOK_MESSAGES:
-            webhook_messages = webhook_messages[-MAX_WEBHOOK_MESSAGES:]
-        
-        print(f"✓ Received webhook data: {request.get('type', 'unknown')}")
-        
-        return {
-            "success": True,
-            "message": "Webhook received successfully",
-            "message_count": len(webhook_messages)
-        }
-        
-    except Exception as e:
-        print(f"❌ Webhook error: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Failed to process webhook: {str(e)}")
-
-@app.get("/webhook/messages")
-async def get_webhook_messages():
-    """Get all received webhook messages"""
-    global webhook_messages
-    
-    # Group messages by type
-    grouped_messages = {}
-    for msg in webhook_messages:
-        msg_type = msg.get("type", "unknown")
-        if msg_type not in grouped_messages:
-            grouped_messages[msg_type] = []
-        grouped_messages[msg_type].append(msg)
-    
-    return {
-        "messages": webhook_messages,
-        "grouped_by_type": grouped_messages,
-        "latest_message": webhook_messages[-1] if webhook_messages else None,
-        "message_count": len(webhook_messages)
-    }
-
-@app.delete("/webhook/messages")
-async def clear_webhook_messages():
-    """Clear all webhook messages"""
-    global webhook_messages
-    webhook_messages.clear()
-    return {
-        "success": True,
-        "message": "Webhook messages cleared",
-        "message_count": 0
-    }
 
 # WebSocket endpoint for real-time communication
 @app.websocket("/ws")

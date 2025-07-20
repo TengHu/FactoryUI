@@ -15,6 +15,7 @@
     "@types/react-dom": "^19.1.6",
     "@xyflow/react": "^12.3.2",
     "react": "^19.1.0",
+    "react-arborist": "^3.4.3",
     "react-dom": "^19.1.0",
     "react-scripts": "5.0.1",
     "three": "^0.178.0",

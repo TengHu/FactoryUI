@@ -15,7 +15,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './App.css';
-import NodePanel from './components/NodePanel';
+import LeftPanel from './components/LeftPanel';
 import CustomNode from './components/CustomNode';
 import CameraNode from './components/CameraNode';
 import ThreeDNode from './components/ThreeDNode';
@@ -23,6 +23,7 @@ import NoteNode from './components/NoteNode';
 import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
 import ThemeToggle from './components/ThemeToggle';
 import { NodeInfo, apiService, WorkflowItem } from './services/api';
+import { localFileService } from './services/localFileService';
 import { canConnect, getConnectionError } from './utils/typeMatching';
 import { shouldUseCameraNode, shouldUseThreeDNode, shouldUseNoteNode } from './utils/nodeUtils';
 import { mergeCameraFramesWithInputValues } from './utils/cameraFrameUtils';
@@ -199,7 +200,7 @@ function App() {
             }
           };
 
-          await apiService.saveWorkflowByFilename(filename, workflowData);
+          await localFileService.saveWorkflowByFilename(filename, workflowData);
           console.log('Auto-saved workflow to backend:', filename);
           
           // Clear unsaved changes flag after successful auto-save
@@ -548,7 +549,7 @@ function App() {
         }
       };
 
-      const response = await apiService.saveWorkflowByFilename(activeCanvas.filename, workflowData);
+      const response = await localFileService.saveWorkflowByFilename(activeCanvas.filename, workflowData);
       if (response.success) {
         console.log('Workflow saved successfully:', activeCanvas.filename);
         alert('Workflow saved successfully!');
@@ -570,30 +571,7 @@ function App() {
   }, [activeCanvas]);
 
   const downloadWorkflow = useCallback(async () => {
-    // Save to backend first if the canvas has a filename
-    if (activeCanvas.filename) {
-      try {
-        const workflowData = {
-          nodes: activeCanvas.nodes,
-          edges: activeCanvas.edges,
-          metadata: {
-            name: activeCanvas.name,
-            description: `Workflow updated on ${new Date().toLocaleDateString()}`,
-            created: new Date().toISOString(),
-            version: '1.0.0'
-          }
-        };
-
-        const response = await apiService.saveWorkflowByFilename(activeCanvas.filename, workflowData);
-        if (response.success) {
-          console.log('Workflow updated in backend:', activeCanvas.filename);
-        } else {
-          console.error('Failed to update workflow in backend');
-        }
-      } catch (error) {
-        console.error('Error updating workflow in backend:', error);
-      }
-    }
+    
 
     // Always save as JSON file
     const workflowData: WorkflowData = {
@@ -636,10 +614,41 @@ function App() {
     fileInputRef.current?.click();
   }, []);
 
+  // Load workflow from file explorer
+  const handleWorkflowSelect = useCallback(async (workflowData: any, workflowName: string) => {
+    try {
+      // Find existing canvas with this workflow name or create new one
+      const existingCanvasIndex = canvases.findIndex(c => c.name === workflowName);
+      
+      if (existingCanvasIndex !== -1) {
+        // Switch to existing canvas
+        setActiveCanvasId(canvases[existingCanvasIndex].id);
+      } else {
+        // Create new canvas with loaded workflow
+        const nextId = Math.max(...canvases.map(c => c.id)) + 1;
+        const newCanvas: Canvas = {
+          id: nextId,
+          name: workflowName,
+          nodes: workflowData.nodes || [],
+          edges: workflowData.edges || [],
+          hasUnsavedChanges: false
+        };
+        
+        setCanvases(prev => [...prev, newCanvas]);
+        setActiveCanvasId(nextId);
+      }
+      
+      console.log(`✓ Workflow "${workflowName}" loaded from local file`);
+    } catch (error) {
+      console.error('Error loading workflow:', error);
+      alert('Failed to load workflow.');
+    }
+  }, [canvases]);
+
   // Fetch all saved workflows and load them as canvas tabs
   const fetchWorkflows = useCallback(async () => {
     try {
-      const response = await apiService.getAllWorkflows();
+      const response = await localFileService.getAllWorkflows();
       if (response.success && response.workflows.length > 0) {
         const workflowCanvases: Canvas[] = response.workflows.map((item, index) => ({
           id: Date.now() + index, // Generate unique ID for canvas
@@ -699,11 +708,11 @@ function App() {
         };
 
         // Save with new filename
-        await apiService.saveWorkflowByFilename(newFilename, workflowData);
+        await localFileService.saveWorkflowByFilename(newFilename, workflowData);
         
         // Delete old workflow if filename is different
         if (oldFilename !== newFilename) {
-          await apiService.deleteWorkflow(oldFilename);
+          await localFileService.deleteWorkflow(oldFilename);
         }
       }
 
@@ -1614,7 +1623,7 @@ function App() {
                   }
                 };
 
-                const response = await apiService.saveWorkflowByFilename(newWorkflowFilename, workflowData);
+                const response = await localFileService.saveWorkflowByFilename(newWorkflowFilename, workflowData);
                 if (response.success) {
                   const newCanvas: Canvas = {
                     id: nextId,
@@ -1665,7 +1674,33 @@ function App() {
       <div className="app-content">
         {activeTab === 'canvas' && (
           <div className="canvas-container">
-            <NodePanel onNodeDrag={onNodeDrag} />
+            <LeftPanel 
+              onNodeDrag={onNodeDrag} 
+              onWorkflowSelect={handleWorkflowSelect}
+              onWorkflowLoad={(workflow) => {
+                // Check if tab already exists for this workflow
+                const existingCanvas = canvases.find(canvas => canvas.filename === workflow.filename);
+                
+                if (existingCanvas) {
+                  // Tab exists, switch to it
+                  setActiveCanvasId(existingCanvas.id);
+                  console.log(`✓ Switched to existing tab: ${workflow.filename}`);
+                } else {
+                  // Create new tab
+                  const newCanvas: Canvas = {
+                    id: Date.now(),
+                    name: workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''),
+                    nodes: workflow.workflow.nodes || [],
+                    edges: workflow.workflow.edges || [],
+                    filename: workflow.filename,
+                    hasUnsavedChanges: false
+                  };
+                  setCanvases(prev => [...prev, newCanvas]);
+                  setActiveCanvasId(newCanvas.id);
+                  console.log(`✓ Created new tab: ${workflow.filename}`);
+                }
+              }}
+            />
             <ReactFlowProvider>
               <div 
                 className={`react-flow-wrapper ${isDraggedOver ? 'drag-over' : ''}`}
@@ -1719,7 +1754,33 @@ function App() {
         
         {activeTab === 'nodes' && (
           <div className="nodes-tab">
-            <NodePanel onNodeDrag={onNodeDrag} />
+            <LeftPanel 
+              onNodeDrag={onNodeDrag} 
+              onWorkflowSelect={handleWorkflowSelect}
+              onWorkflowLoad={(workflow) => {
+                // Check if tab already exists for this workflow
+                const existingCanvas = canvases.find(canvas => canvas.filename === workflow.filename);
+                
+                if (existingCanvas) {
+                  // Tab exists, switch to it
+                  setActiveCanvasId(existingCanvas.id);
+                  console.log(`✓ Switched to existing tab: ${workflow.filename}`);
+                } else {
+                  // Create new tab
+                  const newCanvas: Canvas = {
+                    id: Date.now(),
+                    name: workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''),
+                    nodes: workflow.workflow.nodes || [],
+                    edges: workflow.workflow.edges || [],
+                    filename: workflow.filename,
+                    hasUnsavedChanges: false
+                  };
+                  setCanvases(prev => [...prev, newCanvas]);
+                  setActiveCanvasId(newCanvas.id);
+                  console.log(`✓ Created new tab: ${workflow.filename}`);
+                }
+              }}
+            />
           </div>
         )}
       </div>
