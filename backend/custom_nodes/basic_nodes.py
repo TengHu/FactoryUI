@@ -15,6 +15,7 @@ from feetech_servo import ScsServoSDK
 import http.client
 import json
 import base64
+import asyncio
 
 
 MODULE_TAG = "Basic"
@@ -1020,6 +1021,196 @@ Usage: Use this node at the end of your robot workflow to properly close the con
             raise Exception(f"Failed to disconnect robot: {error_msg}")
 
 
+class NgrokHttpSenderNode(NodeBase):
+    """Send data through ngrok HTTP to external clients"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "data": ("ANY", {}),
+                "ngrok_url": ("STRING", {"default": "https://your-ngrok-url.ngrok.io"})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "success": ("BOOLEAN", {}),
+                "message": ("STRING", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "send_http"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Ngrok HTTP Sender"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Send data through ngrok HTTP to external clients"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+NgrokHttpSenderNode
+
+Purpose: Sends data through a ngrok HTTP URL to external clients. This node makes an HTTP POST request to the specified ngrok URL with the input data.
+
+Inputs:
+  - data (ANY): The data to send through HTTP (will be JSON serialized)
+  - ngrok_url (STRING): The ngrok HTTP URL (e.g., https://abc123.ngrok.io)
+
+Outputs:
+  - success (BOOLEAN): True if the data was sent successfully, False otherwise
+  - message (STRING): Status message describing the result
+
+Usage: Use this node to send data to external clients through ngrok. Make sure your ngrok tunnel is running and the URL is correct. The data will be sent as a JSON POST request.
+        """
+    
+    def send_http(self, data: Any, ngrok_url: str) -> tuple:
+        """Send data through ngrok HTTP"""
+        import json
+        import traceback
+        import requests
+        
+        try:
+            # Create message payload
+            message = {
+                "timestamp": time.time(),
+                "data": data
+            }
+            
+            # Send HTTP POST request
+            response = requests.post(ngrok_url, json=message, timeout=10)
+            
+            if response.status_code == 200:
+                print(f"✓ Sent data through ngrok HTTP: {response.status_code}")
+                return (True, f"Data sent successfully to {ngrok_url}")
+            else:
+                error_msg = f"HTTP request failed with status {response.status_code}"
+                print(f"❌ {error_msg}")
+                return (False, error_msg)
+            
+        except Exception as e:
+            error_msg = f"Failed to send HTTP data: {str(e)}"
+            print(f"❌ {error_msg}")
+            print(traceback.format_exc())
+            return (False, error_msg)
+
+class NgrokHttpReceiverNode(NodeBase):
+    """Receive data from external clients through ngrok HTTP"""
+    
+    def __init__(self):
+        self.received_messages = []
+        self.max_messages = 100  # Keep last 100 messages
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "endpoint": ("STRING", {"default": "/webhook"})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "received_data": ("DICT", {}),
+                "message_count": ("INT", {}),
+                "endpoint_url": ("STRING", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "receive_http"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Ngrok HTTP Receiver"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Receive data from external clients through ngrok HTTP"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+NgrokHttpReceiverNode
+
+Purpose: Receives data from external clients through HTTP webhooks that can be exposed via ngrok. This node provides an endpoint URL that external clients can POST to.
+
+Inputs:
+  - endpoint (STRING): The endpoint path for receiving data (default: /webhook)
+
+Outputs:
+  - received_data (DICT): Dictionary containing all received messages with timestamps
+  - message_count (INT): Number of messages received
+  - endpoint_url (STRING): The full endpoint URL for external clients to use
+
+Usage: Use this node to receive data from external clients. The endpoint_url output will show the full URL that external clients should POST to. Use 'ngrok http 8000' to expose the backend server.
+        """
+    
+    def receive_http(self, endpoint: str) -> tuple:
+        """Receive data from HTTP endpoint"""
+        import traceback
+        
+        try:
+            # Prepare output data
+            if self.received_messages:
+                # Group messages by type
+                grouped_messages = {}
+                for msg in self.received_messages:
+                    msg_type = msg.get("type", "unknown")
+                    if msg_type not in grouped_messages:
+                        grouped_messages[msg_type] = []
+                    grouped_messages[msg_type].append(msg)
+                
+                output_data = {
+                    "messages": self.received_messages,
+                    "grouped_by_type": grouped_messages,
+                    "latest_message": self.received_messages[-1] if self.received_messages else None
+                }
+            else:
+                output_data = {
+                    "messages": [],
+                    "grouped_by_type": {},
+                    "latest_message": None
+                }
+            
+            # Create endpoint URL (assuming backend runs on port 8000)
+            endpoint_url = f"http://localhost:8000{endpoint}"
+            
+            return (
+                output_data,
+                len(self.received_messages),
+                endpoint_url
+            )
+            
+        except Exception as e:
+            error_msg = f"Failed to process HTTP data: {str(e)}"
+            print(f"❌ {error_msg}")
+            print(traceback.format_exc())
+            return (
+                {"error": error_msg},
+                0,
+                "Error occurred"
+            )
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
@@ -1038,4 +1229,6 @@ NODE_CLASS_MAPPINGS = {
     "ThreeDVisualizationNode": ThreeDVisualizationNode,
     "UnlockRemoteNode": UnlockRemoteNode,
     "DisconnectRobotNode": DisconnectRobotNode,
+    "NgrokHttpSenderNode": NgrokHttpSenderNode,
+    "NgrokHttpReceiverNode": NgrokHttpReceiverNode,
 }

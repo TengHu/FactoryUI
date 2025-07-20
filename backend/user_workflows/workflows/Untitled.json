@@ -4,8 +4,8 @@
       "id": "ConnectRobotNode-1752694507773",
       "type": "customNode",
       "position": {
-        "x": 159.47660885213043,
-        "y": 332.0082989099732
+        "x": 112.138613510547,
+        "y": 22.83235753220592
       },
       "data": {
         "label": "Connect Robot",
@@ -54,19 +54,19 @@
       }
     },
     {
-      "id": "UnlockRemoteNode-1752963252608",
+      "id": "SO101RobotStatusReader-1752975092612",
       "type": "customNode",
       "position": {
-        "x": 503.69847482510943,
-        "y": 343.3505665539988
+        "x": 481.42206400594074,
+        "y": 36.663323736185994
       },
       "data": {
-        "label": "Unlock Remote",
+        "label": "SO101 Robot Status Reader",
         "nodeInfo": {
-          "name": "UnlockRemoteNode",
-          "display_name": "Unlock Remote",
-          "description": "Unlock remote control for the SO-101 robot using ScsServoSDK",
-          "detailed_description": "\nUnlockRemoteNode\n\nPurpose: Unlocks remote control functionality for the SO-101 robot, allowing manual or programmatic control of the servos.\n\nInputs:\n  - sdk (ScsServoSDK): The SDK instance for communicating with the robot servos\n\nOutputs:\n  - None (this node has no outputs)\n\nUsage: Use this node to enable remote control mode on the SO-101 robot. This is typically required before sending position commands or reading servo status. Place this node early in your workflow before other robot control nodes.\n\nNote: This operation may be required to establish proper communication with the robot's servo controller and enable command execution.\n        ",
+          "name": "SO101RobotStatusReader",
+          "display_name": "SO101 Robot Status Reader",
+          "description": "Read status (positions, modes) from connected robot servos using feetech-servo-sdk",
+          "detailed_description": "\n            RobotStatusReader Node\n\n            Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk.\n\n            Inputs:\n              - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n\n            Outputs:\n              - status_data (DICT): Dictionary containing read positions, modes, servo_ids, timestamp, and connection status.\n              - positions (DICT): Dictionary of servo positions keyed by servo ID.\n\n            Features:\n              - Automatically reads positions for servos 1-6\n              - Reads servo modes for each connected servo\n              - Provides timestamp and connection status information\n              - Handles errors gracefully with detailed error messages\n              - Returns both comprehensive status data and positions separately\n\n            Usage:\n              - Connect the ScsServoSDK output from a robot connection node\n              - The node automatically reads from servos 1-6\n              - Use status_data for comprehensive robot state information\n              - Use positions for direct access to servo position values\n              - Monitor connection status and error handling\n            ",
           "tags": [
             "SO101",
             "SO100"
@@ -80,16 +80,27 @@
             },
             "optional": {}
           },
-          "return_types": {},
-          "function": "unlock_remote"
+          "return_types": {
+            "required": {
+              "status_data": [
+                "DICT",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "read_robot_status"
         },
-        "type": "UnlockRemoteNode"
+        "type": "SO101RobotStatusReader"
       },
       "measured": {
-        "width": 361,
-        "height": 122
+        "width": 479,
+        "height": 138
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     }
   ],
@@ -97,17 +108,16 @@
     {
       "source": "ConnectRobotNode-1752694507773",
       "sourceHandle": "output",
-      "target": "UnlockRemoteNode-1752963252608",
+      "target": "SO101RobotStatusReader-1752975092612",
       "targetHandle": "sdk",
-      "id": "xy-edge__ConnectRobotNode-1752694507773output-UnlockRemoteNode-1752963252608sdk",
-
+      "id": "xy-edge__ConnectRobotNode-1752694507773output-SO101RobotStatusReader-1752975092612sdk",
       "className": ""
     }
   ],
   "metadata": {
-    "name": "unlock_robot",
+    "name": "Untitled",
     "description": "Auto-saved on 7/19/2025",
-    "created": "2025-07-20T02:41:38.465Z",
+    "created": "2025-07-20T02:55:51.198Z",
     "version": "1.0.0"
   }
 }

@@ -243,13 +243,13 @@ class ContinuousExecutor:
                 self.log_message("error", f"Error in execution loop: {str(e)}")
                 self.log_message("error", f"Traceback: {traceback.format_exc()}")
 
-                
-                
-                # Broadcast error
+                # Broadcast workflow error event
                 if self.websocket_manager:
-                    self._broadcast_sync(self.websocket_manager.broadcast_continuous_update(
-                        self.count_of_iterations, "error", {"error": str(e)}
-                    ))
+                    self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("workflow_error", {
+                        "workflow_id": id(self.current_workflow),
+                        "error": str(e)
+                    }))
+                
                 self.stop_continuous_execution()
                 return
     
@@ -471,14 +471,6 @@ class ContinuousExecutor:
             # Execute the workflow once
             start_time = time.time()
             
-            # Broadcast execution start
-            if self.websocket_manager:
-                self._broadcast_sync(self.websocket_manager.broadcast_execution_status({
-                    "is_running": True,
-                    "workflow_id": id(workflow_data),
-                    "timestamp": start_time
-                }))
-            
             # Setup and use optimized execution if possible
             self._setup_execution()
             self._execute_workflow_once_optimized()
@@ -513,13 +505,7 @@ class ContinuousExecutor:
             }
         
         finally:
-            # Broadcast execution status update
-            if self.websocket_manager:
-                self._broadcast_sync(self.websocket_manager.broadcast_execution_status({
-                    "is_running": False,
-                    "workflow_id": id(workflow_data),
-                    "timestamp": time.time()
-                }))
+            pass
     
     def stop_single_execution(self) -> bool:
         """Stop single workflow execution (for compatibility with workflow_executor interface)"""

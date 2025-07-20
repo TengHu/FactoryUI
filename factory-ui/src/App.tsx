@@ -884,8 +884,7 @@ function App() {
         console.log('Workflow executed successfully:', result);
         alert('Workflow executed successfully! Check the console for details.');
       } else {
-        console.error('Workflow execution failed:', result);
-        alert(`Workflow execution failed: ${result.error || 'Unknown error'}`);
+        // do nothing, status will be updated by websocket workflow_event
       }
     } catch (error) {
       console.error('Error executing workflow:', error);
@@ -1033,7 +1032,7 @@ function App() {
         websocketService.startHeartbeat();
         
         // Subscribe to events
-        websocketService.subscribe(['execution_status', 'node_state', 'workflow_event', 'continuous_update', 'robot_status']);
+        websocketService.subscribe(['node_state', 'workflow_event', 'continuous_update']);
         
         // Request current status to sync state on connection
         websocketService.send('get_status', {});
@@ -1050,10 +1049,6 @@ function App() {
 
     // Set up event handlers, each returns a function to unsubscribe
     const unsubscribeHandlers = [
-      websocketService.on('execution_status', (data) => {
-        console.log('Execution status update:', data);
-        setExecutionResults(data);
-      }),
       
       websocketService.on('status_response', (data) => {
         console.log('Status response received:', data);
@@ -1093,6 +1088,7 @@ function App() {
 
       websocketService.on('workflow_event', (data) => {
         console.log('Workflow event received:', data);
+
         if (data.event === 'continuous_started') {
           setIsContinuousRunning(true);
           console.log('✅ Continuous execution started (confirmed by WebSocket)');
@@ -1101,13 +1097,14 @@ function App() {
           setContinuousStatus(null);
           console.log('✅ Continuous execution stopped (confirmed by WebSocket)');
           
-          // User feedback
-          alert('Continuous execution stopped successfully.');
           
           // Clear any pending fallback timeouts since we got confirmation
           console.log('✅ WebSocket stop confirmation received - state updated');
+        } else if (data.event === 'workflow_error') {
+          console.error('Workflow error:', data.data);
+          alert(`Workflow error: ${data.data.error}\n\nPlease check the backend server logs for more details.`);
         } else {
-          console.log('🔄 Unknown workflow event:', data.event);
+          console.log('🔄 Unknown workflow event:', data);
         }
       }),
 
@@ -1135,29 +1132,7 @@ function App() {
         });
       }),
 
-      websocketService.on('robot_status', (data) => {
-        console.log('Robot status update:', data);
-        // Handle robot status updates
-      }),
 
-      websocketService.on('robot_status_stream', (data) => {
-        console.log('Robot status stream:', data);
-        
-        // Update node state with streaming robot status data
-        if (data.node_id) {
-          throttledSetNodeStates(prev => ({
-            ...prev,
-            [data.node_id]: {
-              ...prev[data.node_id],
-              robotStatus: data.status,
-              streamUpdate: data.stream_update,
-              streamComplete: data.stream_complete,
-              streamError: data.stream_error,
-              timestamp: data.timestamp
-            }
-          }));
-        }
-      })
     ];
 
     // Cleanup on unmount
