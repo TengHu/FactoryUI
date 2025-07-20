@@ -11,22 +11,19 @@ export const TYPE_COMPATIBILITY: TypeCompatibility = {
   'INT': ['INT', 'FLOAT', 'NUMBER', 'ANY'],
   'FLOAT': ['FLOAT', 'NUMBER', 'ANY'],
   'BOOLEAN': ['BOOLEAN', 'ANY'],
-  'ANY': ['ANY'],
+  'ANY': ['ANY', 'STRING', 'INT', 'FLOAT', 'BOOLEAN', 'NUMBER', 'SCSSERVOSDK', 'DICT'],
   'IMAGE': ['IMAGE', 'ANY'],
   
   // Generic types that can connect to their own type
   'NUMBER': ['NUMBER', 'INT', 'FLOAT', 'ANY'],
   
-  // Special cases - these can be more permissive
-  'EXEC': ['EXEC'], // Execution flow
-  'DATA': ['DATA', 'ANY'], // Generic data
   
   // Robot SDK types
   'SCSSERVOSDK': ['SCSSERVOSDK', 'ANY'], // Feetech servo SDK instance
   'DICT': ['DICT', 'ANY'], // Dictionary/object data
   
   // Unknown types can connect to anything (fallback)
-  'unknown': ['unknown', 'ANY', 'STRING', 'INT', 'FLOAT', 'BOOLEAN', 'NUMBER', 'DATA', 'EXEC', 'SCSSERVOSDK', 'DICT'],
+  'unknown': ['unknown', 'ANY', 'STRING', 'INT', 'FLOAT', 'BOOLEAN', 'NUMBER', 'SCSSERVOSDK', 'DICT'],
 };
 
 /**

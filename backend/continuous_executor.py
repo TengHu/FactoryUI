@@ -240,14 +240,16 @@ class ContinuousExecutor:
                 time.sleep(self.loop_interval)
                 
             except Exception as e:
+                stacktrace = traceback.format_exc()
                 self.log_message("error", f"Error in execution loop: {str(e)}")
-                self.log_message("error", f"Traceback: {traceback.format_exc()}")
+                self.log_message("error", f"Traceback: {stacktrace}")
 
                 # Broadcast workflow error event
                 if self.websocket_manager:
                     self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("workflow_error", {
                         "workflow_id": id(self.current_workflow),
-                        "error": str(e)
+                        "error": str(e),
+                        "stacktrace": stacktrace
                     }))
                 
                 self.stop_continuous_execution()
@@ -489,13 +491,16 @@ class ContinuousExecutor:
             }
             
         except Exception as e:
+            stacktrace = traceback.format_exc()
             self.log_message("error", f"Single workflow execution failed: {str(e)}")
+            self.log_message("error", f"Traceback: {stacktrace}")
             
             # Broadcast workflow error event
             if self.websocket_manager:
                 self._broadcast_sync(self.websocket_manager.broadcast_workflow_event("workflow_error", {
                     "workflow_id": id(workflow_data),
-                    "error": str(e)
+                    "error": str(e),
+                    "stacktrace": stacktrace
                 }))
             
             return {

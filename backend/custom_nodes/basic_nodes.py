@@ -199,60 +199,61 @@ Usage: Use this node to manipulate text data in your workflow. Select the desire
             return text
 
 class DelayNode(NodeBase):
-    """Add delay to workflow execution"""
-    
+    """A node that introduces a delay in workflow execution."""
+
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "input": ("STRING", {}),
-                "delay_seconds": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 10.0})
+                "input": ("ANY", {}),
+                "delay_seconds": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 10.0}),
             }
         }
-    
+
     @classmethod
     def RETURN_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "output": ("STRING", {})
+                "output": ("ANY", {})
             }
         }
-    
+
     @classmethod
     def FUNCTION(cls) -> str:
         return "execute"
-    
+
     @classmethod
     def TAGS(cls) -> List[str]:
         return [MODULE_TAG]
-    
+
     @classmethod
     def DISPLAY_NAME(cls) -> str:
         return "Delay"
-    
+
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Add delay to workflow execution"
-    
+        return "Pause workflow execution for a specified number of seconds."
+
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
 DelayNode
 
-Purpose: Adds a configurable delay to workflow execution, useful for timing control and rate limiting.
+Purpose: Introduces a configurable delay (pause) in the workflow, which is useful for timing control, synchronization, or rate limiting.
 
 Inputs:
-  - input (STRING): The value to pass through after the delay
-  - delay_seconds (FLOAT): The number of seconds to wait (range: 0.1 to 10.0, default: 1.0)
+  - input (ANY): The value to pass through after the delay.
+  - delay_seconds (FLOAT): The number of seconds to wait before passing the input forward (range: 0.1 to 10.0, default: 1.0).
 
 Outputs:
-  - output (STRING): The same input value, passed through after the delay
+  - output (ANY): The same input value, returned after the delay.
 
-Usage: Use this node to add pauses in your workflow, for example when interfacing with hardware that needs time between commands or when rate-limiting API calls.
+Usage: Use this node to add a pause in your workflow. This is helpful when you need to wait between hardware commands, throttle API calls, or synchronize steps in your process.
         """
-    
-    def execute(self, input: str, delay_seconds: float) -> str:
-        time.sleep(delay_seconds)
+
+    def execute(self, input, delay_seconds: float):
+        import time
+        time.sleep(int(delay_seconds))
         return input
 
 class RandomNumberNode(NodeBase):
@@ -434,62 +435,6 @@ Usage: Use this node to debug your workflow by printing intermediate values to t
 
     def execute(self, value: Any):
         print(value)
-
-class ConcatNode(NodeBase):
-    """Concatenate two strings with a '+' in between."""
-
-    @classmethod
-    def INPUT_TYPES(cls) -> Dict[str, Any]:
-        return {
-            "required": {
-                "a": ("STRING", {}),
-                "b": ("STRING", {})
-            }
-        }
-
-    @classmethod
-    def RETURN_TYPES(cls) -> Dict[str, Any]:
-        return {
-            "required": {
-                "output": ("STRING", {})
-            }
-        }
-
-    @classmethod
-    def FUNCTION(cls) -> str:
-        return "execute"
-
-    @classmethod
-    def TAGS(cls) -> List[str]:
-        return [MODULE_TAG]
-
-    @classmethod
-    def DISPLAY_NAME(cls) -> str:
-        return "Concat"
-
-    @classmethod
-    def DESCRIPTION(cls) -> str:
-        return "Concatenate two strings with a '+' in between."
-
-    @classmethod
-    def get_detailed_description(cls) -> str:
-        return """
-ConcatNode
-
-Purpose: Concatenates two strings with a '+' character between them.
-
-Inputs:
-  - a (STRING): The first string
-  - b (STRING): The second string
-
-Outputs:
-  - output (STRING): The concatenated result in format 'a+b'
-
-Usage: Use this node to combine string values in your workflow, useful for creating composite commands or labels.
-        """
-
-    def execute(self, a: str, b: str) -> str:
-        return f"{a}+{b}"
 
 class ConnectRobotNode(NodeBase):
     """Connect to a robot and return ScsServoSDK instance"""
@@ -884,9 +829,10 @@ Usage: Use this node to visualize robot joint states in 3D. Connect it to nodes 
             tuple: (None, rt_update)
         """
 
-        angles = {servo_id: (position / 4095.0) * 360.0 for servo_id, position in positions.items()}
+        angles = {int(servo_id): (position / 4095.0) * 360.0 for servo_id, position in positions.items()}
 
         list_of_angles = ['Rotation', 'Pitch', 'Elbow', 'Wrist_Pitch', 'Wrist_Roll', 'Jaw']
+
 
         angles = [
             {'name': list_of_angles[servo_id], 'angle': angles[servo_id+1], 'servoId': servo_id + 1}
@@ -896,8 +842,8 @@ Usage: Use this node to visualize robot joint states in 3D. Connect it to nodes 
         return (None, angles)
 
 
-class UnlockRemoteNode(NodeBase):
-    """Node for unlocking remote control of the robot"""
+class UnlockRobotNode(NodeBase):
+    """Node for unlocking the robot"""
 
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
@@ -914,7 +860,7 @@ class UnlockRemoteNode(NodeBase):
 
     @classmethod
     def FUNCTION(cls) -> str:
-        return "unlock_remote"
+        return "unlock"
 
     @classmethod
     def TAGS(cls) -> List[str]:
@@ -922,18 +868,18 @@ class UnlockRemoteNode(NodeBase):
 
     @classmethod
     def DISPLAY_NAME(cls) -> str:
-        return "Unlock Remote"
+        return "Unlock Robot"
 
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Unlock remote control for the robot using ScsServoSDK"
+        return "Unlock the robot using ScsServoSDK"
 
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
-UnlockRemoteNode
+UnlockRobotNode
 
-Purpose: Unlocks remote control functionality for the robot, allowing manual or programmatic control of the servos.
+Purpose: Unlocks the robot, allowing manual or programmatic control of the servos.
 
 Inputs:
   - sdk (ScsServoSDK): The SDK instance for communicating with the robot servos
@@ -941,25 +887,23 @@ Inputs:
 Outputs:
   - None (this node has no outputs)
 
-Usage: Use this node to enable remote control mode on the robot. This is typically required before sending position commands or reading servo status. Place this node early in your workflow before other robot control nodes.
+Usage: Use this node to enable control mode on the robot. This is typically required before sending position commands or reading servo status. Place this node early in your workflow before other robot control nodes.
 
 Note: This operation may be required to establish proper communication with the robot's servo controller and enable command execution.
         """
 
-    def unlock_remote(self, sdk: ScsServoSDK) -> tuple:
-        """Unlock remote control for the robot using _unlock_servo method"""
+    def unlock(self, sdk: ScsServoSDK) -> tuple:
+        """Unlock the robot using _unlock_servo method"""
         import traceback
+
         try:
-            # Use the specific _unlock_servo method from ScsServoSDK
             for servo_id in range(1, 7):
                 sdk.write_torque_enable(servo_id, False)
-            
-            return ()  # Return empty tuple since no outputs
-            
+            return ()
         except Exception as e:
             error_msg = str(e) + "\n" + traceback.format_exc()
-            print(f"❌ Failed to unlock remote: {error_msg}")
-            raise Exception(f"Failed to unlock remote control: {error_msg}")
+            print(f"❌ Failed to unlock robot: {error_msg}")
+            raise Exception(f"Failed to unlock robot: {error_msg}")
 
 
 class DisconnectRobotNode(NodeBase):
@@ -1021,15 +965,15 @@ Usage: Use this node at the end of your robot workflow to properly close the con
             raise Exception(f"Failed to disconnect robot: {error_msg}")
 
 
-class NgrokHttpSenderNode(NodeBase):
-    """Send data through ngrok HTTP to external clients"""
+class ProxyHttpSenderNode(NodeBase):
+    """Send data through HTTP proxy to external clients"""
     
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
                 "data": ("ANY", {}),
-                "ngrok_url": ("STRING", {"default": "https://your-ngrok-url.ngrok.io"})
+                "proxy_url": ("STRING", {"default": "https://your-proxy-url.com"})
             }
         }
     
@@ -1052,32 +996,32 @@ class NgrokHttpSenderNode(NodeBase):
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
-        return "Ngrok HTTP Sender"
+        return "Proxy HTTP Sender"
     
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Send data through ngrok HTTP to external clients"
+        return "Send data through HTTP proxy to external clients"
     
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
-NgrokHttpSenderNode
+ProxyHttpSenderNode
 
-Purpose: Sends data through a ngrok HTTP URL to external clients. This node makes an HTTP POST request to the specified ngrok URL with the input data.
+Purpose: Sends data through an HTTP proxy URL to external clients. This node makes an HTTP POST request to the specified proxy URL with the input data.
 
 Inputs:
   - data (ANY): The data to send through HTTP (will be JSON serialized)
-  - ngrok_url (STRING): The ngrok HTTP URL (e.g., https://abc123.ngrok.io)
+  - proxy_url (STRING): The HTTP proxy URL (e.g., https://abc123.proxy.com)
 
 Outputs:
   - success (BOOLEAN): True if the data was sent successfully, False otherwise
   - message (STRING): Status message describing the result
 
-Usage: Use this node to send data to external clients through ngrok. Make sure your ngrok tunnel is running and the URL is correct. The data will be sent as a JSON POST request.
+Usage: Use this node to send data to external clients through any HTTP proxy service. Make sure your proxy tunnel is running and the URL is correct. The data will be sent as a JSON POST request.
         """
     
-    def send_http(self, data: Any, ngrok_url: str) -> tuple:
-        """Send data through ngrok HTTP"""
+    def send_http(self, data: Any, proxy_url: str) -> tuple:
+        """Send data through HTTP proxy"""
         import json
         import traceback
         import requests
@@ -1086,15 +1030,15 @@ Usage: Use this node to send data to external clients through ngrok. Make sure y
             # Create message payload
             message = {
                 "timestamp": time.time(),
-                "data": data
+                "payload": data
             }
             
             # Send HTTP POST request
-            response = requests.post(ngrok_url, json=message, timeout=10)
+            response = requests.post(proxy_url, json=message, timeout=10)
             
             if response.status_code == 200:
-                print(f"✓ Sent data through ngrok HTTP: {response.status_code}")
-                return (True, f"Data sent successfully to {ngrok_url}")
+                print(f"✓ Sent data through HTTP proxy: {response.status_code}")
+                return (True, f"Data sent successfully to {proxy_url}")
             else:
                 error_msg = f"HTTP request failed with status {response.status_code}"
                 print(f"❌ {error_msg}")
@@ -1106,18 +1050,14 @@ Usage: Use this node to send data to external clients through ngrok. Make sure y
             print(traceback.format_exc())
             return (False, error_msg)
 
-class NgrokHttpReceiverNode(NodeBase):
-    """Receive data from external clients through ngrok HTTP"""
-    
-    def __init__(self):
-        self.received_messages = []
-        self.max_messages = 100  # Keep last 100 messages
+class ProxyHttpClientNode(NodeBase):
+    """Make HTTP requests to external endpoints through proxy"""
     
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "endpoint": ("STRING", {"default": "/webhook"})
+                "url": ("STRING", {"default": "https://your-proxy-endpoint.com"})
             }
         }
     
@@ -1125,15 +1065,15 @@ class NgrokHttpReceiverNode(NodeBase):
     def RETURN_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "received_data": ("DICT", {}),
-                "message_count": ("INT", {}),
-                "endpoint_url": ("STRING", {})
+                "response_data": ("DICT", {}),
+                "status_code": ("INT", {}),
+                "success": ("BOOLEAN", {})
             }
         }
     
     @classmethod
     def FUNCTION(cls) -> str:
-        return "receive_http"
+        return "fetch_data"
     
     @classmethod
     def TAGS(cls) -> List[str]:
@@ -1141,94 +1081,76 @@ class NgrokHttpReceiverNode(NodeBase):
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
-        return "Ngrok HTTP Receiver"
+        return "Proxy HTTP Client"
     
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Receive data from external clients through ngrok HTTP"
+        return "Make HTTP requests to external endpoints through proxy"
     
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
-NgrokHttpReceiverNode
+ProxyHttpClientNode
 
-Purpose: Receives data from external clients through HTTP webhooks that can be exposed via ngrok. This node provides an endpoint URL that external clients can POST to.
+Purpose: Makes HTTP GET requests to external endpoints that can be accessed through proxy tunnels. This node fetches data from the specified URL and returns the response.
 
 Inputs:
-  - endpoint (STRING): The endpoint path for receiving data (default: /webhook)
+  - url (STRING): The full URL to make the HTTP request to (e.g., https://your-proxy-endpoint.com)
 
 Outputs:
-  - received_data (DICT): Dictionary containing all received messages with timestamps
-  - message_count (INT): Number of messages received
-  - endpoint_url (STRING): The full endpoint URL for external clients to use
+  - response_data (DICT): The response data from the HTTP request (parsed JSON or error info)
+  - status_code (INT): The HTTP status code of the response
+  - success (BOOLEAN): True if the request was successful (status code 200-299), False otherwise
 
-Usage: Use this node to receive data from external clients. The endpoint_url output will show the full URL that external clients should POST to. Use 'ngrok http 8000' to expose the backend server.
+Usage: Use this node to fetch data from external services through proxy tunnels. Provide the full proxy URL and the node will make a GET request and return the response data.
         """
     
-    def receive_http(self, endpoint: str) -> tuple:
-        """Receive data from HTTP endpoint"""
+    def fetch_data(self, url: str) -> tuple:
+        """Fetch data from external HTTP endpoint"""
         import traceback
+        import requests
+
+        response = requests.get(url, timeout=10)
+        status_code = response.status_code
         
         try:
-            # Prepare output data
-            if self.received_messages:
-                # Group messages by type
-                grouped_messages = {}
-                for msg in self.received_messages:
-                    msg_type = msg.get("type", "unknown")
-                    if msg_type not in grouped_messages:
-                        grouped_messages[msg_type] = []
-                    grouped_messages[msg_type].append(msg)
-                
-                output_data = {
-                    "messages": self.received_messages,
-                    "grouped_by_type": grouped_messages,
-                    "latest_message": self.received_messages[-1] if self.received_messages else None
-                }
-            else:
-                output_data = {
-                    "messages": [],
-                    "grouped_by_type": {},
-                    "latest_message": None
-                }
-            
-            # Create endpoint URL (assuming backend runs on port 8000)
-            endpoint_url = f"http://localhost:8000{endpoint}"
+            response_data = response.json()
             
             return (
-                output_data,
-                len(self.received_messages),
-                endpoint_url
+                response_data['data']['payload'],
+                status_code,
+                True
             )
             
         except Exception as e:
-            error_msg = f"Failed to process HTTP data: {str(e)}"
+            error_msg = f"Failed to fetch data from {url}: {str(e)}"
             print(f"❌ {error_msg}")
             print(traceback.format_exc())
+            
+            error_data = {
+                "error": error_msg,
+                "url": url,
+            }
+            
             return (
-                {"error": error_msg},
-                0,
-                "Error occurred"
+                error_data,
+                status_code,
+                False
             )
 
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
-    "OutputNode": OutputNode,
-    "TextProcessorNode": TextProcessorNode,
     "DelayNode": DelayNode,
-    "RandomNumberNode": RandomNumberNode,
-    "MathNode": MathNode,
     "PrintToConsoleNode": PrintToConsoleNode,
-    "ConcatNode": ConcatNode,
     "ConnectRobotNode": ConnectRobotNode,
     "ShowImageNode": ShowImageNode,
     "CameraNode": CameraNode,
     "DisplayNode": DisplayNode,
     "NoteNode": NoteNode,
     "ThreeDVisualizationNode": ThreeDVisualizationNode,
-    "UnlockRemoteNode": UnlockRemoteNode,
+    "UnlockRobotNode": UnlockRobotNode,
     "DisconnectRobotNode": DisconnectRobotNode,
-    "NgrokHttpSenderNode": NgrokHttpSenderNode,
-    "NgrokHttpReceiverNode": NgrokHttpReceiverNode,
+    "ProxyHttpSenderNode": ProxyHttpSenderNode,
+    "ProxyHttpClientNode": ProxyHttpClientNode,
 }

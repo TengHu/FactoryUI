@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "ConnectRobotNode-1752694507773",
+      "id": "ConnectRobotNode-1752986044978",
       "type": "customNode",
       "position": {
-        "x": 159.47660885213043,
-        "y": 332.0082989099732
+        "x": -19.384922504373378,
+        "y": 226.89992312773416
       },
       "data": {
         "label": "Connect Robot",
@@ -54,22 +54,21 @@
       }
     },
     {
-      "id": "UnlockRemoteNode-1752963252608",
+      "id": "UnlockRobotNode-1752986048873",
       "type": "customNode",
       "position": {
-        "x": 503.69847482510943,
-        "y": 343.3505665539988
+        "x": 429.55284204204025,
+        "y": 244.16134222494463
       },
       "data": {
-        "label": "Unlock Remote",
+        "label": "Unlock Robot",
         "nodeInfo": {
-          "name": "UnlockRemoteNode",
-          "display_name": "Unlock Remote",
-          "description": "Unlock remote control for the SO-101 robot using ScsServoSDK",
-          "detailed_description": "\nUnlockRemoteNode\n\nPurpose: Unlocks remote control functionality for the SO-101 robot, allowing manual or programmatic control of the servos.\n\nInputs:\n  - sdk (ScsServoSDK): The SDK instance for communicating with the robot servos\n\nOutputs:\n  - None (this node has no outputs)\n\nUsage: Use this node to enable remote control mode on the SO-101 robot. This is typically required before sending position commands or reading servo status. Place this node early in your workflow before other robot control nodes.\n\nNote: This operation may be required to establish proper communication with the robot's servo controller and enable command execution.\n        ",
+          "name": "UnlockRobotNode",
+          "display_name": "Unlock Robot",
+          "description": "Unlock the robot using ScsServoSDK",
+          "detailed_description": "\nUnlockRobotNode\n\nPurpose: Unlocks the robot, allowing manual or programmatic control of the servos.\n\nInputs:\n  - sdk (ScsServoSDK): The SDK instance for communicating with the robot servos\n\nOutputs:\n  - None (this node has no outputs)\n\nUsage: Use this node to enable control mode on the robot. This is typically required before sending position commands or reading servo status. Place this node early in your workflow before other robot control nodes.\n\nNote: This operation may be required to establish proper communication with the robot's servo controller and enable command execution.\n        ",
           "tags": [
-            "SO101",
-            "SO100"
+            "Basic"
           ],
           "input_types": {
             "required": {
@@ -81,12 +80,12 @@
             "optional": {}
           },
           "return_types": {},
-          "function": "unlock_remote"
+          "function": "unlock"
         },
-        "type": "UnlockRemoteNode"
+        "type": "UnlockRobotNode"
       },
       "measured": {
-        "width": 361,
+        "width": 222,
         "height": 122
       },
       "selected": true,
@@ -95,19 +94,17 @@
   ],
   "edges": [
     {
-      "source": "ConnectRobotNode-1752694507773",
+      "source": "ConnectRobotNode-1752986044978",
       "sourceHandle": "output",
-      "target": "UnlockRemoteNode-1752963252608",
+      "target": "UnlockRobotNode-1752986048873",
       "targetHandle": "sdk",
-      "id": "xy-edge__ConnectRobotNode-1752694507773output-UnlockRemoteNode-1752963252608sdk",
-
-      "className": ""
+      "id": "xy-edge__ConnectRobotNode-1752986044978output-UnlockRobotNode-1752986048873sdk"
     }
   ],
   "metadata": {
     "name": "unlock_robot",
-    "description": "Auto-saved on 7/19/2025",
-    "created": "2025-07-20T02:41:38.465Z",
+    "description": "Auto-saved on 7/20/2025",
+    "created": "2025-07-20T04:49:59.215Z",
     "version": "1.0.0"
   }
 }
