@@ -245,8 +245,8 @@ const CameraNode = ({ id, data, selected, ...props }: CameraNodeProps) => {
                   style={{
                     background: isRequired ? '#22c55e' : '#10b981',
                     border: '2px solid white',
-                    width: '10px',
-                    height: '10px',
+                    width: '16px',
+                    height: '16px',
                   }}
                   title={`${output.name} (${output.type}) - ${isRequired ? 'required' : 'optional'}`}
                 />
