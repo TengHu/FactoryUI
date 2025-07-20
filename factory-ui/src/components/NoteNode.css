@@ -1,0 +1,66 @@
+.note-node {
+  background: #fffbeb;
+  border: 2px solid #fbbf24;
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 150px;
+  min-height: 80px;
+  width: 200px;
+  height: auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  resize: none; /* Disable browser default resize */
+}
+
+.note-node.selected {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.note-node.bypassed {
+  opacity: 0.6;
+  filter: grayscale(0.5);
+}
+
+.note-textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  min-height: 20px;
+}
+
+.note-textarea::placeholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Resizing states */
+.note-node.resizing {
+  user-select: none;
+  pointer-events: none;
+}
+
+.note-node.resizing .note-textarea {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Resize handle colors for note node - make them amber to match the theme */
+.note-node .resize-handle {
+  background: #f59e0b;
+  border: 2px solid #ffffff;
+}
+
+.note-node .resize-handle:hover {
+  background: #d97706;
+}

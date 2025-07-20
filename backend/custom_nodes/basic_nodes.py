@@ -723,7 +723,6 @@ class NoteNode(NodeBase):
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "text": ("STRING", {"default": "Add your note here..."})
             }
         }
 
@@ -763,9 +762,9 @@ Outputs:
 Usage: Use this node to add documentation, comments, or notes to your workflow. The text will be visible in the node but won't affect the workflow execution.
         """
 
-    def note(self, text: str):
-        # Simply consume the text input without producing any output
-        return (None,)
+    def note(self):
+
+        pass
 
 class ThreeDVisualizationNode(NodeBase):
     """A node that takes motor positions and provides 3D visualization capabilities."""

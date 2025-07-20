@@ -88,8 +88,42 @@
         "width": 222,
         "height": 122
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
+    },
+    {
+      "id": "NoteNode-1753023091918",
+      "type": "noteNode",
+      "position": {
+        "x": -568.9511057612863,
+        "y": -2.038104425061931
+      },
+      "data": {
+        "label": "Note",
+        "nodeInfo": {
+          "name": "NoteNode",
+          "display_name": "Note",
+          "description": "Add a note or comment to your workflow (no output).",
+          "detailed_description": "\nNoteNode\n\nPurpose: Takes text input and produces no output. Useful for adding comments, notes, or documentation to your workflow.\n\nInputs:\n  - text (STRING): The note or comment text to add to the workflow\n\nOutputs:\n  - None\n\nUsage: Use this node to add documentation, comments, or notes to your workflow. The text will be visible in the node but won't affect the workflow execution.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {}
+          },
+          "return_types": {},
+          "function": "note"
+        },
+        "type": "NoteNode",
+        "inputValues": {
+          "note": "Unlock your robot"
+        }
+      },
+      "measured": {
+        "width": 200,
+        "height": 80
+      },
+      "selected": false
     }
   ],
   "edges": [
@@ -104,7 +138,7 @@
   "metadata": {
     "name": "unlock_robot",
     "description": "Auto-saved on 7/20/2025",
-    "created": "2025-07-20T14:31:23.964Z",
+    "created": "2025-07-20T14:51:53.870Z",
     "version": "1.0.0"
   }
 }
