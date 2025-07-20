@@ -12,6 +12,7 @@ export interface WorkflowItem {
 export class LocalFileService {
   private static instance: LocalFileService;
   private baseUrl = '/workflows';
+  private listeners: Set<() => void> = new Set();
 
   static getInstance(): LocalFileService {
     if (!LocalFileService.instance) {
@@ -20,10 +21,26 @@ export class LocalFileService {
     return LocalFileService.instance;
   }
 
+  // Event system for auto-refresh
+  addListener(callback: () => void): () => void {
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
+  }
+
+  private notifyListeners(): void {
+    this.listeners.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.error('Error in LocalFileService listener:', error);
+      }
+    });
+  }
+
   async getAllWorkflows(): Promise<{ success: boolean; workflows: WorkflowItem[] }> {
     try {
-      // Fetch list of workflow files from public/workflows directory
-      const workflowFiles = [
+      // First get workflows from public directory
+      const publicWorkflowFiles = [
         'Untitleddd.json',
         'joints_control.json',
         'llm.json',
@@ -34,19 +51,40 @@ export class LocalFileService {
       ];
 
       const workflows: WorkflowItem[] = [];
+      const processedFiles = new Set<string>();
 
-      for (const filename of workflowFiles) {
+      // Load from localStorage first (these take priority)
+      const localWorkflows = await this.getLocalWorkflows();
+      for (const filename of localWorkflows) {
+        try {
+          const workflow = await this.loadWorkflowFromFile(filename);
+          if (workflow) {
+            workflows.push({ filename, workflow });
+            processedFiles.add(filename);
+          }
+        } catch (error) {
+          console.warn(`Failed to load local workflow ${filename}:`, error);
+        }
+      }
+
+      // Get list of deleted workflows
+      const deletedWorkflows = JSON.parse(localStorage.getItem('deleted_workflows') || '[]');
+
+      // Then load from public directory (but skip if already loaded from localStorage or deleted)
+      for (const filename of publicWorkflowFiles) {
+        if (processedFiles.has(filename) || deletedWorkflows.includes(filename)) {
+          continue; // Skip, already loaded from localStorage or marked as deleted
+        }
+
         try {
           const response = await fetch(`${this.baseUrl}/${filename}`);
           if (response.ok) {
             const workflow = await response.json();
-            workflows.push({
-              filename,
-              workflow
-            });
+            workflows.push({ filename, workflow });
+            processedFiles.add(filename);
           }
         } catch (error) {
-          console.warn(`Failed to load workflow ${filename}:`, error);
+          console.warn(`Failed to load public workflow ${filename}:`, error);
         }
       }
 
@@ -65,8 +103,6 @@ export class LocalFileService {
 
   async saveWorkflowByFilename(filename: string, workflow: WorkflowData): Promise<{ success: boolean; message: string; workflow_id?: string }> {
     try {
-      // In a real browser environment, we can't directly write to the public directory
-      // Instead, we'll simulate saving by storing in localStorage and providing download functionality
       const workflowData = {
         ...workflow,
         metadata: {
@@ -79,26 +115,14 @@ export class LocalFileService {
       const storageKey = `workflow_${filename}`;
       localStorage.setItem(storageKey, JSON.stringify(workflowData));
 
-      // Create a downloadable blob
-      const blob = new Blob([JSON.stringify(workflowData, null, 2)], {
-        type: 'application/json'
-      });
-
-      // Trigger download
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      console.log(`Workflow ${filename} saved to localStorage and downloaded`);
+      console.log(`Workflow ${filename} saved to localStorage`);
+      
+      // Notify listeners of the change
+      this.notifyListeners();
 
       return {
         success: true,
-        message: `Workflow saved as ${filename} and downloaded`,
+        message: `Workflow saved as ${filename}`,
         workflow_id: filename
       };
     } catch (error) {
@@ -137,9 +161,20 @@ export class LocalFileService {
       const storageKey = `workflow_${filename}`;
       localStorage.removeItem(storageKey);
 
+      // Also add to a "deleted" list to hide public workflows
+      const deletedKey = 'deleted_workflows';
+      const deleted = JSON.parse(localStorage.getItem(deletedKey) || '[]');
+      if (!deleted.includes(filename)) {
+        deleted.push(filename);
+        localStorage.setItem(deletedKey, JSON.stringify(deleted));
+      }
+
+      // Notify listeners of the change
+      this.notifyListeners();
+
       return {
         success: true,
-        message: `Workflow ${filename} removed from local storage`
+        message: `Workflow ${filename} deleted`
       };
     } catch (error) {
       console.error('Failed to delete workflow:', error);
@@ -176,6 +211,9 @@ export class LocalFileService {
       const filename = file.name;
       const storageKey = `workflow_${filename}`;
       localStorage.setItem(storageKey, text);
+
+      // Notify listeners of the change
+      this.notifyListeners();
 
       return {
         success: true,

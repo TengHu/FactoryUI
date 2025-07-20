@@ -58,9 +58,16 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
     }
   }, []);
 
-  // Automatically load workflows on mount
+  // Automatically load workflows on mount and set up auto-refresh
   useEffect(() => {
     loadWorkflows();
+    
+    // Subscribe to file service changes for auto-refresh
+    const unsubscribe = localFileService.addListener(() => {
+      loadWorkflows();
+    });
+    
+    return unsubscribe;
   }, [loadWorkflows]);
 
   const handleWorkflowClick = useCallback(async (node: WorkflowTreeNode) => {
@@ -83,10 +90,140 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
     }
   }, [onWorkflowSelect, onWorkflowLoad]);
 
+  const handleRenameWorkflow = useCallback(async (workflow: WorkflowItem) => {
+    const newName = prompt('Enter new workflow name:', workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''));
+    if (!newName || newName === (workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''))) {
+      return;
+    }
+
+    try {
+      // Update workflow metadata
+      const updatedWorkflow = {
+        ...workflow.workflow,
+        metadata: {
+          ...workflow.workflow.metadata,
+          name: newName,
+          modified: new Date().toISOString()
+        }
+      };
+
+      const result = await localFileService.saveWorkflowByFilename(workflow.filename, updatedWorkflow);
+      if (result.success) {
+        console.log(`✓ Workflow renamed to "${newName}"`);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error('Failed to rename workflow:', error);
+      alert('Failed to rename workflow');
+    }
+  }, [loadWorkflows]);
+
+  const handleDeleteWorkflow = useCallback(async (workflow: WorkflowItem) => {
+    const workflowName = workflow.workflow.metadata?.name || workflow.filename.replace('.json', '');
+    if (!window.confirm(`Are you sure you want to delete workflow "${workflowName}"?`)) {
+      return;
+    }
+
+    try {
+      const result = await localFileService.deleteWorkflow(workflow.filename);
+      if (result.success) {
+        console.log(`✓ Workflow "${workflowName}" deleted`);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error('Failed to delete workflow:', error);
+      alert('Failed to delete workflow');
+    }
+  }, [loadWorkflows]);
+
+  const handleDuplicateWorkflow = useCallback(async (workflow: WorkflowItem) => {
+    const originalName = workflow.workflow.metadata?.name || workflow.filename.replace('.json', '');
+    const newName = prompt('Enter name for the duplicate:', `${originalName} (Copy)`);
+    if (!newName) {
+      return;
+    }
+
+    try {
+      const newFilename = `${newName.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
+      const duplicatedWorkflow = {
+        ...workflow.workflow,
+        metadata: {
+          ...workflow.workflow.metadata,
+          name: newName,
+          created: new Date().toISOString(),
+          modified: new Date().toISOString()
+        }
+      };
+
+      const result = await localFileService.saveWorkflowByFilename(newFilename, duplicatedWorkflow);
+      if (result.success) {
+        console.log(`✓ Workflow duplicated as "${newName}"`);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error('Failed to duplicate workflow:', error);
+      alert('Failed to duplicate workflow');
+    }
+  }, [loadWorkflows]);
+
   const Node = ({ node, style, dragHandle }: any) => {
     const handleClick = () => {
       if (node.data.type === 'workflow') {
         handleWorkflowClick(node.data);
+      }
+    };
+
+    const handleContextMenu = (e: React.MouseEvent) => {
+      e.preventDefault();
+      
+      if (node.data.type === 'workflow' && node.data.workflow) {
+        const contextMenu = document.createElement('div');
+        contextMenu.className = 'workflow-context-menu';
+        contextMenu.innerHTML = `
+          <div class="context-menu-item" data-action="rename">✏️ Rename</div>
+          <div class="context-menu-item" data-action="duplicate">📄 Duplicate</div>
+          <div class="context-menu-separator"></div>
+          <div class="context-menu-item danger" data-action="delete">🗑️ Delete</div>
+        `;
+        
+        contextMenu.style.position = 'fixed';
+        contextMenu.style.left = `${e.clientX}px`;
+        contextMenu.style.top = `${e.clientY}px`;
+        contextMenu.style.zIndex = '1000';
+        
+        document.body.appendChild(contextMenu);
+
+        const handleContextClick = (event: MouseEvent) => {
+          const target = event.target as HTMLElement;
+          const action = target.getAttribute('data-action');
+          
+          if (action) {
+            switch (action) {
+              case 'rename':
+                handleRenameWorkflow(node.data.workflow);
+                break;
+              case 'duplicate':
+                handleDuplicateWorkflow(node.data.workflow);
+                break;
+              case 'delete':
+                handleDeleteWorkflow(node.data.workflow);
+                break;
+            }
+          }
+          
+          document.body.removeChild(contextMenu);
+          document.removeEventListener('click', handleContextClick);
+        };
+
+        contextMenu.addEventListener('click', handleContextClick);
+        
+        // Remove menu when clicking elsewhere
+        setTimeout(() => {
+          document.addEventListener('click', handleContextClick, { once: true });
+        }, 0);
       }
     };
 
@@ -99,6 +236,7 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
         style={style}
         className={`workflow-tree-node ${node.data.type} ${isSelected ? 'selected' : ''}`}
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
       >
         <span className="node-icon">{icon}</span>
         <span className="node-name">{node.data.name}</span>
@@ -135,7 +273,7 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
             data={treeData}
             openByDefault={true}
             width="100%"
-            height={300}
+            height={1000}
             indent={16}
           >
             {Node}

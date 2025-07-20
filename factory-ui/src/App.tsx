@@ -1678,17 +1678,27 @@ function App() {
               onNodeDrag={onNodeDrag} 
               onWorkflowSelect={handleWorkflowSelect}
               onWorkflowLoad={(workflow) => {
-                // Load workflow directly from local file service
-                const newCanvas: Canvas = {
-                  id: Date.now(),
-                  name: workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''),
-                  nodes: workflow.workflow.nodes || [],
-                  edges: workflow.workflow.edges || [],
-                  filename: workflow.filename,
-                  hasUnsavedChanges: false
-                };
-                setCanvases(prev => [...prev, newCanvas]);
-                setActiveCanvasId(newCanvas.id);
+                // Check if tab already exists for this workflow
+                const existingCanvas = canvases.find(canvas => canvas.filename === workflow.filename);
+                
+                if (existingCanvas) {
+                  // Tab exists, switch to it
+                  setActiveCanvasId(existingCanvas.id);
+                  console.log(`✓ Switched to existing tab: ${workflow.filename}`);
+                } else {
+                  // Create new tab
+                  const newCanvas: Canvas = {
+                    id: Date.now(),
+                    name: workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''),
+                    nodes: workflow.workflow.nodes || [],
+                    edges: workflow.workflow.edges || [],
+                    filename: workflow.filename,
+                    hasUnsavedChanges: false
+                  };
+                  setCanvases(prev => [...prev, newCanvas]);
+                  setActiveCanvasId(newCanvas.id);
+                  console.log(`✓ Created new tab: ${workflow.filename}`);
+                }
               }}
             />
             <ReactFlowProvider>
@@ -1748,17 +1758,27 @@ function App() {
               onNodeDrag={onNodeDrag} 
               onWorkflowSelect={handleWorkflowSelect}
               onWorkflowLoad={(workflow) => {
-                // Load workflow directly from local file service
-                const newCanvas: Canvas = {
-                  id: Date.now(),
-                  name: workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''),
-                  nodes: workflow.workflow.nodes || [],
-                  edges: workflow.workflow.edges || [],
-                  filename: workflow.filename,
-                  hasUnsavedChanges: false
-                };
-                setCanvases(prev => [...prev, newCanvas]);
-                setActiveCanvasId(newCanvas.id);
+                // Check if tab already exists for this workflow
+                const existingCanvas = canvases.find(canvas => canvas.filename === workflow.filename);
+                
+                if (existingCanvas) {
+                  // Tab exists, switch to it
+                  setActiveCanvasId(existingCanvas.id);
+                  console.log(`✓ Switched to existing tab: ${workflow.filename}`);
+                } else {
+                  // Create new tab
+                  const newCanvas: Canvas = {
+                    id: Date.now(),
+                    name: workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''),
+                    nodes: workflow.workflow.nodes || [],
+                    edges: workflow.workflow.edges || [],
+                    filename: workflow.filename,
+                    hasUnsavedChanges: false
+                  };
+                  setCanvases(prev => [...prev, newCanvas]);
+                  setActiveCanvasId(newCanvas.id);
+                  console.log(`✓ Created new tab: ${workflow.filename}`);
+                }
               }}
             />
           </div>
