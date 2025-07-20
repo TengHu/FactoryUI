@@ -150,7 +150,7 @@
       "target": "SO101RobotStatusReader-1752964637833",
       "targetHandle": "sdk",
       "id": "xy-edge__ConnectRobotNode-1752694258308output-SO101RobotStatusReader-1752964637833sdk",
-      "className": ""
+      "className": "animated"
     },
     {
       "source": "SO101RobotStatusReader-1752964637833",
@@ -158,13 +158,13 @@
       "target": "ThreeDVisualizationNode-1752964269089",
       "targetHandle": "positions",
       "id": "xy-edge__SO101RobotStatusReader-1752964637833output-1-ThreeDVisualizationNode-1752964269089positions",
-      "className": ""
+      "className": "animated"
     }
   ],
   "metadata": {
     "name": "llm",
-    "description": "Auto-saved on 7/19/2025",
-    "created": "2025-07-20T03:14:01.924Z",
+    "description": "Auto-saved on 7/20/2025",
+    "created": "2025-07-20T04:48:23.244Z",
     "version": "1.0.0"
   }
 }

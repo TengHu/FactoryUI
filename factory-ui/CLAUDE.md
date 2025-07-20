@@ -1,5 +1,38 @@
 # Factory UI Frontend
 
+## Communication Architecture
+
+### Overview
+
+The frontend implements a **dual communication system** that combines HTTP REST API calls for traditional request-response operations and WebSocket connections for real-time bidirectional communication. This hybrid approach provides both reliable data operations and instant visual feedback during workflow execution.
+
+**Communication Channels:**
+- **HTTP REST API**: For CRUD operations, workflow management, and one-time requests
+- **WebSocket**: For real-time updates, live monitoring, and instant feedback
+
+### Communication Flow
+
+```
+Frontend (React)
+    ↕️ HTTP API (REST)
+    ↕️ WebSocket (Real-time)
+Backend (FastAPI)
+```
+
+**HTTP API Usage:**
+- Workflow creation, updates, and deletion
+- Node configuration and parameter management
+- File uploads and downloads
+- Authentication and user management
+- One-time data retrieval
+
+**WebSocket Usage:**
+- Real-time node state updates
+- Live execution monitoring
+- Instant input synchronization
+- Continuous workflow status
+- Live error reporting and notifications
+
 ## Real-Time Communication Implementation
 
 ### Overview
@@ -20,7 +53,42 @@ Real-Time State Management (React Hooks)
 
 ## Core Components
 
-### 1. WebSocket Service (`src/services/websocket.ts`)
+### 1. HTTP API Service (`src/services/api.ts`)
+
+RESTful API client for traditional request-response operations with the backend.
+
+**Key Features:**
+- CRUD operations for workflows and nodes
+- File upload/download capabilities
+- Authentication and session management
+- Error handling and retry logic
+- Request/response interceptors
+
+**Usage:**
+```typescript
+import { apiService } from './services/api';
+
+// Create a new workflow
+const workflow = await apiService.createWorkflow({
+  name: 'My Workflow',
+  nodes: [...],
+  edges: [...]
+});
+
+// Update node configuration
+await apiService.updateNode(nodeId, {
+  position: { x: 100, y: 200 },
+  data: { ... }
+});
+
+// Upload files
+const fileData = await apiService.uploadFile(file);
+
+// Get workflow status
+const status = await apiService.getWorkflowStatus(workflowId);
+```
+
+### 2. WebSocket Service (`src/services/websocket.ts`)
 
 Comprehensive WebSocket client with automatic reconnection and event management.
 
@@ -53,7 +121,41 @@ websocketService.disconnect();
 
 ### 2. React Integration (`src/App.tsx`)
 
-Main application component with WebSocket integration and real-time state management.
+Main application component with both HTTP API and WebSocket integration for comprehensive backend communication.
+
+**Dual Communication Pattern:**
+```typescript
+// HTTP for initial data loading and CRUD operations
+useEffect(() => {
+  const loadWorkflow = async () => {
+    try {
+      const workflow = await apiService.getWorkflow(workflowId);
+      setNodes(workflow.nodes);
+      setEdges(workflow.edges);
+    } catch (error) {
+      console.error('Failed to load workflow:', error);
+    }
+  };
+  
+  loadWorkflow();
+}, [workflowId]);
+
+// WebSocket for real-time updates
+useEffect(() => {
+  websocketService.on('node_state', (data) => {
+    setNodeStates(prev => ({
+      ...prev,
+      [data.node_id]: data
+    }));
+  });
+}, []);
+```
+
+**Communication Strategy:**
+- **Initial Load**: HTTP API fetches complete workflow state
+- **Real-time Updates**: WebSocket provides live node state changes
+- **User Actions**: HTTP API for persistent changes, WebSocket for immediate feedback
+- **Error Handling**: HTTP API for retry logic, WebSocket for instant error notifications
 
 **Real-Time Features:**
 - Live node state visualization
@@ -106,6 +208,75 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
 ```
 
 ## Message Protocol
+
+### HTTP API Protocol
+
+#### RESTful Endpoints
+```typescript
+// Workflow Management
+GET    /api/workflows                    // List all workflows
+POST   /api/workflows                    // Create new workflow
+GET    /api/workflows/{id}               // Get specific workflow
+PUT    /api/workflows/{id}               // Update workflow
+DELETE /api/workflows/{id}               // Delete workflow
+
+// Node Operations
+GET    /api/nodes/{id}                   // Get node details
+PUT    /api/nodes/{id}                   // Update node configuration
+POST   /api/nodes/{id}/execute           // Execute single node
+
+// File Operations
+POST   /api/files/upload                 // Upload file
+GET    /api/files/{id}                   // Download file
+DELETE /api/files/{id}                   // Delete file
+
+// System Status
+GET    /api/status                       // Get system status
+GET    /api/health                       // Health check
+```
+
+#### Request/Response Examples
+```typescript
+// Create Workflow
+const response = await apiService.createWorkflow({
+  name: "Robot Control Workflow",
+  description: "Controls robot joints",
+  nodes: [
+    {
+      id: "joint1",
+      type: "JointControl",
+      position: { x: 100, y: 100 },
+      data: { joint_id: 1, angle: 45 }
+    }
+  ],
+  edges: []
+});
+
+// Response:
+{
+  "id": "workflow_12345",
+  "name": "Robot Control Workflow",
+  "created_at": "2024-01-15T10:30:00Z",
+  "status": "created"
+}
+
+// Update Node
+await apiService.updateNode("joint1", {
+  data: { joint_id: 1, angle: 90 }
+});
+
+// Get Workflow Status
+const status = await apiService.getWorkflowStatus("workflow_12345");
+// Response:
+{
+  "workflow_id": "workflow_12345",
+  "status": "running",
+  "execution_count": 42,
+  "last_execution": "2024-01-15T10:35:00Z"
+}
+```
+
+### WebSocket Protocol
 
 ### Outbound Messages (Client → Server)
 
@@ -398,6 +569,59 @@ const nodesWithState = React.useMemo(() => {
   nodeTypes={nodeTypes}
   isValidConnection={isValidConnection}
 />
+```
+
+## Benefits of Dual Communication
+
+### Why Both HTTP and WebSocket?
+
+**HTTP API Advantages:**
+- **Reliability**: Guaranteed delivery with retry mechanisms
+- **Caching**: Browser and CDN caching for static resources
+- **Security**: Standard authentication and authorization
+- **Compatibility**: Works with all browsers and network configurations
+- **Debugging**: Easy to inspect with browser dev tools
+
+**WebSocket Advantages:**
+- **Real-time**: Sub-10ms latency for instant updates
+- **Bidirectional**: Server can push updates without polling
+- **Efficiency**: Single connection for multiple updates
+- **Stateful**: Maintains connection context
+- **Interactive**: Perfect for live collaboration
+
+**Combined Benefits:**
+- **Best of Both Worlds**: Reliable operations + real-time feedback
+- **Graceful Degradation**: Fallback to HTTP polling if WebSocket fails
+- **Scalable Architecture**: HTTP for heavy operations, WebSocket for updates
+- **User Experience**: Instant feedback with reliable data persistence
+
+### Use Case Examples
+
+```typescript
+// Scenario 1: Workflow Creation
+// 1. HTTP API creates workflow (reliable persistence)
+const workflow = await apiService.createWorkflow(workflowData);
+
+// 2. WebSocket immediately starts monitoring (real-time updates)
+websocketService.subscribeToWorkflow(workflow.id);
+
+// Scenario 2: Node Configuration
+// 1. HTTP API updates node config (persistent change)
+await apiService.updateNode(nodeId, newConfig);
+
+// 2. WebSocket provides instant visual feedback
+websocketService.on('node_updated', (data) => {
+  updateNodeVisualState(data.node_id, data.state);
+});
+
+// Scenario 3: File Upload
+// 1. HTTP API handles file upload (reliable, supports large files)
+const fileData = await apiService.uploadFile(file);
+
+// 2. WebSocket notifies when processing starts
+websocketService.on('file_processing_started', (data) => {
+  showProcessingIndicator(data.file_id);
+});
 ```
 
 ## Performance Optimizations

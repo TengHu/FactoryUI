@@ -4,8 +4,8 @@
       "id": "ConnectRobotNode-1752981247094",
       "type": "customNode",
       "position": {
-        "x": -90.47214823923906,
-        "y": 269.21765058222684
+        "x": -85.64319997888809,
+        "y": 261.9742281917004
       },
       "data": {
         "label": "Connect Robot",
@@ -57,8 +57,8 @@
       "id": "SO101RobotStatusReader-1752981261656",
       "type": "customNode",
       "position": {
-        "x": 267.0994466529175,
-        "y": 273.9697767956164
+        "x": 330.02009953611486,
+        "y": 210.7662689233171
       },
       "data": {
         "label": "SO101 Robot Status Reader",
@@ -98,131 +98,17 @@
       },
       "measured": {
         "width": 479,
-        "height": 320
+        "height": 138
       },
       "selected": false,
       "dragging": false
     },
     {
-      "id": "NgrokHttpSenderNode-1752981275603",
+      "id": "DisplayNode-1752983719616",
       "type": "customNode",
       "position": {
-        "x": 839.7288920091684,
-        "y": 288.8432688827915
-      },
-      "data": {
-        "label": "Ngrok HTTP Sender",
-        "nodeInfo": {
-          "name": "NgrokHttpSenderNode",
-          "display_name": "Ngrok HTTP Sender",
-          "description": "Send data through ngrok HTTP to external clients",
-          "detailed_description": "\nNgrokHttpSenderNode\n\nPurpose: Sends data through a ngrok HTTP URL to external clients. This node makes an HTTP POST request to the specified ngrok URL with the input data.\n\nInputs:\n  - data (ANY): The data to send through HTTP (will be JSON serialized)\n  - ngrok_url (STRING): The ngrok HTTP URL (e.g., https://abc123.ngrok.io)\n\nOutputs:\n  - success (BOOLEAN): True if the data was sent successfully, False otherwise\n  - message (STRING): Status message describing the result\n\nUsage: Use this node to send data to external clients through ngrok. Make sure your ngrok tunnel is running and the URL is correct. The data will be sent as a JSON POST request.\n        ",
-          "tags": [
-            "Basic"
-          ],
-          "input_types": {
-            "required": {
-              "data": [
-                "ANY",
-                {}
-              ],
-              "ngrok_url": [
-                "STRING",
-                {
-                  "default": "https://your-ngrok-url.ngrok.io"
-                }
-              ]
-            }
-          },
-          "return_types": {
-            "required": {
-              "success": [
-                "BOOLEAN",
-                {}
-              ],
-              "message": [
-                "STRING",
-                {}
-              ]
-            }
-          },
-          "function": "send_http"
-        },
-        "type": "NgrokHttpSenderNode",
-        "inputValues": {
-          "ngrok_url": "https://2d269edb62d1.ngrok-free.app"
-        }
-      },
-      "measured": {
-        "width": 287,
-        "height": 300
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "NgrokHttpReceiverNode-1752981642123",
-      "type": "customNode",
-      "position": {
-        "x": -51.44117554742115,
-        "y": 731.3296584762581
-      },
-      "data": {
-        "label": "Ngrok HTTP Receiver",
-        "nodeInfo": {
-          "name": "NgrokHttpReceiverNode",
-          "display_name": "Ngrok HTTP Receiver",
-          "description": "Receive data from external clients through ngrok HTTP",
-          "detailed_description": "\nNgrokHttpReceiverNode\n\nPurpose: Receives data from external clients through HTTP webhooks that can be exposed via ngrok. This node provides an endpoint URL that external clients can POST to.\n\nInputs:\n  - endpoint (STRING): The endpoint path for receiving data (default: /webhook)\n\nOutputs:\n  - received_data (DICT): Dictionary containing all received messages with timestamps\n  - message_count (INT): Number of messages received\n  - endpoint_url (STRING): The full endpoint URL for external clients to use\n\nUsage: Use this node to receive data from external clients. The endpoint_url output will show the full URL that external clients should POST to. Use 'ngrok http 8000' to expose the backend server.\n        ",
-          "tags": [
-            "Basic"
-          ],
-          "input_types": {
-            "required": {
-              "endpoint": [
-                "STRING",
-                {
-                  "default": "/webhook"
-                }
-              ]
-            }
-          },
-          "return_types": {
-            "required": {
-              "received_data": [
-                "DICT",
-                {}
-              ],
-              "message_count": [
-                "INT",
-                {}
-              ],
-              "endpoint_url": [
-                "STRING",
-                {}
-              ]
-            }
-          },
-          "function": "receive_http"
-        },
-        "type": "NgrokHttpReceiverNode",
-        "inputValues": {
-          "endpoint": "http://localhost:8081"
-        }
-      },
-      "measured": {
-        "width": 315,
-        "height": 264
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "DisplayNode-1752981658121",
-      "type": "customNode",
-      "position": {
-        "x": 336.5090763930691,
-        "y": 753.6398966070211
+        "x": 326.445288428994,
+        "y": 607.1952657282742
       },
       "data": {
         "label": "Display",
@@ -245,11 +131,243 @@
           "return_types": {},
           "function": "display"
         },
-        "type": "DisplayNode"
+        "type": "DisplayNode",
+        "bypassed": false
       },
       "measured": {
-        "width": 784,
-        "height": 210
+        "width": 362,
+        "height": 122
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "ThreeDVisualizationNode-1752985141862",
+      "type": "threeDNode",
+      "position": {
+        "x": 1134.902344667754,
+        "y": 678.353651015242
+      },
+      "data": {
+        "label": "3D Visualization",
+        "nodeInfo": {
+          "name": "ThreeDVisualizationNode",
+          "display_name": "3D Visualization",
+          "description": "Visualize robot positions in 3D by converting motor positions to angles.",
+          "detailed_description": "\nThreeDVisualizationNode\n\nPurpose: Takes motor position data and converts it to joint angles for 3D visualization. This node processes motor position data and returns visualization data that can be rendered in a 3D viewer.\n\nInputs:\n  - positions (DICT): Dictionary mapping servo IDs to positions in format:\n    {1: 1510, 2: 1029, 3: 3010, 4: 967, 5: 638, 6: 2039}\n\nOutputs:\n  - None (produces rt_update for 3D visualization)\n\nUsage: Use this node to visualize robot joint states in 3D. Connect it to nodes that provide motor position data to see the 3D representation of the robot's current configuration in the UI.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "return_types": {
+            "required": {}
+          },
+          "function": "visualize_3d"
+        },
+        "type": "ThreeDVisualizationNode"
+      },
+      "measured": {
+        "width": 500,
+        "height": 400
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "ThreeDVisualizationNode-1752985392275",
+      "type": "threeDNode",
+      "position": {
+        "x": 292.7945591469669,
+        "y": 935.1587544020083
+      },
+      "data": {
+        "label": "3D Visualization",
+        "nodeInfo": {
+          "name": "ThreeDVisualizationNode",
+          "display_name": "3D Visualization",
+          "description": "Visualize robot positions in 3D by converting motor positions to angles.",
+          "detailed_description": "\nThreeDVisualizationNode\n\nPurpose: Takes motor position data and converts it to joint angles for 3D visualization. This node processes motor position data and returns visualization data that can be rendered in a 3D viewer.\n\nInputs:\n  - positions (DICT): Dictionary mapping servo IDs to positions in format:\n    {1: 1510, 2: 1029, 3: 3010, 4: 967, 5: 638, 6: 2039}\n\nOutputs:\n  - None (produces rt_update for 3D visualization)\n\nUsage: Use this node to visualize robot joint states in 3D. Connect it to nodes that provide motor position data to see the 3D representation of the robot's current configuration in the UI.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "return_types": {
+            "required": {}
+          },
+          "function": "visualize_3d"
+        },
+        "type": "ThreeDVisualizationNode",
+        "bypassed": false
+      },
+      "measured": {
+        "width": 500,
+        "height": 400
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "DisplayNode-1752985414958",
+      "type": "customNode",
+      "position": {
+        "x": 1157.9415627698786,
+        "y": 335.9452969882729
+      },
+      "data": {
+        "label": "Display",
+        "nodeInfo": {
+          "name": "DisplayNode",
+          "display_name": "Display",
+          "description": "Display the input value (ANY type) for debugging or monitoring.",
+          "detailed_description": "\nDisplayNode\n\nPurpose: Takes any input value and displays it (prints to console). Useful for debugging or monitoring workflow data.\n\nInputs:\n  - value (ANY): Any value to display\n\nOutputs:\n  - value (ANY): The same value that was input, for display purposes\n\nUsage: Use this node to inspect values in your workflow. It prints the value to the backend console and passes it through for display in the UI.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "value": [
+                "ANY",
+                {}
+              ]
+            }
+          },
+          "return_types": {},
+          "function": "display"
+        },
+        "type": "DisplayNode",
+        "bypassed": false
+      },
+      "measured": {
+        "width": 362,
+        "height": 122
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "ProxyHttpSenderNode-1752986430006",
+      "type": "customNode",
+      "position": {
+        "x": 1076.405779811138,
+        "y": 13.319457546238027
+      },
+      "data": {
+        "label": "Proxy HTTP Sender",
+        "nodeInfo": {
+          "name": "ProxyHttpSenderNode",
+          "display_name": "Proxy HTTP Sender",
+          "description": "Send data through HTTP proxy to external clients",
+          "detailed_description": "\nProxyHttpSenderNode\n\nPurpose: Sends data through an HTTP proxy URL to external clients. This node makes an HTTP POST request to the specified proxy URL with the input data.\n\nInputs:\n  - data (ANY): The data to send through HTTP (will be JSON serialized)\n  - proxy_url (STRING): The HTTP proxy URL (e.g., https://abc123.proxy.com)\n\nOutputs:\n  - success (BOOLEAN): True if the data was sent successfully, False otherwise\n  - message (STRING): Status message describing the result\n\nUsage: Use this node to send data to external clients through any HTTP proxy service. Make sure your proxy tunnel is running and the URL is correct. The data will be sent as a JSON POST request.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "data": [
+                "ANY",
+                {}
+              ],
+              "proxy_url": [
+                "STRING",
+                {
+                  "default": "https://your-proxy-url.com"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "success": [
+                "BOOLEAN",
+                {}
+              ],
+              "message": [
+                "STRING",
+                {}
+              ]
+            }
+          },
+          "function": "send_http"
+        },
+        "type": "ProxyHttpSenderNode",
+        "inputValues": {
+          "proxy_url": " https://6d1446e16e46.ngrok-free.app/data"
+        }
+      },
+      "measured": {
+        "width": 287,
+        "height": 232
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "ProxyHttpClientNode-1752986434375",
+      "type": "customNode",
+      "position": {
+        "x": -147.59422018886187,
+        "y": 591.944457546238
+      },
+      "data": {
+        "label": "Proxy HTTP Client",
+        "nodeInfo": {
+          "name": "ProxyHttpClientNode",
+          "display_name": "Proxy HTTP Client",
+          "description": "Make HTTP requests to external endpoints through proxy",
+          "detailed_description": "\nProxyHttpClientNode\n\nPurpose: Makes HTTP GET requests to external endpoints that can be accessed through proxy tunnels. This node fetches data from the specified URL and returns the response.\n\nInputs:\n  - url (STRING): The full URL to make the HTTP request to (e.g., https://your-proxy-endpoint.com)\n\nOutputs:\n  - response_data (DICT): The response data from the HTTP request (parsed JSON or error info)\n  - status_code (INT): The HTTP status code of the response\n  - success (BOOLEAN): True if the request was successful (status code 200-299), False otherwise\n\nUsage: Use this node to fetch data from external services through proxy tunnels. Provide the full proxy URL and the node will make a GET request and return the response data.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "url": [
+                "STRING",
+                {
+                  "default": "https://your-proxy-endpoint.com"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "response_data": [
+                "DICT",
+                {}
+              ],
+              "status_code": [
+                "INT",
+                {}
+              ],
+              "success": [
+                "BOOLEAN",
+                {}
+              ]
+            }
+          },
+          "function": "fetch_data"
+        },
+        "type": "ProxyHttpClientNode",
+        "inputValues": {
+          "url": "http://localhost:8001/data"
+        }
+      },
+      "measured": {
+        "width": 328,
+        "height": 264
       },
       "selected": false,
       "dragging": false
@@ -267,23 +385,48 @@
     {
       "source": "SO101RobotStatusReader-1752981261656",
       "sourceHandle": "output-1",
-      "target": "NgrokHttpSenderNode-1752981275603",
-      "targetHandle": "data",
-      "id": "xy-edge__SO101RobotStatusReader-1752981261656output-1-NgrokHttpSenderNode-1752981275603data",
+      "target": "ThreeDVisualizationNode-1752985141862",
+      "targetHandle": "positions",
+      "id": "xy-edge__SO101RobotStatusReader-1752981261656output-1-ThreeDVisualizationNode-1752985141862positions",
       "className": ""
     },
     {
-      "source": "NgrokHttpReceiverNode-1752981642123",
-      "sourceHandle": "output-0",
-      "target": "DisplayNode-1752981658121",
+      "source": "SO101RobotStatusReader-1752981261656",
+      "sourceHandle": "output-1",
+      "target": "DisplayNode-1752985414958",
       "targetHandle": "value",
-      "id": "xy-edge__NgrokHttpReceiverNode-1752981642123output-0-DisplayNode-1752981658121value"
+      "id": "xy-edge__SO101RobotStatusReader-1752981261656output-1-DisplayNode-1752985414958value",
+      "className": ""
+    },
+    {
+      "source": "SO101RobotStatusReader-1752981261656",
+      "sourceHandle": "output-1",
+      "target": "ProxyHttpSenderNode-1752986430006",
+      "targetHandle": "data",
+      "id": "xy-edge__SO101RobotStatusReader-1752981261656output-1-ProxyHttpSenderNode-1752986430006data",
+      "className": ""
+    },
+    {
+      "source": "ProxyHttpClientNode-1752986434375",
+      "sourceHandle": "output-0",
+      "target": "DisplayNode-1752983719616",
+      "targetHandle": "value",
+      "id": "xy-edge__ProxyHttpClientNode-1752986434375output-0-DisplayNode-1752983719616value",
+      "className": ""
+    },
+    {
+      "source": "ProxyHttpClientNode-1752986434375",
+      "sourceHandle": "output-0",
+      "target": "ThreeDVisualizationNode-1752985392275",
+      "targetHandle": "positions",
+      "id": "xy-edge__ProxyHttpClientNode-1752986434375output-0-ThreeDVisualizationNode-1752985392275positions",
+      "className": ""
     }
   ],
   "metadata": {
     "name": "teleoperation_through_ngrok",
-    "description": "Auto-saved on 7/19/2025",
-    "created": "2025-07-20T03:22:05.143Z",
+    "description": "Auto-saved on 7/20/2025",
+    "created": "2025-07-20T04:48:00.809Z",
     "version": "1.0.0"
   }
 }

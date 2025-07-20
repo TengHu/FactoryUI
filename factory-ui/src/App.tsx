@@ -1102,7 +1102,13 @@ function App() {
           console.log('✅ WebSocket stop confirmation received - state updated');
         } else if (data.event === 'workflow_error') {
           console.error('Workflow error:', data.data);
-          alert(`Workflow error: ${data.data.error}\n\nPlease check the backend server logs for more details.`);
+          // Show a nicely formatted, human-readable error dialog for workflow errors
+          alert(
+            `🚨 Workflow Error 🚨\n\n` +
+            `Error: ${data.data.error}\n\n` +
+            `Stacktrace:\n${data.data.stacktrace}` + 
+            `\n\nPlease check the backend server logs for more details.`
+          );
         } else {
           console.log('🔄 Unknown workflow event:', data);
         }
