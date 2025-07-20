@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ngrok WebSocket Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .connecting { background-color: #fff3cd; color: #856404; }
+        
+        input, button {
+            padding: 8px 12px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        
+        .message-log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .message { margin: 2px 0; }
+        .sent { color: #007bff; }
+        .received { color: #28a745; }
+        .error { color: #dc3545; }
+        
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 Ngrok WebSocket Test Client</h1>
+        
+        <div id="status" class="status disconnected">
+            Disconnected
+        </div>
+        
+        <div class="form-group">
+            <label for="wsUrl">WebSocket URL:</label>
+            <input type="text" id="wsUrl" value="ws://localhost:8765" style="width: 300px;">
+            <button onclick="connect()" id="connectBtn">Connect</button>
+            <button onclick="disconnect()" id="disconnectBtn" disabled>Disconnect</button>
+        </div>
+        
+        <div class="form-group">
+            <label for="messageType">Message Type:</label>
+            <input type="text" id="messageType" value="test_message" style="width: 200px;">
+        </div>
+        
+        <div class="form-group">
+            <label for="messageData">Message Data (JSON):</label>
+            <textarea id="messageData" rows="4" style="width: 100%; font-family: monospace;">{
+  "client_id": "web-client",
+  "message": "Hello from web client!",
+  "timestamp": "auto"
+}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <button onclick="sendMessage()" id="sendBtn" disabled>Send Message</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="form-group">
+            <label>Message Log:</label>
+            <div id="messageLog" class="message-log"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let isConnected = false;
+
+        function updateStatus(status, className) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = status;
+            statusEl.className = `status ${className}`;
+        }
+
+        function logMessage(message, type = 'info') {
+            const log = document.getElementById('messageLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+            if (!url) {
+                alert('Please enter a WebSocket URL');
+                return;
+            }
+
+            updateStatus('Connecting...', 'connecting');
+            logMessage(`Connecting to ${url}...`);
+
+            try {
+                ws = new WebSocket(url);
+
+                ws.onopen = function() {
+                    isConnected = true;
+                    updateStatus('Connected', 'connected');
+                    logMessage('✅ WebSocket connected successfully', 'received');
+                    
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    document.getElementById('sendBtn').disabled = false;
+                };
+
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        logMessage(`📥 Received: ${JSON.stringify(data, null, 2)}`, 'received');
+                    } catch (e) {
+                        logMessage(`📥 Received: ${event.data}`, 'received');
+                    }
+                };
+
+                ws.onclose = function(event) {
+                    isConnected = false;
+                    updateStatus('Disconnected', 'disconnected');
+                    logMessage(`❌ WebSocket closed: ${event.code} ${event.reason}`, 'error');
+                    
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                    document.getElementById('sendBtn').disabled = true;
+                };
+
+                ws.onerror = function(error) {
+                    logMessage(`❌ WebSocket error: ${error}`, 'error');
+                };
+
+            } catch (error) {
+                logMessage(`❌ Failed to create WebSocket: ${error}`, 'error');
+                updateStatus('Connection Failed', 'disconnected');
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendMessage() {
+            if (!isConnected || !ws) {
+                alert('Not connected to WebSocket');
+                return;
+            }
+
+            const messageType = document.getElementById('messageType').value;
+            let messageData = document.getElementById('messageData').value;
+
+            try {
+                // Parse JSON data
+                let data = JSON.parse(messageData);
+                
+                // Replace "auto" timestamp with actual timestamp
+                if (data.timestamp === "auto") {
+                    data.timestamp = Date.now();
+                }
+
+                const message = {
+                    type: messageType,
+                    timestamp: Date.now(),
+                    data: data
+                };
+
+                ws.send(JSON.stringify(message));
+                logMessage(`📤 Sent: ${JSON.stringify(message, null, 2)}`, 'sent');
+
+            } catch (error) {
+                logMessage(`❌ Failed to send message: ${error}`, 'error');
+                alert('Invalid JSON in message data');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('messageLog').innerHTML = '';
+        }
+
+        // Auto-connect on page load if URL is provided
+        window.onload = function() {
+            const url = document.getElementById('wsUrl').value;
+            if (url && url !== 'ws://localhost:8765') {
+                connect();
+            }
+        };
+    </script>
+</body>
+</html> 

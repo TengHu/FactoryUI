@@ -15,6 +15,7 @@ from feetech_servo import ScsServoSDK
 import http.client
 import json
 import base64
+import asyncio
 
 
 MODULE_TAG = "Basic"
@@ -1020,6 +1021,306 @@ Usage: Use this node at the end of your robot workflow to properly close the con
             raise Exception(f"Failed to disconnect robot: {error_msg}")
 
 
+class NgrokWebSocketSenderNode(NodeBase):
+    """Send data through ngrok websocket to external clients"""
+    
+    def __init__(self):
+        self.websocket_connections = {}
+        self.connection_lock = asyncio.Lock()
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "data": ("ANY", {}),
+                "ngrok_url": ("STRING", {"default": "wss://your-ngrok-url.ngrok.io"}),
+                "message_type": ("STRING", {"default": "data"})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "success": ("BOOLEAN", {}),
+                "message": ("STRING", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "send_websocket"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Ngrok WebSocket Sender"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Send data through ngrok websocket to external clients"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+NgrokWebSocketSenderNode
+
+Purpose: Sends data through a ngrok websocket URL to external clients. This node establishes a websocket connection to the specified ngrok URL and sends the input data.
+
+Inputs:
+  - data (ANY): The data to send through the websocket (will be JSON serialized)
+  - ngrok_url (STRING): The ngrok websocket URL (e.g., wss://abc123.ngrok.io)
+  - message_type (STRING): The type of message to send (default: "data")
+
+Outputs:
+  - success (BOOLEAN): True if the data was sent successfully, False otherwise
+  - message (STRING): Status message describing the result
+
+Usage: Use this node to send data to external clients through ngrok. Make sure your ngrok tunnel is running and the URL is correct. The data will be sent as a JSON message with the specified message type.
+        """
+    
+    def send_websocket(self, data: Any, ngrok_url: str, message_type: str) -> tuple:
+        """Send data through ngrok websocket"""
+        import json
+        import traceback
+        import asyncio
+        
+        try:
+            # Create message payload
+            message = {
+                "type": message_type,
+                "timestamp": time.time(),
+                "data": data
+            }
+            
+            # Run async websocket operation
+            async def send_message():
+                # Get or create websocket connection
+                if ngrok_url not in self.websocket_connections:
+                    try:
+                        import websockets
+                        websocket = await websockets.connect(ngrok_url)
+                        self.websocket_connections[ngrok_url] = websocket
+                        print(f"✓ Connected to ngrok websocket: {ngrok_url}")
+                    except Exception as e:
+                        raise Exception(f"Failed to connect to ngrok websocket: {str(e)}")
+                
+                websocket = self.websocket_connections[ngrok_url]
+                
+                # Send the message
+                await websocket.send(json.dumps(message))
+                print(f"✓ Sent data through ngrok websocket: {message_type}")
+            
+            # Execute the async function
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Schedule the coroutine
+                    asyncio.create_task(send_message())
+                else:
+                    # Run in new event loop
+                    asyncio.run(send_message())
+            except Exception as e:
+                raise Exception(f"Failed to execute websocket operation: {str(e)}")
+            
+            return (True, f"Data sent successfully to {ngrok_url}")
+            
+        except Exception as e:
+            error_msg = f"Failed to send websocket data: {str(e)}"
+            print(f"❌ {error_msg}")
+            print(traceback.format_exc())
+            return (False, error_msg)
+
+class NgrokWebSocketReceiverNode(NodeBase):
+    """Receive data from external clients through ngrok websocket"""
+    
+    def __init__(self):
+        self.websocket_server = None
+        self.received_messages = []
+        self.max_messages = 100  # Keep last 100 messages
+        self.is_running = False
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "port": ("INT", {"default": 8765, "min": 1024, "max": 65535}),
+                "start_server": ("BOOLEAN", {"default": True})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "received_data": ("DICT", {}),
+                "message_count": ("INT", {}),
+                "server_status": ("STRING", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "receive_websocket"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Ngrok WebSocket Receiver"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Receive data from external clients through ngrok websocket"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+NgrokWebSocketReceiverNode
+
+Purpose: Receives data from external clients through a websocket server that can be exposed via ngrok. This node starts a websocket server on the specified port and collects incoming messages.
+
+Inputs:
+  - port (INT): The port to run the websocket server on (default: 8765)
+  - start_server (BOOLEAN): Whether to start the websocket server (default: True)
+
+Outputs:
+  - received_data (DICT): Dictionary containing all received messages with timestamps
+  - message_count (INT): Number of messages received
+  - server_status (STRING): Current status of the websocket server
+
+Usage: Use this node to receive data from external clients. Start ngrok with 'ngrok http 8765' to expose the websocket server. The node will collect all incoming messages and make them available as output.
+        """
+    
+    async def start_websocket_server(self, port: int):
+        """Start the websocket server"""
+        import websockets
+        import json
+        
+        async def handle_client(websocket, path):
+            """Handle incoming websocket connections"""
+            client_address = websocket.remote_address
+            print(f"✓ Client connected: {client_address}")
+            
+            try:
+                async for message in websocket:
+                    try:
+                        # Parse the message
+                        data = json.loads(message)
+                        
+                        # Add timestamp if not present
+                        if "timestamp" not in data:
+                            data["timestamp"] = time.time()
+                        
+                        # Store the message
+                        self.received_messages.append(data)
+                        
+                        # Keep only the last max_messages
+                        if len(self.received_messages) > self.max_messages:
+                            self.received_messages = self.received_messages[-self.max_messages:]
+                        
+                        print(f"✓ Received message from {client_address}: {data.get('type', 'unknown')}")
+                        
+                        # Send acknowledgment
+                        await websocket.send(json.dumps({
+                            "type": "ack",
+                            "timestamp": time.time(),
+                            "message": "Message received successfully"
+                        }))
+                        
+                    except json.JSONDecodeError:
+                        print(f"❌ Invalid JSON from {client_address}")
+                        await websocket.send(json.dumps({
+                            "type": "error",
+                            "message": "Invalid JSON format"
+                        }))
+                        
+            except websockets.exceptions.ConnectionClosed:
+                print(f"✓ Client disconnected: {client_address}")
+            except Exception as e:
+                print(f"❌ Error handling client {client_address}: {str(e)}")
+        
+        # Start the server
+        self.websocket_server = await websockets.serve(handle_client, "localhost", port)
+        self.is_running = True
+        print(f"✓ WebSocket server started on port {port}")
+        print(f"  Use 'ngrok http {port}' to expose this server")
+    
+    def receive_websocket(self, port: int, start_server: bool) -> tuple:
+        """Receive data from websocket server"""
+        import asyncio
+        import traceback
+        
+        try:
+            # Start server if requested and not already running
+            if start_server and not self.is_running:
+                # Run the async server start in a new event loop
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # Schedule the server start
+                        asyncio.create_task(self.start_websocket_server(port))
+                    else:
+                        # Run in new event loop
+                        asyncio.run(self.start_websocket_server(port))
+                except Exception as e:
+                    return (
+                        {"error": f"Failed to start server: {str(e)}"},
+                        0,
+                        f"Failed to start: {str(e)}"
+                    )
+            
+            # Prepare output data
+            if self.received_messages:
+                # Group messages by type
+                grouped_messages = {}
+                for msg in self.received_messages:
+                    msg_type = msg.get("type", "unknown")
+                    if msg_type not in grouped_messages:
+                        grouped_messages[msg_type] = []
+                    grouped_messages[msg_type].append(msg)
+                
+                output_data = {
+                    "messages": self.received_messages,
+                    "grouped_by_type": grouped_messages,
+                    "latest_message": self.received_messages[-1] if self.received_messages else None
+                }
+            else:
+                output_data = {
+                    "messages": [],
+                    "grouped_by_type": {},
+                    "latest_message": None
+                }
+            
+            # Determine server status
+            if self.is_running:
+                status = f"Server running on port {port}"
+            elif start_server:
+                status = "Starting server..."
+            else:
+                status = "Server not started"
+            
+            return (
+                output_data,
+                len(self.received_messages),
+                status
+            )
+            
+        except Exception as e:
+            error_msg = f"Failed to receive websocket data: {str(e)}"
+            print(f"❌ {error_msg}")
+            print(traceback.format_exc())
+            return (
+                {"error": error_msg},
+                0,
+                f"Error: {str(e)}"
+            )
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
@@ -1038,4 +1339,6 @@ NODE_CLASS_MAPPINGS = {
     "ThreeDVisualizationNode": ThreeDVisualizationNode,
     "UnlockRemoteNode": UnlockRemoteNode,
     "DisconnectRobotNode": DisconnectRobotNode,
+    "NgrokWebSocketSenderNode": NgrokWebSocketSenderNode,
+    "NgrokWebSocketReceiverNode": NgrokWebSocketReceiverNode,
 }
