@@ -98,7 +98,7 @@
       },
       "measured": {
         "width": 479,
-        "height": 320
+        "height": 138
       },
       "selected": false,
       "dragging": false
@@ -107,8 +107,8 @@
       "id": "ThreeDVisualizationNode-1752985258317",
       "type": "threeDNode",
       "position": {
-        "x": 1050.8299906973539,
-        "y": 346.40679951933873
+        "x": 1057.6637833076923,
+        "y": 344.12886864922586
       },
       "data": {
         "label": "3D Visualization",
@@ -136,8 +136,8 @@
         "type": "ThreeDVisualizationNode"
       },
       "measured": {
-        "width": 760,
-        "height": 600
+        "width": 500,
+        "height": 400
       },
       "selected": true,
       "dragging": false
@@ -174,7 +174,7 @@
       },
       "measured": {
         "width": 362,
-        "height": 280
+        "height": 122
       },
       "selected": false,
       "dragging": false
@@ -209,7 +209,7 @@
   "metadata": {
     "name": "read_robot_status",
     "description": "Auto-saved on 7/20/2025",
-    "created": "2025-07-20T15:11:17.038Z",
+    "created": "2025-07-20T21:49:46.070Z",
     "version": "1.0.0"
   }
 }

@@ -1,0 +1,170 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectRobotNode-1752694258308",
+      "type": "customNode",
+      "position": {
+        "x": -140.46342736455415,
+        "y": 226.84797599266287
+      },
+      "data": {
+        "label": "Connect Robot",
+        "nodeInfo": {
+          "name": "ConnectRobotNode",
+          "display_name": "Connect Robot",
+          "description": "Connect to a robot using ScsServoSDK.connect() and return SDK instance",
+          "detailed_description": "\nConnectRobotNode\n\nPurpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.\n\nInputs:\n  - port_name (STRING): The serial port name to connect to (leave empty for auto-detection)\n\nOutputs:\n  - sdk (ScsServoSDK): The connected SDK instance that can be used by other robot control nodes\n\nUsage: Use this node at the beginning of robot workflows to establish communication. The SDK output should be connected to other robot nodes that require servo control. If port_name is empty, the system will attempt to auto-detect the robot.\n        ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "port_name": [
+                "STRING",
+                {
+                  "default": ""
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectRobotNode",
+        "inputValues": {
+          "port_name": "/dev/tty.usbmodem5A7A0558831"
+        }
+      },
+      "width": 280,
+      "height": 137,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 38.9472161517557,
+        "y": 228.1063287492885
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 137
+      }
+    },
+    {
+      "id": "ThreeDVisualizationNode-1752964269089",
+      "type": "threeDNode",
+      "position": {
+        "x": 829.940092877923,
+        "y": 186.04223733154095
+      },
+      "data": {
+        "label": "3D Visualization",
+        "nodeInfo": {
+          "name": "ThreeDVisualizationNode",
+          "display_name": "3D Visualization",
+          "description": "Visualize robot positions in 3D by converting motor positions to angles.",
+          "detailed_description": "\nThreeDVisualizationNode\n\nPurpose: Takes motor position data and converts it to joint angles for 3D visualization. This node processes motor position data and returns visualization data that can be rendered in a 3D viewer.\n\nInputs:\n  - positions (DICT): Dictionary mapping servo IDs to positions in format:\n    {1: 1510, 2: 1029, 3: 3010, 4: 967, 5: 638, 6: 2039}\n\nOutputs:\n  - None (produces rt_update for 3D visualization)\n\nUsage: Use this node to visualize robot joint states in 3D. Connect it to nodes that provide motor position data to see the 3D representation of the robot's current configuration in the UI.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "return_types": {
+            "required": {}
+          },
+          "function": "visualize_3d"
+        },
+        "type": "ThreeDVisualizationNode"
+      },
+      "measured": {
+        "width": 500,
+        "height": 400
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "SO101RobotStatusReader-1752964637833",
+      "type": "customNode",
+      "position": {
+        "x": 261.9098425467676,
+        "y": 217.67252952124977
+      },
+      "data": {
+        "label": "Robot Status Reader",
+        "nodeInfo": {
+          "name": "SO101RobotStatusReader",
+          "display_name": "Robot Status Reader",
+          "description": "Read status (positions, modes) from connected robot servos using feetech-servo-sdk",
+          "detailed_description": "\n            RobotStatusReader Node\n\n            Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk with real-time streaming support.\n\n            Inputs:\n              - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n              - servo_ids (STRING): Comma-separated list of servo IDs to read (e.g., '1,2,3,4,5').\n              - read_positions (BOOLEAN, optional): Whether to read servo positions (default: True).\n              - read_modes (BOOLEAN, optional): Whether to read servo modes (default: False).\n              - stream_results (BOOLEAN, optional): Enable real-time streaming to frontend (default: True).\n              - update_interval (FLOAT, optional): Time between updates in seconds (default: 0.1, range: 0.01-5.0).\n\n            Outputs:\n              - status_data (DICT): Dictionary containing read positions, modes (if requested), servo_ids, timestamp, and connection status.\n              - positions (DICT): Dictionary of servo positions keyed by servo ID.\n\n            Real-time Features:\n              - When stream_results is enabled, robot status is continuously broadcast to the frontend\n              - The node displays live servo positions and modes in the UI\n              - Update frequency is configurable via update_interval\n              - Streaming runs for a maximum of 10 seconds per execution\n              - Real-time indicators show streaming status (Live, Complete, Error)\n\n            Usage:\n              - Connect the ScsServoSDK output from a robot connection node\n              - Specify servo IDs to monitor (e.g., \"1,2,3,4,5,6\")\n              - Enable streaming for real-time monitoring\n              - Adjust update_interval for performance vs. responsiveness balance\n              - Monitor the node UI for live robot status updates\n            ",
+          "tags": [
+            "SO101",
+            "SO100"
+          ],
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "status_data": [
+                "DICT",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "read_robot_status"
+        },
+        "type": "SO101RobotStatusReader"
+      },
+      "measured": {
+        "width": 479,
+        "height": 138
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "ConnectRobotNode-1752694258308",
+      "sourceHandle": "output",
+      "target": "SO101RobotStatusReader-1752964637833",
+      "targetHandle": "sdk",
+      "id": "xy-edge__ConnectRobotNode-1752694258308output-SO101RobotStatusReader-1752964637833sdk",
+      "className": "animated"
+    },
+    {
+      "source": "SO101RobotStatusReader-1752964637833",
+      "sourceHandle": "output-1",
+      "target": "ThreeDVisualizationNode-1752964269089",
+      "targetHandle": "positions",
+      "id": "xy-edge__SO101RobotStatusReader-1752964637833output-1-ThreeDVisualizationNode-1752964269089positions",
+      "className": "animated"
+    }
+  ],
+  "metadata": {
+    "name": "llm",
+    "description": "Auto-saved on 7/20/2025",
+    "created": "2025-07-20T21:44:54.847Z",
+    "version": "1.0.0"
+  }
+}

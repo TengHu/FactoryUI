@@ -1,0 +1,75 @@
+.left-panel {
+  width: 300px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-right: 1px solid #e0e0e0;
+}
+
+[data-theme="dark"] .left-panel {
+  background: #1e1e1e;
+  border-right-color: #333;
+}
+
+.left-panel-tabs {
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="dark"] .left-panel-tabs {
+  background: #252526;
+  border-bottom-color: #333;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  background: #e9ecef;
+  color: #333;
+}
+
+[data-theme="dark"] .tab-button {
+  color: #999;
+}
+
+[data-theme="dark"] .tab-button:hover {
+  background: #3e3e42;
+  color: #cccccc;
+}
+
+.tab-button.active {
+  background: #ffffff;
+  color: #007bff;
+  border-bottom-color: #007bff;
+}
+
+[data-theme="dark"] .tab-button.active {
+  background: #1e1e1e;
+  color: #64b5f6;
+  border-bottom-color: #64b5f6;
+}
+
+.left-panel-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure child components fill the space */
+.left-panel-content > * {
+  height: 100%;
+}

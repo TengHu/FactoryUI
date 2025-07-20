@@ -1,0 +1,242 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectRobotNode-1752615634005",
+      "type": "customNode",
+      "position": {
+        "x": 141.37401432941033,
+        "y": 171.0934761947922
+      },
+      "data": {
+        "label": "Connect Robot",
+        "nodeInfo": {
+          "name": "ConnectRobotNode",
+          "display_name": "Connect Robot",
+          "description": "Connect to a robot using ScsServoSDK.connect() and return SDK instance",
+          "detailed_description": "\nConnectRobotNode\n\nPurpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.\n\nInputs:\n  - port_name (STRING): The serial port name to connect to (leave empty for auto-detection)\n\nOutputs:\n  - sdk (ScsServoSDK): The connected SDK instance that can be used by other robot control nodes\n\nUsage: Use this node at the beginning of robot workflows to establish communication. The SDK output should be connected to other robot nodes that require servo control. If port_name is empty, the system will attempt to auto-detect the robot.\n        ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "port_name": [
+                "STRING",
+                {
+                  "default": ""
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectRobotNode",
+        "inputValues": {
+          "port_name": "/dev/tty.usbmodem5A7A0573841"
+        }
+      },
+      "width": 280,
+      "height": 137,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 141.37401432941033,
+        "y": 171.0934761947922
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 137
+      }
+    },
+    {
+      "id": "So101WritePositionNode-1752619385006",
+      "type": "customNode",
+      "position": {
+        "x": 505.56158184441614,
+        "y": 513.4269809498269
+      },
+      "data": {
+        "label": "SO101 Write Position",
+        "nodeInfo": {
+          "name": "So101WritePositionNode",
+          "display_name": "SO101 Write Position",
+          "description": "Write multiple servo positions to the robot using ScsServoSDK.",
+          "detailed_description": "\n            So101WritePositionNode Node\n\n\"\n            \"Purpose: Writes multiple servo positions to the robot using ScsServoSDK.\n\"\n            \"Inputs:\n\"\n            \"  - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n\"\n            \"  - positions (DICT): Dictionary mapping servo IDs to target positions.\n\"\n            \"Outputs:\n\"\n            \"  - write_result (DICT): Dictionary reflecting the positions written to the servos.\n\"\n            ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "write_result": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "write_positions"
+        },
+        "type": "So101WritePositionNode"
+      },
+      "width": 280,
+      "height": 158,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 469.4678713023862,
+        "y": 426.3042313656169
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 158
+      }
+    },
+    {
+      "id": "ConnectRobotNode-1752619389451",
+      "type": "customNode",
+      "position": {
+        "x": 134.57712561267925,
+        "y": 452.48741210062184
+      },
+      "data": {
+        "label": "Connect Robot",
+        "nodeInfo": {
+          "name": "ConnectRobotNode",
+          "display_name": "Connect Robot",
+          "description": "Connect to a robot using ScsServoSDK.connect() and return SDK instance",
+          "detailed_description": "\nConnectRobotNode\n\nPurpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.\n\nInputs:\n  - port_name (STRING): The serial port name to connect to (leave empty for auto-detection)\n\nOutputs:\n  - sdk (ScsServoSDK): The connected SDK instance that can be used by other robot control nodes\n\nUsage: Use this node at the beginning of robot workflows to establish communication. The SDK output should be connected to other robot nodes that require servo control. If port_name is empty, the system will attempt to auto-detect the robot.\n        ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "port_name": [
+                "STRING",
+                {
+                  "default": ""
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectRobotNode",
+        "inputValues": {
+          "port_name": "/dev/tty.usbmodem5A7A0558831"
+        }
+      },
+      "width": 280,
+      "height": 137,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 132.0879041959875,
+        "y": 398.346846287577
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 137
+      }
+    },
+    {
+      "id": "SO101RobotStatusReader-1753021999486",
+      "type": "customNode",
+      "position": {
+        "x": 492.6664200025797,
+        "y": 247.6501968696702
+      },
+      "data": {
+        "label": "SO101 Robot Status Reader",
+        "nodeInfo": {
+          "name": "SO101RobotStatusReader",
+          "display_name": "SO101 Robot Status Reader",
+          "description": "Read status (positions, modes) from connected robot servos using feetech-servo-sdk",
+          "detailed_description": "\n            RobotStatusReader Node\n\n            Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk.\n\n            Inputs:\n              - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n\n            Outputs:\n              - status_data (DICT): Dictionary containing read positions, modes, servo_ids, timestamp, and connection status.\n              - positions (DICT): Dictionary of servo positions keyed by servo ID.\n\n            Features:\n              - Automatically reads positions for servos 1-6\n              - Reads servo modes for each connected servo\n              - Provides timestamp and connection status information\n              - Handles errors gracefully with detailed error messages\n              - Returns both comprehensive status data and positions separately\n\n            Usage:\n              - Connect the ScsServoSDK output from a robot connection node\n              - The node automatically reads from servos 1-6\n              - Use status_data for comprehensive robot state information\n              - Use positions for direct access to servo position values\n              - Monitor connection status and error handling\n            ",
+          "tags": [
+            "SO101",
+            "SO100"
+          ],
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "status_data": [
+                "DICT",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "read_robot_status"
+        },
+        "type": "SO101RobotStatusReader"
+      },
+      "measured": {
+        "width": 479,
+        "height": 138
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "ConnectRobotNode-1752619389451",
+      "sourceHandle": "output",
+      "target": "So101WritePositionNode-1752619385006",
+      "targetHandle": "sdk",
+      "id": "reactflow__edge-ConnectRobotNode-1752619389451output-So101WritePositionNode-1752619385006sdk"
+    },
+    {
+      "source": "ConnectRobotNode-1752615634005",
+      "sourceHandle": "output",
+      "target": "SO101RobotStatusReader-1753021999486",
+      "targetHandle": "sdk",
+      "id": "xy-edge__ConnectRobotNode-1752615634005output-SO101RobotStatusReader-1753021999486sdk"
+    },
+    {
+      "source": "SO101RobotStatusReader-1753021999486",
+      "sourceHandle": "output-1",
+      "target": "So101WritePositionNode-1752619385006",
+      "targetHandle": "positions",
+      "id": "xy-edge__SO101RobotStatusReader-1753021999486output-1-So101WritePositionNode-1752619385006positions"
+    }
+  ],
+  "metadata": {
+    "name": "teleoperation",
+    "description": "Workflow saved on 7/20/2025",
+    "created": "2025-07-20T14:33:34.897Z",
+    "version": "1.0.0"
+  }
+}

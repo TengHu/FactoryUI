@@ -15,7 +15,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './App.css';
-import NodePanel from './components/NodePanel';
+import LeftPanel from './components/LeftPanel';
 import CustomNode from './components/CustomNode';
 import CameraNode from './components/CameraNode';
 import ThreeDNode from './components/ThreeDNode';
@@ -635,6 +635,37 @@ function App() {
   const loadWorkflow = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
+
+  // Load workflow from file explorer
+  const handleWorkflowSelect = useCallback(async (workflowData: any, workflowName: string) => {
+    try {
+      // Find existing canvas with this workflow name or create new one
+      const existingCanvasIndex = canvases.findIndex(c => c.name === workflowName);
+      
+      if (existingCanvasIndex !== -1) {
+        // Switch to existing canvas
+        setActiveCanvasId(canvases[existingCanvasIndex].id);
+      } else {
+        // Create new canvas with loaded workflow
+        const nextId = Math.max(...canvases.map(c => c.id)) + 1;
+        const newCanvas: Canvas = {
+          id: nextId,
+          name: workflowName,
+          nodes: workflowData.nodes || [],
+          edges: workflowData.edges || [],
+          hasUnsavedChanges: false
+        };
+        
+        setCanvases(prev => [...prev, newCanvas]);
+        setActiveCanvasId(nextId);
+      }
+      
+      console.log(`✓ Workflow "${workflowName}" loaded from local file`);
+    } catch (error) {
+      console.error('Error loading workflow:', error);
+      alert('Failed to load workflow.');
+    }
+  }, [canvases]);
 
   // Fetch all saved workflows and load them as canvas tabs
   const fetchWorkflows = useCallback(async () => {
@@ -1665,7 +1696,7 @@ function App() {
       <div className="app-content">
         {activeTab === 'canvas' && (
           <div className="canvas-container">
-            <NodePanel onNodeDrag={onNodeDrag} />
+            <LeftPanel onNodeDrag={onNodeDrag} onWorkflowSelect={handleWorkflowSelect} />
             <ReactFlowProvider>
               <div 
                 className={`react-flow-wrapper ${isDraggedOver ? 'drag-over' : ''}`}
@@ -1719,7 +1750,7 @@ function App() {
         
         {activeTab === 'nodes' && (
           <div className="nodes-tab">
-            <NodePanel onNodeDrag={onNodeDrag} />
+            <LeftPanel onNodeDrag={onNodeDrag} onWorkflowSelect={handleWorkflowSelect} />
           </div>
         )}
       </div>
