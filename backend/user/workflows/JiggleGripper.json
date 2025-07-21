@@ -186,7 +186,7 @@
       },
       "measured": {
         "width": 362,
-        "height": 224
+        "height": 210
       },
       "selected": false,
       "dragging": false
@@ -688,8 +688,8 @@
   "metadata": {
     "name": "JiggleGripper",
     "description": "Auto-saved on 7/21/2025",
-    "created": "2025-07-21T04:40:32.263Z",
+    "created": "2025-07-21T04:47:18.045Z",
     "version": "1.0.0",
-    "modified": "2025-07-21T04:40:32.263Z"
+    "modified": "2025-07-21T04:47:18.045Z"
   }
 }

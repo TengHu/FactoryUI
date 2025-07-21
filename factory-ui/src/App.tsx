@@ -648,25 +648,8 @@ function App() {
 
   // Fetch all saved workflows and load them as canvas tabs
   const fetchWorkflows = useCallback(async () => {
-    try {
-      const response = await localFileService.getAllWorkflows();
-      if (response.success && response.workflows.length > 0) {
-        // Use all workflows from backend
-        const workflowCanvases: Canvas[] = response.workflows.map((item, index) => ({
-          id: Date.now() + index, // Generate unique ID for canvas
-          name: item.filename.replace('.json', ''),
-          nodes: item.workflow.nodes || [],
-          edges: item.workflow.edges || [],
-          filename: item.filename,
-          hasUnsavedChanges: false
-        }));
-        // Replace the default canvas with backend workflow canvases
-        setCanvases(workflowCanvases);
-        setActiveCanvasId(workflowCanvases[0].id);
-      }
-    } catch (error) {
-      console.error('Error fetching workflows:', error);
-    }
+    // Don't load workflows on startup - just keep the default canvas
+    console.log('App started with default canvas - workflows can be loaded manually');
   }, []);
 
   // Start renaming a tab
