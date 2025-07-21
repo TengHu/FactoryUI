@@ -3,6 +3,13 @@ import { Tree } from 'react-arborist';
 import { localFileService, WorkflowItem } from '../services/localFileService';
 import './WorkflowExplorer.css';
 
+// Local interface definitions to avoid API dependencies
+interface WorkflowData {
+  nodes: any[];
+  edges: any[];
+  metadata?: Record<string, any>;
+}
+
 interface WorkflowTreeNode {
   id: string;
   name: string;
@@ -12,7 +19,7 @@ interface WorkflowTreeNode {
 }
 
 interface WorkflowExplorerProps {
-  onWorkflowSelect: (workflowData: any, workflowName: string) => void;
+  onWorkflowSelect: (filename: string, workflowName: string) => void;
   onWorkflowLoad?: (workflow: WorkflowItem) => void;
 }
 
@@ -27,12 +34,13 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
     try {
       setLoading(true);
       setError(null);
+      console.log('🔄 WorkflowExplorer: Loading workflows...');
       const response = await localFileService.getAllWorkflows();
       if (response.success) {
         // Convert to tree structure
         const workflowNodes: WorkflowTreeNode[] = response.workflows.map(workflow => ({
           id: `workflow-${workflow.filename}`,
-          name: workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''),
+          name: workflow.filename,
           type: 'workflow' as const,
           workflow: workflow
         }));
@@ -47,6 +55,7 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
         ];
 
         setTreeData(rootStructure);
+        console.log(`✅ WorkflowExplorer: Loaded ${workflowNodes.length} workflows`);
       } else {
         setError('Failed to load workflows');
       }
@@ -62,12 +71,21 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
   useEffect(() => {
     loadWorkflows();
     
-    // Subscribe to file service changes for auto-refresh
+    // Subscribe to file service changes for auto-refresh with debouncing
+    let debounceTimer: NodeJS.Timeout;
     const unsubscribe = localFileService.addListener(() => {
-      loadWorkflows();
+      console.log('🔄 WorkflowExplorer: Received change notification, reloading workflows...');
+      // Debounce the reload to prevent too many rapid calls
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        loadWorkflows();
+      }, 100);
     });
     
-    return unsubscribe;
+    return () => {
+      clearTimeout(debounceTimer);
+      unsubscribe();
+    };
   }, [loadWorkflows]);
 
   const handleWorkflowClick = useCallback(async (node: WorkflowTreeNode) => {
@@ -78,8 +96,8 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
         if (onWorkflowLoad) {
           onWorkflowLoad(node.workflow);
         } else {
-          const workflowName = node.workflow.workflow.metadata?.name || node.workflow.filename.replace('.json', '');
-          onWorkflowSelect(node.workflow.workflow, workflowName);
+          const workflowName = node.workflow.filename;
+          onWorkflowSelect(node.workflow.filename, workflowName);
         }
         
         console.log(`✓ Workflow "${node.workflow.filename}" loaded`);
@@ -91,23 +109,21 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
   }, [onWorkflowSelect, onWorkflowLoad]);
 
   const handleRenameWorkflow = useCallback(async (workflow: WorkflowItem) => {
-    const newName = prompt('Enter new workflow name:', workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''));
-    if (!newName || newName === (workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''))) {
+    const currentName = workflow.filename;
+    const newName = prompt('Enter new workflow name:', currentName);
+    if (!newName || newName === currentName) {
       return;
     }
 
     try {
-      // Update workflow metadata
-      const updatedWorkflow = {
-        ...workflow.workflow,
-        metadata: {
-          ...workflow.workflow.metadata,
-          name: newName,
-          modified: new Date().toISOString()
-        }
-      };
+      // Use the new name as-is
+      const newFilename = newName;
+      
+      // Use rename operation which handles both the rename and cleanup
+      const result = await localFileService.renameWorkflow(workflow.filename, newFilename);
 
-      const result = await localFileService.saveWorkflowByFilename(workflow.filename, updatedWorkflow);
+
+
       if (result.success) {
         console.log(`✓ Workflow renamed to "${newName}"`);
       } else {
@@ -117,10 +133,10 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
       console.error('Failed to rename workflow:', error);
       alert('Failed to rename workflow');
     }
-  }, [loadWorkflows]);
+  }, []);
 
   const handleDeleteWorkflow = useCallback(async (workflow: WorkflowItem) => {
-    const workflowName = workflow.workflow.metadata?.name || workflow.filename.replace('.json', '');
+    const workflowName = workflow.filename;
     if (!window.confirm(`Are you sure you want to delete workflow "${workflowName}"?`)) {
       return;
     }
@@ -136,18 +152,18 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
       console.error('Failed to delete workflow:', error);
       alert('Failed to delete workflow');
     }
-  }, [loadWorkflows]);
+  }, []);
 
   const handleDuplicateWorkflow = useCallback(async (workflow: WorkflowItem) => {
-    const originalName = workflow.workflow.metadata?.name || workflow.filename.replace('.json', '');
+    const originalName = workflow.filename;
     const newName = prompt('Enter name for the duplicate:', `${originalName} (Copy)`);
     if (!newName) {
       return;
     }
 
     try {
-      const newFilename = `${newName.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
-      const duplicatedWorkflow = {
+      const newFilename = newName.endsWith('.json') ? newName : `${newName}.json`;
+      const duplicatedWorkflow: WorkflowData = {
         ...workflow.workflow,
         metadata: {
           ...workflow.workflow.metadata,
@@ -159,7 +175,7 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
 
       const result = await localFileService.saveWorkflowByFilename(newFilename, duplicatedWorkflow);
       if (result.success) {
-        console.log(`✓ Workflow duplicated as "${newName}"`);
+        console.log(`✓ Workflow duplicated as "${newFilename}"`);
       } else {
         throw new Error(result.message);
       }
@@ -167,7 +183,7 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
       console.error('Failed to duplicate workflow:', error);
       alert('Failed to duplicate workflow');
     }
-  }, [loadWorkflows]);
+  }, []);
 
   const Node = ({ node, style, dragHandle }: any) => {
     const handleClick = () => {
@@ -281,7 +297,7 @@ const WorkflowExplorer: React.FC<WorkflowExplorerProps> = ({ onWorkflowSelect, o
         ) : !error && (
           <div className="empty-state">
             <p>No workflows found</p>
-            <p>Add workflow files to the public/workflows directory</p>
+            <p>Add workflow files to the backend/user/workflows directory</p>
             <button onClick={loadWorkflows}>Refresh</button>
           </div>
         )}
