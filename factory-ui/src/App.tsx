@@ -650,8 +650,20 @@ function App() {
     try {
       const response = await localFileService.getAllWorkflows();
       if (response.success && response.workflows.length > 0) {
-        // Filter to only filename == 'unlock_robot'
-        const filtered = response.workflows.filter(item => item.filename === 'unlock_robot.json');
+        // Filter to show all workflow files from the image
+        const workflowFiles = [
+          'read_robot_status.json',
+          'jiggle_gripper.json', 
+          'unlock_robot.json',
+          'joints_control.json',
+          'teleoperation.json',
+          'teleoperation_through_ngrok.json'
+        ];
+        
+        const filtered = response.workflows.filter(item => 
+          workflowFiles.includes(item.filename)
+        );
+        
         if (filtered.length > 0) {
           const workflowCanvases: Canvas[] = filtered.map((item, index) => ({
             id: Date.now() + index, // Generate unique ID for canvas
@@ -1732,6 +1744,8 @@ function App() {
                   nodesDraggable={true}
                   nodesConnectable={true}
                   elementsSelectable={true}
+                  minZoom={0.01}
+                  maxZoom={100}
                   onError={(id, message) => {
                     // Suppress ResizeObserver errors which are harmless
                     if (message.includes('ResizeObserver')) {
