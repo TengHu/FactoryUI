@@ -1,12 +1,14 @@
-# FactoryUI
+# Factory UI
 
 An adaptable and powerful graphical interface for open-source robotics. Easily create agent-based robotic workflows using drag-and-drop nodes, allowing for real-time execution and hands-on robot management.
 
 Offers modular, reusable building blocks—like Lego—for constructing custom robot agent workflows.
 
+![FactoryUI Screenshot](screenshot.png)
+
 ## 📋 Prerequisites
 
-Before you begin, assemble and set up your robot by following the instructions at [https://bambot.org/](https://bambot.org/).
+Before you begin, assemble and set up your robot by following the instructions at [https://bambot.org/](https://bambot.org/). Find the serial port that's connected to your robot.
 
 
 ## 🚀 Quick Start
