@@ -1,6 +1,6 @@
 # Factory UI
 
-An powerful GUI for open-source robotics. Easily create agent-based robotic workflows using drag-and-drop nodes, allowing for real-time execution and hands-on robot management.
+A powerful GUI for open-source robotics. Easily create agent-based robotic workflows using drag-and-drop nodes, allowing for real-time execution and hands-on robot management.
 
 Offers modular, reusable building blocks—like Lego—for constructing custom robot agent workflows.
 
