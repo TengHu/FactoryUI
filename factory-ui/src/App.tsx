@@ -184,7 +184,7 @@ function App() {
     
     // Auto-save to backend if the active canvas has a filename
     const currentActiveCanvas = canvases[activeCanvasIndex];
-    if (currentActiveCanvas?.filename) {
+    if (currentActiveCanvas?.filename && !isLoadingRef.current) {
       const filename = currentActiveCanvas.filename;
       // Debounce auto-save to avoid too many requests
       const saveTimeout = setTimeout(async () => {
@@ -615,7 +615,7 @@ function App() {
   }, []);
 
   // Load workflow from file explorer
-  const handleWorkflowSelect = useCallback(async (workflowData: any, workflowName: string) => {
+  const handleWorkflowSelect = useCallback(async (filename: string, workflowName: string) => {
     try {
       // Find existing canvas with this workflow name or create new one
       const existingCanvasIndex = canvases.findIndex(c => c.name === workflowName);
@@ -629,8 +629,9 @@ function App() {
         const newCanvas: Canvas = {
           id: nextId,
           name: workflowName,
-          nodes: workflowData.nodes || [],
-          edges: workflowData.edges || [],
+          nodes: [], // Will be loaded from backend
+          edges: [], // Will be loaded from backend
+          filename: filename,
           hasUnsavedChanges: false
         };
         
@@ -647,41 +648,8 @@ function App() {
 
   // Fetch all saved workflows and load them as canvas tabs
   const fetchWorkflows = useCallback(async () => {
-    try {
-      const response = await localFileService.getAllWorkflows();
-      if (response.success && response.workflows.length > 0) {
-        // Filter to show all workflow files from the image
-        const workflowFiles = [
-          'read_robot_status.json',
-          'jiggle_gripper.json', 
-          'unlock_robot.json',
-          'joints_control.json',
-          'teleoperation.json',
-          'teleoperation_through_ngrok.json'
-        ];
-        
-        const filtered = response.workflows.filter(item => 
-          workflowFiles.includes(item.filename)
-        );
-        
-        if (filtered.length > 0) {
-          const workflowCanvases: Canvas[] = filtered.map((item, index) => ({
-            id: Date.now() + index, // Generate unique ID for canvas
-            name: item.filename,
-            nodes: item.workflow.nodes || [],
-            edges: item.workflow.edges || [],
-            filename: item.filename,
-            hasUnsavedChanges: false
-          }));
-
-          // Replace the default canvas with filtered workflow canvases
-          setCanvases(workflowCanvases);
-          setActiveCanvasId(workflowCanvases[0].id);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching workflows:', error);
-    }
+    // Don't load workflows on startup - just keep the default canvas
+    console.log('App started with default canvas - workflows can be loaded manually');
   }, []);
 
   // Start renaming a tab
@@ -706,46 +674,29 @@ function App() {
     }
 
     const oldFilename = canvasToRename.filename;
-    const newFilename = newTabName.trim();
+    const newFilename = newTabName.trim().endsWith('.json') ? newTabName.trim() : `${newTabName.trim()}.json`;
 
     try {
-      // If there's an old filename, delete the old workflow and create a new one
-      if (oldFilename) {
-        // Get the current workflow data
-        const workflowData = {
-          nodes: canvasToRename.nodes,
-          edges: canvasToRename.edges,
-          metadata: {
-            name: newFilename,
-            description: `Renamed workflow on ${new Date().toLocaleDateString()}`,
-            created: new Date().toISOString(),
-            version: '1.0.0'
-          }
-        };
-
-        // Save with new filename
-        await localFileService.saveWorkflowByFilename(newFilename, workflowData);
-        
-        // Delete old workflow if filename is different
-        if (oldFilename !== newFilename) {
-          await localFileService.deleteWorkflow(oldFilename);
+      if (oldFilename && oldFilename !== newFilename) {
+        // Use backend rename
+        const response = await localFileService.renameWorkflow(oldFilename, newFilename);
+        if (!response.success) {
+          throw new Error(response.message);
         }
       }
-
       // Update the canvas
       setCanvases(prev => prev.map(canvas => 
         canvas.id === renamingTabId 
-          ? { ...canvas, name: newFilename, filename: newFilename }
+          ? { ...canvas, name: newTabName.trim(), filename: newFilename }
           : canvas
       ));
-
       console.log(`Renamed workflow from "${oldFilename}" to "${newFilename}"`);
     } catch (error) {
       console.error('Failed to rename workflow:', error);
       // Just update locally if backend fails
       setCanvases(prev => prev.map(canvas => 
         canvas.id === renamingTabId 
-          ? { ...canvas, name: newFilename }
+          ? { ...canvas, name: newTabName.trim() }
           : canvas
       ));
     }
@@ -1624,7 +1575,8 @@ function App() {
             className="tab add-tab"
             onClick={async () => {
               const nextId = Math.max(...canvases.map(c => c.id)) + 1;
-              const newWorkflowFilename = `Untitled`;
+              const newWorkflowName = `Untitled`;
+              const newWorkflowFilename = `${newWorkflowName}.json`;
               
               // Save new workflow to backend
               try {
@@ -1632,7 +1584,7 @@ function App() {
                   nodes: [],
                   edges: [],
                   metadata: {
-                    name: newWorkflowFilename,
+                    name: newWorkflowName,
                     description: `New workflow created on ${new Date().toLocaleDateString()}`,
                     created: new Date().toISOString(),
                     version: '1.0.0'
@@ -1643,7 +1595,7 @@ function App() {
                 if (response.success) {
                   const newCanvas: Canvas = {
                     id: nextId,
-                    name: newWorkflowFilename,
+                    name: newWorkflowName,
                     nodes: [],
                     edges: [],
                     filename: newWorkflowFilename,
@@ -1655,7 +1607,7 @@ function App() {
                   // Fallback to local-only canvas if backend save fails
                   const newCanvas: Canvas = {
                     id: nextId,
-                    name: newWorkflowFilename,
+                    name: newWorkflowName,
                     nodes: [],
                     edges: [],
                     hasUnsavedChanges: false
@@ -1668,7 +1620,7 @@ function App() {
                 // Fallback to local-only canvas
                 const newCanvas: Canvas = {
                   id: nextId,
-                  name: newWorkflowFilename,
+                  name: newWorkflowName,
                   nodes: [],
                   edges: [],
                   hasUnsavedChanges: false
@@ -1705,7 +1657,7 @@ function App() {
                   // Create new tab
                   const newCanvas: Canvas = {
                     id: Date.now(),
-                    name: workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''),
+                    name: workflow.filename.replace('.json', ''),
                     nodes: workflow.workflow.nodes || [],
                     edges: workflow.workflow.edges || [],
                     filename: workflow.filename,
@@ -1787,7 +1739,7 @@ function App() {
                   // Create new tab
                   const newCanvas: Canvas = {
                     id: Date.now(),
-                    name: workflow.workflow.metadata?.name || workflow.filename.replace('.json', ''),
+                    name: workflow.filename.replace('.json', ''),
                     nodes: workflow.workflow.nodes || [],
                     edges: workflow.workflow.edges || [],
                     filename: workflow.filename,

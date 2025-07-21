@@ -57,8 +57,8 @@
       "id": "UnlockRobotNode-1752986048873",
       "type": "customNode",
       "position": {
-        "x": 429.55284204204025,
-        "y": 244.16134222494463
+        "x": 81.53397164920767,
+        "y": 256.9248704789605
       },
       "data": {
         "label": "Unlock Robot",
@@ -88,39 +88,8 @@
         "width": 222,
         "height": 122
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
-    },
-    {
-      "id": "NoteNode-1753023969824",
-      "type": "noteNode",
-      "position": {
-        "x": -509.07732718980236,
-        "y": 86.53981050508386
-      },
-      "data": {
-        "label": "Note",
-        "nodeInfo": {
-          "name": "NoteNode",
-          "display_name": "Note",
-          "description": "Add a note or comment to your workflow (no output).",
-          "detailed_description": "\nNoteNode\n\nPurpose: Takes text input and produces no output. Useful for adding comments, notes, or documentation to your workflow.\n\nInputs:\n  - text (STRING): The note or comment text to add to the workflow\n\nOutputs:\n  - None\n\nUsage: Use this node to add documentation, comments, or notes to your workflow. The text will be visible in the node but won't affect the workflow execution.\n        ",
-          "tags": [
-            "Basic"
-          ],
-          "input_types": {
-            "required": {}
-          },
-          "return_types": {},
-          "function": "note"
-        },
-        "type": "NoteNode"
-      },
-      "measured": {
-        "width": 200,
-        "height": 80
-      },
-      "selected": false
     }
   ],
   "edges": [
@@ -134,9 +103,10 @@
     }
   ],
   "metadata": {
-    "name": "unlock_robot",
-    "description": "Auto-saved on 7/20/2025",
-    "created": "2025-07-20T15:53:56.161Z",
-    "version": "1.0.0"
+    "name": "UnlockRobot",
+    "description": "Auto-saved on 7/21/2025",
+    "created": "2025-07-21T04:46:58.681Z",
+    "version": "1.0.0",
+    "modified": "2025-07-21T04:46:58.681Z"
   }
 }

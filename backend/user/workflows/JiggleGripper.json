@@ -1,0 +1,695 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectRobotNode-1752615634005",
+      "type": "customNode",
+      "position": {
+        "x": -149.8784491628716,
+        "y": 175.8664771854734
+      },
+      "data": {
+        "label": "Connect Robot",
+        "nodeInfo": {
+          "name": "ConnectRobotNode",
+          "display_name": "Connect Robot",
+          "description": "Connect to a robot using ScsServoSDK.connect() and return SDK instance",
+          "detailed_description": "\nConnectRobotNode\n\nPurpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.\n\nInputs:\n  - port_name (STRING): The serial port name to connect to (leave empty for auto-detection)\n\nOutputs:\n  - sdk (ScsServoSDK): The connected SDK instance that can be used by other robot control nodes\n\nUsage: Use this node at the beginning of robot workflows to establish communication. The SDK output should be connected to other robot nodes that require servo control. If port_name is empty, the system will attempt to auto-detect the robot.\n        ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "port_name": [
+                "STRING",
+                {
+                  "default": ""
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectRobotNode",
+        "inputValues": {
+          "port_name": "/dev/tty.usbmodem5A7A0558831"
+        }
+      },
+      "width": 280,
+      "height": 137,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 156.498022016508,
+        "y": 178.3529998845991
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 137
+      }
+    },
+    {
+      "id": "SO101JointAnglesToPositions-1752679439906",
+      "type": "customNode",
+      "position": {
+        "x": 325.65635702127526,
+        "y": 441.9149686670519
+      },
+      "data": {
+        "label": "SO-101 Joint Angles to Positions",
+        "nodeInfo": {
+          "name": "SO101JointAnglesToPositions",
+          "display_name": "SO-101 Joint Angles to Positions",
+          "description": "Convert joint angles to servo positions for the SO-101 robot",
+          "detailed_description": "\n            \n            ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "rotation": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -180,
+                  "max": 180
+                }
+              ],
+              "pitch": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -90,
+                  "max": 90
+                }
+              ],
+              "elbow": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -120,
+                  "max": 120
+                }
+              ],
+              "wrist_pitch": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -90,
+                  "max": 90
+                }
+              ],
+              "wrist_roll": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -180,
+                  "max": 180
+                }
+              ],
+              "jaw": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": 0,
+                  "max": 90
+                }
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "angles_to_positions"
+        },
+        "type": "SO101JointAnglesToPositions",
+        "inputValues": {
+          "rotation": "",
+          "pitch": "",
+          "elbow": "",
+          "wrist_pitch": "",
+          "wrist_roll": "",
+          "jaw": "20"
+        }
+      },
+      "width": 280,
+      "height": 392,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 158.44136484547164,
+        "y": 379.70376858056636
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 392
+      }
+    },
+    {
+      "id": "DisplayNode-1753054999826",
+      "type": "customNode",
+      "position": {
+        "x": 754.7387660515984,
+        "y": 833.9455711459245
+      },
+      "data": {
+        "label": "Display",
+        "nodeInfo": {
+          "name": "DisplayNode",
+          "display_name": "Display",
+          "description": "Display the input value (ANY type) for debugging or monitoring.",
+          "detailed_description": "\nDisplayNode\n\nPurpose: Takes any input value and displays it (prints to console). Useful for debugging or monitoring workflow data.\n\nInputs:\n  - value (ANY): Any value to display\n\nOutputs:\n  - value (ANY): The same value that was input, for display purposes\n\nUsage: Use this node to inspect values in your workflow. It prints the value to the backend console and passes it through for display in the UI.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "value": [
+                "ANY",
+                {}
+              ]
+            }
+          },
+          "return_types": {},
+          "function": "display"
+        },
+        "type": "DisplayNode"
+      },
+      "measured": {
+        "width": 362,
+        "height": 210
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "SO101RobotStatusReader-1753055468574",
+      "type": "customNode",
+      "position": {
+        "x": 722.544910711751,
+        "y": 438.43000893731465
+      },
+      "data": {
+        "label": "SO101 Robot Status Reader",
+        "nodeInfo": {
+          "name": "SO101RobotStatusReader",
+          "display_name": "SO101 Robot Status Reader",
+          "description": "Read status (positions, modes) from connected robot servos using feetech-servo-sdk",
+          "detailed_description": "\n            RobotStatusReader Node\n\n            Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk.\n\n            Inputs:\n              - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n\n            Outputs:\n              - status_data (DICT): Dictionary containing read positions, modes, servo_ids, timestamp, and connection status.\n              - positions (DICT): Dictionary of servo positions keyed by servo ID.\n\n            Features:\n              - Automatically reads positions for servos 1-6\n              - Reads servo modes for each connected servo\n              - Provides timestamp and connection status information\n              - Handles errors gracefully with detailed error messages\n              - Returns both comprehensive status data and positions separately\n\n            Usage:\n              - Connect the ScsServoSDK output from a robot connection node\n              - The node automatically reads from servos 1-6\n              - Use status_data for comprehensive robot state information\n              - Use positions for direct access to servo position values\n              - Monitor connection status and error handling\n            ",
+          "tags": [
+            "SO101",
+            "SO100"
+          ],
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "status_data": [
+                "DICT",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "read_robot_status"
+        },
+        "type": "SO101RobotStatusReader"
+      },
+      "measured": {
+        "width": 479,
+        "height": 320
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "So101WritePositionNode-1753055737700",
+      "type": "customNode",
+      "position": {
+        "x": 334.2083038094618,
+        "y": 163.5776035968745
+      },
+      "data": {
+        "label": "SO101 Write Position",
+        "nodeInfo": {
+          "name": "So101WritePositionNode",
+          "display_name": "SO101 Write Position",
+          "description": "Write multiple servo positions to the robot using ScsServoSDK.",
+          "detailed_description": "\n            So101WritePositionNode\n\n            Purpose: Writes multiple servo positions to the robot using ScsServoSDK.\n\n            Inputs:\n              - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n              - positions (DICT): Dictionary mapping servo IDs to target positions (e.g., {1: 2048, 2: 1024}).\n\n            Outputs:\n              - sdk (ScsServoSDK): The SDK instance, passed through for chaining.\n              - write_result (DICT): Dictionary reflecting the positions written to the servos.\n\n            Features:\n              - Writes positions to multiple servos simultaneously\n              - Uses sync_write_positions for efficient communication\n              - Provides detailed error messages with stack traces\n              - Returns the positions that were successfully written\n              - Handles connection errors and servo communication failures\n\n            Usage:\n              - Connect the ScsServoSDK output from a robot connection node\n              - Provide positions dictionary with servo ID to position mapping\n              - The node will attempt to write all positions to the robot\n              - Monitor the write_result for confirmation of successful writes\n              - Use with position data from joint angle conversion nodes\n            ",
+          "tags": [
+            "SO101",
+            "SO100"
+          ],
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ],
+              "write_result": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "write_positions"
+        },
+        "type": "So101WritePositionNode"
+      },
+      "measured": {
+        "width": 358,
+        "height": 206
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "So101WritePositionNode-1753055797885",
+      "type": "customNode",
+      "position": {
+        "x": 1985.1641849067548,
+        "y": 197.517685786099
+      },
+      "data": {
+        "label": "SO101 Write Position",
+        "nodeInfo": {
+          "name": "So101WritePositionNode",
+          "display_name": "SO101 Write Position",
+          "description": "Write multiple servo positions to the robot using ScsServoSDK.",
+          "detailed_description": "\n            So101WritePositionNode\n\n            Purpose: Writes multiple servo positions to the robot using ScsServoSDK.\n\n            Inputs:\n              - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n              - positions (DICT): Dictionary mapping servo IDs to target positions (e.g., {1: 2048, 2: 1024}).\n\n            Outputs:\n              - sdk (ScsServoSDK): The SDK instance, passed through for chaining.\n              - write_result (DICT): Dictionary reflecting the positions written to the servos.\n\n            Features:\n              - Writes positions to multiple servos simultaneously\n              - Uses sync_write_positions for efficient communication\n              - Provides detailed error messages with stack traces\n              - Returns the positions that were successfully written\n              - Handles connection errors and servo communication failures\n\n            Usage:\n              - Connect the ScsServoSDK output from a robot connection node\n              - Provide positions dictionary with servo ID to position mapping\n              - The node will attempt to write all positions to the robot\n              - Monitor the write_result for confirmation of successful writes\n              - Use with position data from joint angle conversion nodes\n            ",
+          "tags": [
+            "SO101",
+            "SO100"
+          ],
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ],
+              "write_result": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "write_positions"
+        },
+        "type": "So101WritePositionNode"
+      },
+      "measured": {
+        "width": 358,
+        "height": 206
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "DelayNode-1753055824329",
+      "type": "customNode",
+      "position": {
+        "x": 1324.5790812903697,
+        "y": 176.82309598573008
+      },
+      "data": {
+        "label": "Delay",
+        "nodeInfo": {
+          "name": "DelayNode",
+          "display_name": "Delay",
+          "description": "Pause workflow execution for a specified number of seconds.",
+          "detailed_description": "\nDelayNode\n\nPurpose: Introduces a configurable delay (pause) in the workflow, which is useful for timing control, synchronization, or rate limiting.\n\nInputs:\n  - input (ANY): The value to pass through after the delay.\n  - delay_seconds (FLOAT): The number of seconds to wait before passing the input forward (range: 0.1 to 10.0, default: 1.0).\n\nOutputs:\n  - output (ANY): The same input value, returned after the delay.\n\nUsage: Use this node to add a pause in your workflow. This is helpful when you need to wait between hardware commands, throttle API calls, or synchronize steps in your process.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "input": [
+                "ANY",
+                {}
+              ],
+              "delay_seconds": [
+                "FLOAT",
+                {
+                  "default": 1,
+                  "min": 0.1,
+                  "max": 10
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "output": [
+                "ANY",
+                {}
+              ]
+            }
+          },
+          "function": "execute"
+        },
+        "type": "DelayNode",
+        "inputValues": {
+          "delay_seconds": "1"
+        }
+      },
+      "measured": {
+        "width": 349,
+        "height": 208
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "SO101RobotStatusReader-1753055972731",
+      "type": "customNode",
+      "position": {
+        "x": 2360.8606857849513,
+        "y": 471.8366119160833
+      },
+      "data": {
+        "label": "SO101 Robot Status Reader",
+        "nodeInfo": {
+          "name": "SO101RobotStatusReader",
+          "display_name": "SO101 Robot Status Reader",
+          "description": "Read status (positions, modes) from connected robot servos using feetech-servo-sdk",
+          "detailed_description": "\n            RobotStatusReader Node\n\n            Purpose: Reads status (positions, modes) from connected robot servos using feetech-servo-sdk.\n\n            Inputs:\n              - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n\n            Outputs:\n              - status_data (DICT): Dictionary containing read positions, modes, servo_ids, timestamp, and connection status.\n              - positions (DICT): Dictionary of servo positions keyed by servo ID.\n\n            Features:\n              - Automatically reads positions for servos 1-6\n              - Reads servo modes for each connected servo\n              - Provides timestamp and connection status information\n              - Handles errors gracefully with detailed error messages\n              - Returns both comprehensive status data and positions separately\n\n            Usage:\n              - Connect the ScsServoSDK output from a robot connection node\n              - The node automatically reads from servos 1-6\n              - Use status_data for comprehensive robot state information\n              - Use positions for direct access to servo position values\n              - Monitor connection status and error handling\n            ",
+          "tags": [
+            "SO101",
+            "SO100"
+          ],
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "status_data": [
+                "DICT",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "read_robot_status"
+        },
+        "type": "SO101RobotStatusReader"
+      },
+      "measured": {
+        "width": 479,
+        "height": 320
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "SO101JointAnglesToPositions-1753055999934",
+      "type": "customNode",
+      "position": {
+        "x": 2016.1899527263124,
+        "y": 480.115812209159
+      },
+      "data": {
+        "label": "SO-101 Joint Angles to Positions",
+        "nodeInfo": {
+          "name": "SO101JointAnglesToPositions",
+          "display_name": "SO-101 Joint Angles to Positions",
+          "description": "Convert joint angles to servo positions for the SO-101 robot",
+          "detailed_description": "\n            \n            ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "rotation": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -180,
+                  "max": 180
+                }
+              ],
+              "pitch": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -90,
+                  "max": 90
+                }
+              ],
+              "elbow": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -120,
+                  "max": 120
+                }
+              ],
+              "wrist_pitch": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -90,
+                  "max": 90
+                }
+              ],
+              "wrist_roll": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": -180,
+                  "max": 180
+                }
+              ],
+              "jaw": [
+                "FLOAT",
+                {
+                  "default": 0,
+                  "min": 0,
+                  "max": 90
+                }
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "angles_to_positions"
+        },
+        "type": "SO101JointAnglesToPositions",
+        "inputValues": {
+          "rotation": "",
+          "pitch": "",
+          "elbow": "",
+          "wrist_pitch": "",
+          "wrist_roll": "",
+          "jaw": "340"
+        }
+      },
+      "width": 280,
+      "height": 392,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 158.44136484547164,
+        "y": 379.70376858056636
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 392
+      }
+    },
+    {
+      "id": "DelayNode-1753056261948",
+      "type": "customNode",
+      "position": {
+        "x": 2393.2769161618025,
+        "y": 189.60022442590855
+      },
+      "data": {
+        "label": "Delay",
+        "nodeInfo": {
+          "name": "DelayNode",
+          "display_name": "Delay",
+          "description": "Pause workflow execution for a specified number of seconds.",
+          "detailed_description": "\nDelayNode\n\nPurpose: Introduces a configurable delay (pause) in the workflow, which is useful for timing control, synchronization, or rate limiting.\n\nInputs:\n  - input (ANY): The value to pass through after the delay.\n  - delay_seconds (FLOAT): The number of seconds to wait before passing the input forward (range: 0.1 to 10.0, default: 1.0).\n\nOutputs:\n  - output (ANY): The same input value, returned after the delay.\n\nUsage: Use this node to add a pause in your workflow. This is helpful when you need to wait between hardware commands, throttle API calls, or synchronize steps in your process.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "input": [
+                "ANY",
+                {}
+              ],
+              "delay_seconds": [
+                "FLOAT",
+                {
+                  "default": 1,
+                  "min": 0.1,
+                  "max": 10
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "output": [
+                "ANY",
+                {}
+              ]
+            }
+          },
+          "function": "execute"
+        },
+        "type": "DelayNode",
+        "inputValues": {
+          "delay_seconds": "0.3"
+        }
+      },
+      "measured": {
+        "width": 349,
+        "height": 208
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "SO101JointAnglesToPositions-1752679439906",
+      "sourceHandle": "output",
+      "target": "DisplayNode-1753054999826",
+      "targetHandle": "value",
+      "id": "xy-edge__SO101JointAnglesToPositions-1752679439906output-DisplayNode-1753054999826value",
+      "className": "animated"
+    },
+    {
+      "source": "ConnectRobotNode-1752615634005",
+      "sourceHandle": "output",
+      "target": "So101WritePositionNode-1753055737700",
+      "targetHandle": "sdk",
+      "id": "xy-edge__ConnectRobotNode-1752615634005output-So101WritePositionNode-1753055737700sdk",
+      "className": "animated"
+    },
+    {
+      "source": "SO101JointAnglesToPositions-1752679439906",
+      "sourceHandle": "output",
+      "target": "So101WritePositionNode-1753055737700",
+      "targetHandle": "positions",
+      "id": "xy-edge__SO101JointAnglesToPositions-1752679439906output-So101WritePositionNode-1753055737700positions",
+      "className": "animated"
+    },
+    {
+      "source": "So101WritePositionNode-1753055737700",
+      "sourceHandle": "output-0",
+      "target": "DelayNode-1753055824329",
+      "targetHandle": "input",
+      "id": "xy-edge__So101WritePositionNode-1753055737700output-0-DelayNode-1753055824329input",
+      "className": "animated"
+    },
+    {
+      "source": "DelayNode-1753055824329",
+      "sourceHandle": "output",
+      "target": "So101WritePositionNode-1753055797885",
+      "targetHandle": "sdk",
+      "id": "xy-edge__DelayNode-1753055824329output-So101WritePositionNode-1753055797885sdk",
+      "className": "animated"
+    },
+    {
+      "source": "SO101JointAnglesToPositions-1753055999934",
+      "sourceHandle": "output",
+      "target": "So101WritePositionNode-1753055797885",
+      "targetHandle": "positions",
+      "id": "xy-edge__SO101JointAnglesToPositions-1753055999934output-So101WritePositionNode-1753055797885positions",
+      "className": "animated"
+    },
+    {
+      "source": "So101WritePositionNode-1753055737700",
+      "sourceHandle": "output-0",
+      "target": "SO101RobotStatusReader-1753055468574",
+      "targetHandle": "sdk",
+      "id": "xy-edge__So101WritePositionNode-1753055737700output-0-SO101RobotStatusReader-1753055468574sdk",
+      "className": "animated"
+    },
+    {
+      "source": "So101WritePositionNode-1753055797885",
+      "sourceHandle": "output-0",
+      "target": "DelayNode-1753056261948",
+      "targetHandle": "input",
+      "id": "xy-edge__So101WritePositionNode-1753055797885output-0-DelayNode-1753056261948input",
+      "className": "animated"
+    },
+    {
+      "source": "DelayNode-1753056261948",
+      "sourceHandle": "output",
+      "target": "SO101RobotStatusReader-1753055972731",
+      "targetHandle": "sdk",
+      "id": "xy-edge__DelayNode-1753056261948output-SO101RobotStatusReader-1753055972731sdk",
+      "className": "animated"
+    }
+  ],
+  "metadata": {
+    "name": "JiggleGripper",
+    "description": "Auto-saved on 7/21/2025",
+    "created": "2025-07-21T04:47:18.045Z",
+    "version": "1.0.0",
+    "modified": "2025-07-21T04:47:18.045Z"
+  }
+}

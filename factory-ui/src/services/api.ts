@@ -44,6 +44,22 @@ export interface WorkflowItem {
   workflow: WorkflowData;
 }
 
+export interface CreateWorkflowRequest {
+  name: string;
+  nodes: any[];
+  edges: any[];
+}
+
+export interface CreateOrUpdateWorkflowRequest {
+  filename: string;
+  workflow_data: WorkflowData;
+}
+
+export interface RenameWorkflowRequest {
+  old_filename: string;
+  new_filename: string;
+}
+
 export class ApiService {
   private static instance: ApiService;
 
@@ -80,26 +96,8 @@ export class ApiService {
     }
   }
 
-  async saveWorkflow(workflow: WorkflowData): Promise<{ success: boolean; message: string; workflow_id?: string }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/workflow`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(workflow),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Failed to save workflow:', error);
-      throw error;
-    }
-  }
+
+
 
   async executeWorkflow(workflow: WorkflowData): Promise<ExecutionResponse> {
     try {
@@ -141,68 +139,6 @@ export class ApiService {
     }
   }
 
-  async connectRobot(port: string, baudrate: number = 115200, deviceType: string = 'serial'): Promise<{
-    success: boolean;
-    message: string;
-    device_info?: any;
-  }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/robot/connect`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          port,
-          baudrate,
-          device_type: deviceType,
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Failed to connect robot:', error);
-      throw error;
-    }
-  }
-
-  async disconnectRobot(): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/robot/disconnect`, {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Failed to disconnect robot:', error);
-      throw error;
-    }
-  }
-
-  async getRobotStatus(): Promise<{
-    connected: boolean;
-    port: string | null;
-    device_info: any;
-  }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/robot/status`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Failed to get robot status:', error);
-      throw error;
-    }
-  }
 
   async startContinuousExecution(workflow: WorkflowData): Promise<{ success: boolean; message: string }> {
     try {
@@ -284,13 +220,78 @@ export class ApiService {
     }
   }
 
-  async getAllWorkflows(): Promise<{ success: boolean; workflows: WorkflowItem[] }> {
+ 
+
+  async createOrUpdateWorkflow(request: CreateOrUpdateWorkflowRequest): Promise<{ success: boolean; workflows: Record<string, WorkflowData> }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/workflows`);
+      const response = await fetch(`${API_BASE_URL}/user/workflows/create-or-update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       return await response.json();
+    } catch (error) {
+      console.error('Failed to create or update workflow:', error);
+      throw error;
+    }
+  }
+
+  async renameWorkflow(request: RenameWorkflowRequest): Promise<{ success: boolean; workflows: Record<string, WorkflowData> }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/workflows/rename`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to rename workflow:', error);
+      throw error;
+    }
+  }
+
+  async deleteWorkflow(workflowName: string): Promise<{ success: boolean; workflows: Record<string, WorkflowData> }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/workflows/${workflowName}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to delete workflow:', error);
+      throw error;
+    }
+  }
+
+  async getAllWorkflows(): Promise<{ success: boolean; workflows: Record<string, WorkflowData> }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/workflows`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const workflows = await response.json();
+      return {
+        success: true,
+        workflows: workflows
+      };
     } catch (error) {
       console.error('Failed to fetch workflows:', error);
       throw error;

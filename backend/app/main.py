@@ -6,6 +6,8 @@ import os
 import sys
 import json
 import logging
+import uuid
+from datetime import datetime
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -59,6 +61,10 @@ robot_state = {
 # Global executor instance with WebSocket support
 # This single executor handles both continuous and single workflow execution
 executor = ContinuousExecutor(loop_interval=1, websocket_manager=websocket_manager)
+
+# Workflow storage directory
+WORKFLOWS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "user", "workflows")
+os.makedirs(WORKFLOWS_DIR, exist_ok=True)
 
 
 
@@ -143,51 +149,6 @@ async def get_execution_status():
         "execution": status
     }
 
-@app.post("/robot/connect")
-async def connect_robot(connection: RobotConnectionRequest):
-    """Connect to a robot device"""
-    try:
-        # Placeholder for robot connection logic
-        # This would integrate with your actual robot communication library
-        robot_state["connected"] = True
-        robot_state["port"] = connection.port
-        robot_state["device_info"] = {
-            "port": connection.port,
-            "baudrate": connection.baudrate,
-            "device_type": connection.device_type
-        }
-        
-        return {
-            "success": True,
-            "message": f"Connected to robot on {connection.port}",
-            "device_info": robot_state["device_info"]
-        }
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to connect to robot: {str(e)}")
-
-@app.post("/robot/disconnect")
-async def disconnect_robot():
-    """Disconnect from robot device"""
-    try:
-        # Placeholder for robot disconnection logic
-        robot_state["connected"] = False
-        robot_state["port"] = None
-        robot_state["device_info"] = None
-        
-        return {
-            "success": True,
-            "message": "Disconnected from robot"
-        }
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to disconnect from robot: {str(e)}")
-
-@app.get("/robot/status")
-async def get_robot_status():
-    """Get robot connection status"""
-    return robot_state
-
 @app.post("/continuous/start")
 async def start_continuous_execution(workflow: WorkflowRequest):
     """Start continuous execution of a workflow"""
@@ -236,6 +197,79 @@ async def stop_continuous_execution():
 async def get_continuous_status():
     """Get continuous execution status"""
     return executor.get_status()
+
+@app.get("/user/workflows")
+async def get_workflows():
+    """Get all workflows - returns dict of (filename, workflow_data)"""
+    workflows = {}
+    if os.path.exists(WORKFLOWS_DIR):
+        for filename in os.listdir(WORKFLOWS_DIR):
+            if filename.endswith('.json'):
+                with open(os.path.join(WORKFLOWS_DIR, filename), 'r') as f:
+                    workflows[filename] = json.load(f)
+    return workflows
+
+
+class CreateOrUpdateWorkflowRequest(BaseModel):
+    filename: str
+    workflow_data: Dict[str, Any]
+
+
+@app.post("/user/workflows/create-or-update")
+async def create_or_update_workflow(request: CreateOrUpdateWorkflowRequest):
+    """Create or update workflow - returns dict of (filename, workflow_data)"""
+    filename = request.filename
+    if not filename.endswith('.json'):
+        filename += '.json'
+    
+    workflow_path = os.path.join(WORKFLOWS_DIR, filename)
+    
+    with open(workflow_path, 'w') as f:
+        json.dump(request.workflow_data, f, indent=2)
+    
+    return {"success": True, "message": f"Workflow {filename} created or updated"}
+
+class RenameWorkflowRequest(BaseModel):
+    old_filename: str
+    new_filename: str
+
+@app.post("/user/workflows/rename")
+async def rename_workflow(request: RenameWorkflowRequest):
+    """Rename workflow - returns dict of (filename, workflow_data)"""
+    old_filename = request.old_filename
+    new_filename = request.new_filename
+    
+    if not old_filename.endswith('.json'):
+        old_filename += '.json'
+    if not new_filename.endswith('.json'):
+        new_filename += '.json'
+    
+    old_path = os.path.join(WORKFLOWS_DIR, old_filename)
+    new_path = os.path.join(WORKFLOWS_DIR, new_filename)
+    
+    if not os.path.exists(old_path):
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    if os.path.exists(new_path):
+        raise HTTPException(status_code=409, detail="Workflow with new name already exists")
+    
+    os.rename(old_path, new_path)
+    return {"success": True, "message": f"Workflow {old_filename} renamed to {new_filename}"}
+
+@app.delete("/user/workflows/{workflow_name}")
+async def delete_workflow(workflow_name: str):
+    """Delete workflow - returns dict of (filename, workflow_data)"""
+    filename = workflow_name
+    if not filename.endswith('.json'):
+        filename += '.json'
+        
+    workflow_path = os.path.join(WORKFLOWS_DIR, filename)
+    
+    if not os.path.exists(workflow_path):
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    os.remove(workflow_path)
+    return {"success": True, "message": f"Workflow {filename} deleted"}
 
 # WebSocket endpoint for real-time communication
 @app.websocket("/ws")
