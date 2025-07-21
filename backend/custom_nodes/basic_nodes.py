@@ -253,7 +253,7 @@ Usage: Use this node to add a pause in your workflow. This is helpful when you n
 
     def execute(self, input, delay_seconds: float):
         import time
-        time.sleep(int(delay_seconds))
+        time.sleep(float(delay_seconds))
         return input
 
 class RandomNumberNode(NodeBase):
@@ -819,22 +819,24 @@ Usage: Use this node to visualize robot joint states in 3D. Connect it to nodes 
     def visualize_3d(self, positions: dict):
         """
         Convert motor positions to angles and return 3D visualization data.
-        
+
         Args:
             positions: Dictionary mapping servo IDs to positions
-            
+
         Returns:
             tuple: (None, rt_update)
         """
 
-        angles = {int(servo_id): (position / 4095.0) * 360.0 for servo_id, position in positions.items()}
+        # Convert only available positions to angles
+        angle_map = {int(servo_id): (position / 4095.0) * 360.0 for servo_id, position in positions.items()}
 
         list_of_angles = ['Rotation', 'Pitch', 'Elbow', 'Wrist_Pitch', 'Wrist_Roll', 'Jaw']
 
-
+        # Only include angles for servo IDs present in positions
         angles = [
-            {'name': list_of_angles[servo_id], 'angle': angles[servo_id+1], 'servoId': servo_id + 1}
-            for servo_id in range(len(list_of_angles))
+            {'name': list_of_angles[servo_id - 1], 'angle': angle_map[servo_id], 'servoId': servo_id}
+            for servo_id in sorted(angle_map.keys())
+            if 1 <= servo_id <= len(list_of_angles)
         ]
 
         return (None, angles)

@@ -212,33 +212,26 @@ class SO101JointAnglesToPositions(NodeBase):
     
     def angles_to_positions(self, rotation: float, pitch: float, elbow: float, 
                       wrist_pitch: float, wrist_roll: float, jaw: float) -> tuple:
-        # Type safety for angles
-        try:
-            rotation = float(rotation)
-            pitch = float(pitch)
-            elbow = float(elbow)
-            wrist_pitch = float(wrist_pitch)
-            wrist_roll = float(wrist_roll)
-            jaw = float(jaw)
-        except Exception as e:
-            raise ValueError(f"All joint angles must be convertible to float: {e}")
-       
-        servo_ids = [1,2,3,4,5,6]
-         
-        # Map joint angles to servo IDs
-        joint_angles = [rotation, pitch, elbow, wrist_pitch, wrist_roll, jaw]
-        
+        # Helper to check if value is empty/None/''
+        def is_valid(val):
+            return val is not None and val != '' and str(val).strip() != ''
+
+        servo_ids = [1, 2, 3, 4, 5, 6]
+        input_angles = [rotation, pitch, elbow, wrist_pitch, wrist_roll, jaw]
+
         positions = {}
-        # Convert angles to servo positions and send commands
-        for angle, servo_id in zip(joint_angles, servo_ids):
+        for angle, servo_id in zip(input_angles, servo_ids):
+            if not is_valid(angle):
+                continue
+            try:
+                angle_f = float(angle)
+            except Exception as e:
+                raise ValueError(f"Joint angle for servo {servo_id} must be convertible to float: {e}")
             # Convert angle to servo position (assuming 0-4095 range for SCS servos)
-            # This is a basic conversion - you may need to adjust based on your servo configuration
-            servo_position = int(round((angle * 4096) / 360)) # Convert 0-360 to 0-4096
+            servo_position = int(round((angle_f * 4096) / 360))  # Convert 0-360 to 0-4096
             servo_position = min(4096, max(0, servo_position))
             positions[servo_id] = servo_position
-                
-            
-        
+
         return (positions,)
 
 
@@ -260,6 +253,7 @@ class So101WritePositionNode(NodeBase):
     def RETURN_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
+                "sdk": ("ScsServoSDK", {}),
                 "write_result": ("DICT", {})
             }
         }
@@ -293,6 +287,7 @@ class So101WritePositionNode(NodeBase):
               - positions (DICT): Dictionary mapping servo IDs to target positions (e.g., {1: 2048, 2: 1024}).
 
             Outputs:
+              - sdk (ScsServoSDK): The SDK instance, passed through for chaining.
               - write_result (DICT): Dictionary reflecting the positions written to the servos.
 
             Features:
@@ -312,11 +307,11 @@ class So101WritePositionNode(NodeBase):
         )
 
     def write_positions(self, sdk: ScsServoSDK, positions: dict) -> tuple:
-        """Write positions to robot servos"""
+        """Write positions to robot servos and pass sdk as output as well"""
         import traceback
         try:
             sdk.sync_write_positions(positions)
-            return (positions,)
+            return ((sdk, positions), "success")
         except Exception as e:
             error_msg = str(e) + "\n" + traceback.format_exc()
             raise Exception(f"Failed to write positions: {error_msg}")

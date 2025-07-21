@@ -650,18 +650,34 @@ function App() {
     try {
       const response = await localFileService.getAllWorkflows();
       if (response.success && response.workflows.length > 0) {
-        const workflowCanvases: Canvas[] = response.workflows.map((item, index) => ({
-          id: Date.now() + index, // Generate unique ID for canvas
-          name: item.filename,
-          nodes: item.workflow.nodes || [],
-          edges: item.workflow.edges || [],
-          filename: item.filename,
-          hasUnsavedChanges: false
-        }));
+        // Filter to show all workflow files from the image
+        const workflowFiles = [
+          'read_robot_status.json',
+          'jiggle_gripper.json', 
+          'unlock_robot.json',
+          'joints_control.json',
+          'teleoperation.json',
+          'teleoperation_through_ngrok.json'
+        ];
         
-        // Replace the default canvas with workflow canvases
-        setCanvases(workflowCanvases);
-        setActiveCanvasId(workflowCanvases[0].id);
+        const filtered = response.workflows.filter(item => 
+          workflowFiles.includes(item.filename)
+        );
+        
+        if (filtered.length > 0) {
+          const workflowCanvases: Canvas[] = filtered.map((item, index) => ({
+            id: Date.now() + index, // Generate unique ID for canvas
+            name: item.filename,
+            nodes: item.workflow.nodes || [],
+            edges: item.workflow.edges || [],
+            filename: item.filename,
+            hasUnsavedChanges: false
+          }));
+
+          // Replace the default canvas with filtered workflow canvases
+          setCanvases(workflowCanvases);
+          setActiveCanvasId(workflowCanvases[0].id);
+        }
       }
     } catch (error) {
       console.error('Error fetching workflows:', error);
@@ -1728,6 +1744,8 @@ function App() {
                   nodesDraggable={true}
                   nodesConnectable={true}
                   elementsSelectable={true}
+                  minZoom={0.01}
+                  maxZoom={100}
                   onError={(id, message) => {
                     // Suppress ResizeObserver errors which are harmless
                     if (message.includes('ResizeObserver')) {
