@@ -1,0 +1,241 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectRobotNode-1752981247094",
+      "type": "customNode",
+      "position": {
+        "x": -13.91190554372156,
+        "y": 274.5586658119051
+      },
+      "data": {
+        "label": "Connect Robot",
+        "nodeInfo": {
+          "name": "ConnectRobotNode",
+          "display_name": "Connect Robot",
+          "description": "Connect to a robot using ScsServoSDK.connect() and return SDK instance",
+          "detailed_description": "\nConnectRobotNode\n\nPurpose: Establishes a connection to a robot using the ScsServoSDK and returns the SDK instance for use by other robot nodes.\n\nInputs:\n  - port_name (STRING): The serial port name to connect to (leave empty for auto-detection)\n\nOutputs:\n  - sdk (ScsServoSDK): The connected SDK instance that can be used by other robot control nodes\n\nUsage: Use this node at the beginning of robot workflows to establish communication. The SDK output should be connected to other robot nodes that require servo control. If port_name is empty, the system will attempt to auto-detect the robot.\n        ",
+          "category": "robot",
+          "input_types": {
+            "required": {
+              "port_name": [
+                "STRING",
+                {
+                  "default": ""
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectRobotNode",
+        "inputValues": {
+          "port_name": "/dev/tty.usbmodem5A7A0558831"
+        }
+      },
+      "width": 280,
+      "height": 137,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 159.47660885213043,
+        "y": 332.0082989099732
+      },
+      "dragging": false,
+      "measured": {
+        "width": 280,
+        "height": 137
+      }
+    },
+    {
+      "id": "ThreeDVisualizationNode-1752985392275",
+      "type": "threeDNode",
+      "position": {
+        "x": 486.4749195307953,
+        "y": 844.7543997523491
+      },
+      "data": {
+        "label": "3D Visualization",
+        "nodeInfo": {
+          "name": "ThreeDVisualizationNode",
+          "display_name": "3D Visualization",
+          "description": "Visualize robot positions in 3D by converting motor positions to angles.",
+          "detailed_description": "\nThreeDVisualizationNode\n\nPurpose: Takes motor position data and converts it to joint angles for 3D visualization. This node processes motor position data and returns visualization data that can be rendered in a 3D viewer.\n\nInputs:\n  - positions (DICT): Dictionary mapping servo IDs to positions in format:\n    {1: 1510, 2: 1029, 3: 3010, 4: 967, 5: 638, 6: 2039}\n\nOutputs:\n  - None (produces rt_update for 3D visualization)\n\nUsage: Use this node to visualize robot joint states in 3D. Connect it to nodes that provide motor position data to see the 3D representation of the robot's current configuration in the UI.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "positions": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "return_types": {
+            "required": {}
+          },
+          "function": "visualize_3d"
+        },
+        "type": "ThreeDVisualizationNode",
+        "bypassed": false
+      },
+      "measured": {
+        "width": 500,
+        "height": 400
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "ProxyHttpClientNode-1752986434375",
+      "type": "customNode",
+      "position": {
+        "x": -82.26992899985925,
+        "y": 594.8477593768604
+      },
+      "data": {
+        "label": "Proxy HTTP Client",
+        "nodeInfo": {
+          "name": "ProxyHttpClientNode",
+          "display_name": "Proxy HTTP Client",
+          "description": "Make HTTP requests to external endpoints through proxy",
+          "detailed_description": "\nProxyHttpClientNode\n\nPurpose: Makes HTTP GET requests to external endpoints that can be accessed through proxy tunnels. This node fetches data from the specified URL and returns the response.\n\nInputs:\n  - url (STRING): The full URL to make the HTTP request to (e.g., https://your-proxy-endpoint.com)\n\nOutputs:\n  - response_data (DICT): The response data from the HTTP request (parsed JSON or error info)\n  - status_code (INT): The HTTP status code of the response\n  - success (BOOLEAN): True if the request was successful (status code 200-299), False otherwise\n\nUsage: Use this node to fetch data from external services through proxy tunnels. Provide the full proxy URL and the node will make a GET request and return the response data.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "url": [
+                "STRING",
+                {
+                  "default": "https://your-proxy-endpoint.com"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "response_data": [
+                "DICT",
+                {}
+              ],
+              "status_code": [
+                "INT",
+                {}
+              ],
+              "success": [
+                "BOOLEAN",
+                {}
+              ]
+            }
+          },
+          "function": "fetch_data"
+        },
+        "type": "ProxyHttpClientNode",
+        "inputValues": {
+          "url": "http://localhost:8001/data"
+        }
+      },
+      "measured": {
+        "width": 328,
+        "height": 264
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "So101WritePositionNode-1753060241198",
+      "type": "customNode",
+      "position": {
+        "x": 495.48677787725063,
+        "y": 627.2426927776037
+      },
+      "data": {
+        "label": "SO101 Write Position",
+        "nodeInfo": {
+          "name": "So101WritePositionNode",
+          "display_name": "SO101 Write Position",
+          "description": "Write multiple servo positions to the robot using ScsServoSDK.",
+          "detailed_description": "\n            So101WritePositionNode\n\n            Purpose: Writes multiple servo positions to the robot using ScsServoSDK.\n\n            Inputs:\n              - sdk (ScsServoSDK): The SDK instance for communicating with servos.\n              - positions (DICT): Dictionary mapping servo IDs to target positions (e.g., {1: 2048, 2: 1024}).\n\n            Outputs:\n              - sdk (ScsServoSDK): The SDK instance, passed through for chaining.\n              - write_result (DICT): Dictionary reflecting the positions written to the servos.\n\n            Features:\n              - Writes positions to multiple servos simultaneously\n              - Uses sync_write_positions for efficient communication\n              - Provides detailed error messages with stack traces\n              - Returns the positions that were successfully written\n              - Handles connection errors and servo communication failures\n\n            Usage:\n              - Connect the ScsServoSDK output from a robot connection node\n              - Provide positions dictionary with servo ID to position mapping\n              - The node will attempt to write all positions to the robot\n              - Monitor the write_result for confirmation of successful writes\n              - Use with position data from joint angle conversion nodes\n            ",
+          "tags": [
+            "SO101",
+            "SO100"
+          ],
+          "input_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ],
+              "positions": [
+                "DICT",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "sdk": [
+                "ScsServoSDK",
+                {}
+              ],
+              "write_result": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "write_positions"
+        },
+        "type": "So101WritePositionNode"
+      },
+      "measured": {
+        "width": 358,
+        "height": 206
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "ProxyHttpClientNode-1752986434375",
+      "sourceHandle": "output-0",
+      "target": "ThreeDVisualizationNode-1752985392275",
+      "targetHandle": "positions",
+      "id": "xy-edge__ProxyHttpClientNode-1752986434375output-0-ThreeDVisualizationNode-1752985392275positions",
+      "className": ""
+    },
+    {
+      "source": "ConnectRobotNode-1752981247094",
+      "sourceHandle": "output",
+      "target": "So101WritePositionNode-1753060241198",
+      "targetHandle": "sdk",
+      "id": "xy-edge__ConnectRobotNode-1752981247094output-So101WritePositionNode-1753060241198sdk",
+      "className": ""
+    },
+    {
+      "source": "ProxyHttpClientNode-1752986434375",
+      "sourceHandle": "output-0",
+      "target": "So101WritePositionNode-1753060241198",
+      "targetHandle": "positions",
+      "id": "xy-edge__ProxyHttpClientNode-1752986434375output-0-So101WritePositionNode-1753060241198positions",
+      "className": ""
+    }
+  ],
+  "metadata": {
+    "name": "teleoperation_through_ngrok.json",
+    "description": "Auto-saved on 7/20/2025",
+    "created": "2025-07-21T01:13:47.316Z",
+    "version": "1.0.0",
+    "modified": "2025-07-21T01:13:47.316Z"
+  }
+}
