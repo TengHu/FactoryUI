@@ -1412,7 +1412,6 @@ function App() {
       },
     ];
 
-    // Add input mode toggles if the node has string inputs
     if (contextMenu.nodeInfo && contextMenu.nodeId) {
       const node = nodes.find(n => n.id === contextMenu.nodeId);
       const requiredInputs = Object.keys(contextMenu.nodeInfo.input_types.required || {});
