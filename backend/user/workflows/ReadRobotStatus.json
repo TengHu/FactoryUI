@@ -57,8 +57,8 @@
       "id": "SO101RobotStatusReader-1752985250384",
       "type": "customNode",
       "position": {
-        "x": 426.4449232997058,
-        "y": 155.93604025290074
+        "x": 521.813126245976,
+        "y": 325.74963224788326
       },
       "data": {
         "label": "SO101 Robot Status Reader",
@@ -94,21 +94,59 @@
           },
           "function": "read_robot_status"
         },
-        "type": "SO101RobotStatusReader"
+        "type": "SO101RobotStatusReader",
+        "bypassed": false
       },
       "measured": {
         "width": 479,
-        "height": 320
+        "height": 296
       },
       "selected": false,
       "dragging": false
     },
     {
-      "id": "ThreeDVisualizationNode-1752985258317",
+      "id": "PrintToConsoleNode-1753834822342",
+      "type": "customNode",
+      "position": {
+        "x": 1091.6940986629568,
+        "y": 269.5319704441732
+      },
+      "data": {
+        "label": "Print To Console",
+        "nodeInfo": {
+          "name": "PrintToConsoleNode",
+          "display_name": "Print To Console",
+          "description": "Prints the input value to the console.",
+          "detailed_description": "\nPrintToConsoleNode\n\nPurpose: Prints any input value to the console for debugging and monitoring purposes.\n\nInputs:\n  - value (ANY): Any value to print to the console\n\nOutputs:\n  - None (this node has no outputs)\n\nUsage: Use this node to debug your workflow by printing intermediate values to the console. Place it anywhere in your workflow to see what data is flowing through.\n        ",
+          "tags": [
+            "Basic"
+          ],
+          "input_types": {
+            "required": {
+              "value": [
+                "ANY",
+                {}
+              ]
+            }
+          },
+          "return_types": {},
+          "function": "execute"
+        },
+        "type": "PrintToConsoleNode"
+      },
+      "measured": {
+        "width": 220,
+        "height": 122
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "ThreeDVisualizationNode-1753835857504",
       "type": "threeDNode",
       "position": {
-        "x": 1067.4927613384248,
-        "y": 560.2456894130817
+        "x": 1102.385330393815,
+        "y": 532.8291412963881
       },
       "data": {
         "label": "3D Visualization",
@@ -139,43 +177,6 @@
         "width": 500,
         "height": 400
       },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "DisplayNode-1752985280003",
-      "type": "customNode",
-      "position": {
-        "x": 1078.893498902503,
-        "y": 153.98432861242725
-      },
-      "data": {
-        "label": "Display",
-        "nodeInfo": {
-          "name": "DisplayNode",
-          "display_name": "Display",
-          "description": "Display the input value (ANY type) for debugging or monitoring.",
-          "detailed_description": "\nDisplayNode\n\nPurpose: Takes any input value and displays it (prints to console). Useful for debugging or monitoring workflow data.\n\nInputs:\n  - value (ANY): Any value to display\n\nOutputs:\n  - value (ANY): The same value that was input, for display purposes\n\nUsage: Use this node to inspect values in your workflow. It prints the value to the backend console and passes it through for display in the UI.\n        ",
-          "tags": [
-            "Basic"
-          ],
-          "input_types": {
-            "required": {
-              "value": [
-                "ANY",
-                {}
-              ]
-            }
-          },
-          "return_types": {},
-          "function": "display"
-        },
-        "type": "DisplayNode"
-      },
-      "measured": {
-        "width": 362,
-        "height": 280
-      },
       "selected": true,
       "dragging": false
     }
@@ -187,30 +188,30 @@
       "target": "SO101RobotStatusReader-1752985250384",
       "targetHandle": "sdk",
       "id": "xy-edge__ConnectRobotNode-1752694507773output-SO101RobotStatusReader-1752985250384sdk",
-      "className": "animated"
+      "className": ""
     },
     {
       "source": "SO101RobotStatusReader-1752985250384",
       "sourceHandle": "output-1",
-      "target": "ThreeDVisualizationNode-1752985258317",
-      "targetHandle": "positions",
-      "id": "xy-edge__SO101RobotStatusReader-1752985250384output-1-ThreeDVisualizationNode-1752985258317positions",
-      "className": "animated"
-    },
-    {
-      "source": "SO101RobotStatusReader-1752985250384",
-      "sourceHandle": "output-1",
-      "target": "DisplayNode-1752985280003",
+      "target": "PrintToConsoleNode-1753834822342",
       "targetHandle": "value",
-      "id": "xy-edge__SO101RobotStatusReader-1752985250384output-1-DisplayNode-1752985280003value",
-      "className": "animated"
+      "id": "xy-edge__SO101RobotStatusReader-1752985250384output-1-PrintToConsoleNode-1753834822342value",
+      "className": ""
+    },
+    {
+      "source": "SO101RobotStatusReader-1752985250384",
+      "sourceHandle": "output-1",
+      "target": "ThreeDVisualizationNode-1753835857504",
+      "targetHandle": "positions",
+      "id": "xy-edge__SO101RobotStatusReader-1752985250384output-1-ThreeDVisualizationNode-1753835857504positions",
+      "className": ""
     }
   ],
   "metadata": {
     "name": "ReadRobotStatus",
-    "description": "Auto-saved on 7/21/2025",
-    "created": "2025-07-21T04:46:41.345Z",
+    "description": "Workflow saved on 7/29/2025",
+    "created": "2025-07-30T00:38:17.496Z",
     "version": "1.0.0",
-    "modified": "2025-07-21T04:46:41.345Z"
+    "modified": "2025-07-30T00:38:17.496Z"
   }
 }

@@ -1138,6 +1138,194 @@ Usage: Use this node to fetch data from external services through proxy tunnels.
                 False
             )
 
+class VLMNode(NodeBase):
+    """A mock Vision Language Model node"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "system_prompt": ("STRING", {"default": ""}),
+                "user_prompt": ("STRING", {"default": ""}),
+                "model_name": ("STRING", {"default": "grok-vlm"}),
+                "images": ("IMAGE", {})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "immediate_action": ("STRING", {}),
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "process_vlm"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "VLM"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Grok VLM"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+VLMNode
+
+Purpose: Mock Vision Language Model node that processes images with text prompts.
+
+Inputs:
+  - system_prompt (STRING): The system prompt for the VLM (default: empty string)
+  - images (IMAGE): The images to process with the VLM
+
+Outputs:
+  - response (STRING): The VLM's response to the prompt and images
+  - confidence (FLOAT): Confidence score of the response
+
+Usage: Use this node to simulate VLM processing. The node will pass through the inputs and return mock responses.
+        """
+    
+    def process_vlm(self, system_prompt: str, user_prompt: str, model_name, images) -> tuple:
+        """Mock VLM processing"""
+        response = f"Mock VLM response to prompt: '{system_prompt[:50]}...' with {len(images) if hasattr(images, '__len__') else 1} image(s)"
+        confidence = 0.85
+        return (response, confidence)
+
+class VLAModelNode(NodeBase):
+    """A mock Vision Language Action model node"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "system_status": ("DICT", {}),
+                "prompt": ("STRING", {"default": ""}),
+                "images": ("IMAGE", {}),
+                "model_name": ("STRING", {"default": "grok-vla"}),
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "desired_positions": ("DICT", {}),
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "process_vla"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "VLA Model"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "VLA node"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+VLAModelNode
+
+Purpose: Mock Vision Language Action model node that processes system status, prompts, and images to generate actions.
+
+Inputs:
+  - system_status (DICT): Current system status information
+  - prompt (STRING): The prompt for the VLA model (default: empty string)
+  - images (IMAGE): The images to process with the VLA model
+
+Outputs:
+  - action (STRING): The action to be performed
+  - parameters (DICT): Parameters for the action
+  - confidence (FLOAT): Confidence score of the action
+
+Usage: Use this node to simulate VLA model processing. The node will pass through the inputs and return mock actions and parameters.
+        """
+    
+    def process_vla(self, system_status: dict, prompt: str, images, model_name) -> tuple:
+        """Mock VLA processing"""
+        action = f"mock_action_{len(prompt) % 3}"
+        parameters = {"param1": "value1", "param2": "value2"}
+        confidence = 0.92
+        return system_status, None
+    
+
+class DataRecordNode(NodeBase):
+    """A mock node for data recording functionality"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "hf_token": ("STRING", {"default": ""})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "success": ("BOOLEAN", {}),
+                "message": ("STRING", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "record_data"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Data Record"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Mock node for data recording functionality"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+DataRecordNode
+
+Purpose: Mock node for data recording functionality. This node simulates recording data using a Hugging Face token.
+
+Inputs:
+  - hf_token (STRING): Hugging Face token for data recording (default: empty string)
+
+Outputs:
+  - success (BOOLEAN): True if recording was successful, False otherwise
+  - message (STRING): Status message describing the recording result
+
+Usage: Use this node to simulate data recording operations. The node will pass through the token and return a mock success response.
+        """
+    
+    def record_data(self, hf_token: str) -> tuple:
+        """Mock data recording functionality"""
+        if hf_token:
+            return (True, f"Data recorded successfully with token: {hf_token[:8]}...")
+        else:
+            return (False, "No HF token provided for data recording")
+
 # Node class mappings for registration
 NODE_CLASS_MAPPINGS = {
     "InputNode": InputNode,
@@ -1153,4 +1341,7 @@ NODE_CLASS_MAPPINGS = {
     "DisconnectRobotNode": DisconnectRobotNode,
     "ProxyHttpSenderNode": ProxyHttpSenderNode,
     "ProxyHttpClientNode": ProxyHttpClientNode,
+    "VLMNode": VLMNode,
+    "VLAModelNode": VLAModelNode,
+    "DataRecordNode": DataRecordNode,
 }
