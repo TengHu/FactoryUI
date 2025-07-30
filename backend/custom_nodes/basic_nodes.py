@@ -35,7 +35,7 @@ class InputNode(NodeBase):
     def RETURN_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "output": ("STRING", {})
+                "output": ("ANY", {})
             }
         }
     
@@ -66,7 +66,7 @@ Inputs:
   - value (STRING): The input text value to pass through the workflow (default: empty string)
 
 Outputs:
-  - output (STRING): The same value that was input, passed through to connected nodes
+  - output (ANY): The same value that was input, passed through to connected nodes
 
 Usage: Use this node to inject text data into your workflow, either by setting a default value or connecting it to other nodes that provide string data.
         """
@@ -512,7 +512,7 @@ Usage: Use this node at the beginning of robot workflows to establish communicat
 
         self.port2sdk[port_name] = sdk
 
-        return (sdk,)
+        return (sdk, None)
      
 class ShowImageNode(NodeBase):
     """A node that shows an image (takes image input, no output)."""
