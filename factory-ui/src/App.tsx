@@ -165,7 +165,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCanvasId]);
 
-  // 4. When nodes/edges change, update the canvases array and sync with backend
+  // 4. When nodes/edges change, update the canvases array (auto-save disabled)
   useEffect(() => {
     console.log('Canvas sync effect triggered. Nodes count:', nodes.length, 'Edges count:', edges.length);
     console.log('Active canvas index:', activeCanvasIndex);
@@ -182,40 +182,9 @@ function App() {
       return updated;
     });
     
-    // Auto-save to backend if the active canvas has a filename
-    const currentActiveCanvas = canvases[activeCanvasIndex];
-    if (currentActiveCanvas?.filename && !isLoadingRef.current) {
-      const filename = currentActiveCanvas.filename;
-      // Debounce auto-save to avoid too many requests
-      const saveTimeout = setTimeout(async () => {
-        try {
-          const workflowData = {
-            nodes: nodes,
-            edges: edges,
-            metadata: {
-              name: currentActiveCanvas.name,
-              description: `Auto-saved on ${new Date().toLocaleDateString()}`,
-              created: new Date().toISOString(),
-              version: '1.0.0'
-            }
-          };
-
-          await localFileService.saveWorkflowByFilename(filename, workflowData);
-          console.log('Auto-saved workflow to backend:', filename);
-          
-          // Clear unsaved changes flag after successful auto-save
-          setCanvases(prev => prev.map(canvas => 
-            canvas.id === activeCanvasId 
-              ? { ...canvas, hasUnsavedChanges: false }
-              : canvas
-          ));
-        } catch (error) {
-          console.error('Failed to auto-save workflow:', error);
-        }
-      }, 2000); // Auto-save after 2 seconds of inactivity
-
-      return () => clearTimeout(saveTimeout);
-    }
+    // Auto-save functionality has been disabled
+    // Manual save is still available through the save button
+    
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges]);
 
@@ -1483,46 +1452,47 @@ function App() {
   }, [nodes, debouncedNodeStates]);
 
   // Helper function to convert string input to appropriate type based on node input type
-  const convertInputValue = useCallback((nodeId: string, inputName: string, value: string) => {
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return value;
-    
-    const nodeInfo = (node.data as any).nodeInfo as NodeInfo;
-    const typeInfo = 
-      nodeInfo.input_types.required?.[inputName] ||
-      nodeInfo.input_types.optional?.[inputName];
-    const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-    
-    // Convert value based on type
-    switch (typeName) {
-      case 'STRING':
-        return value; // Keep as string
-      case 'FLOAT':
-        const floatValue = parseFloat(value);
-        return isNaN(floatValue) ? value : floatValue; // Return number if valid, original string if invalid
-      case 'INT':
-        const intValue = parseInt(value, 10);
-        return isNaN(intValue) ? value : intValue; // Return number if valid, original string if invalid
-      case 'BOOLEAN':
-        const lowerValue = value.toLowerCase();
-        if (lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes') {
-          return true;
-        } else if (lowerValue === 'false' || lowerValue === '0' || lowerValue === 'no') {
-          return false;
-        }
-        return value; // Return original string if not a valid boolean
-      default:
-        return value; // Keep as string for unknown types
-    }
-  }, [nodes]);
+  // Removed convertInputValue function - conversion is now done inline to prevent nodeTypes recreation
 
   const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
-    // Convert the value to the appropriate type
-    const convertedValue = convertInputValue(nodeId, inputName, value);
-    
     setNodes(nodes => 
       nodes.map(node => {
         if (node.id === nodeId) {
+          // Convert the value inline to avoid dependency issues
+          let convertedValue: any = value;
+          const nodeInfo = (node.data as any).nodeInfo as NodeInfo;
+          const typeInfo = 
+            nodeInfo.input_types.required?.[inputName] ||
+            nodeInfo.input_types.optional?.[inputName];
+          const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+          
+          // Convert value based on type
+          switch (typeName) {
+            case 'FLOAT':
+              const floatValue = parseFloat(value);
+              convertedValue = isNaN(floatValue) ? value : floatValue;
+              break;
+            case 'INT':
+              const intValue = parseInt(value, 10);
+              convertedValue = isNaN(intValue) ? value : intValue;
+              break;
+            case 'BOOLEAN':
+              const lowerValue = value.toLowerCase();
+              if (lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes') {
+                convertedValue = true;
+              } else if (lowerValue === 'false' || lowerValue === '0' || lowerValue === 'no') {
+                convertedValue = false;
+              }
+              break;
+            default:
+              convertedValue = value; // Keep as string
+          }
+          
+          // Send real-time input update via WebSocket
+          if (connectionState.isConnected) {
+            websocketService.sendInputUpdate(nodeId, inputName, convertedValue);
+          }
+          
           return {
             ...node,
             data: {
@@ -1537,13 +1507,7 @@ function App() {
         return node;
       })
     );
-
-    
-    // Send real-time input update via WebSocket
-    if (connectionState.isConnected) {
-      websocketService.sendInputUpdate(nodeId, inputName, convertedValue);
-    }
-  }, [setNodes, connectionState.isConnected, convertInputValue]);
+  }, [setNodes, connectionState.isConnected]);
 
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),

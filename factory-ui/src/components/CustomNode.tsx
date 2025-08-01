@@ -61,26 +61,50 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
     return () => window.removeEventListener('error', handleResizeObserverError);
   }, []);
 
-  // Auto-resize textareas when content changes
-  useEffect(() => {
-    const autoResizeTextareas = () => {
-      const textareas = nodeRef.current?.querySelectorAll('.auto-expand-textarea') as NodeListOf<HTMLTextAreaElement>;
-      textareas?.forEach((textarea) => {
-        const container = textarea.closest('.custom-node') as HTMLElement;
-        const containerHeight = container ? container.offsetHeight : 0;
-        const maxHeight = Math.max(120, containerHeight - 100);
+  // Debounced auto-resize - only resize after user stops typing
+  const autoResizeHandler = useCallback(() => {
+    const resizeTimeouts = new Map<HTMLTextAreaElement, number>();
+    
+    return (textarea: HTMLTextAreaElement) => {
+      // Clear existing timeout for this textarea
+      const existingTimeout = resizeTimeouts.get(textarea);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+      
+      // Set new timeout - resize after user stops typing for 300ms
+      const timeoutId = window.setTimeout(() => {
+        try {
+          const container = textarea.closest('.custom-node') as HTMLElement;
+          if (!container) return;
+          
+          const containerHeight = container.offsetHeight;
+          const maxHeight = Math.max(120, containerHeight - 100);
+          
+          // Resize without disrupting focus
+          const currentHeight = textarea.offsetHeight;
+          textarea.style.height = 'auto';
+          const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+          
+          // Only update if height actually changed to avoid unnecessary DOM manipulation
+          if (Math.abs(newHeight - currentHeight) > 2) {
+            textarea.style.height = `${newHeight}px`;
+            textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+          } else {
+            textarea.style.height = `${currentHeight}px`; // Restore original height
+          }
+        } catch (error) {
+          console.debug('Textarea resize skipped:', error);
+        }
         
-        textarea.style.height = 'auto';
-        const newHeight = Math.min(textarea.scrollHeight, maxHeight);
-        textarea.style.height = `${newHeight}px`;
-        textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
-      });
+        resizeTimeouts.delete(textarea);
+      }, 300); // Wait 300ms after user stops typing
+      
+      resizeTimeouts.set(textarea, timeoutId);
     };
+  }, []);
 
-    // Small delay to ensure DOM is updated
-    const timeoutId = setTimeout(autoResizeTextareas, 0);
-    return () => clearTimeout(timeoutId);
-  }, [inputValues]);
+  const resizeHandler = autoResizeHandler();
   
   // Custom resize functionality
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -364,18 +388,8 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                                   height: 'auto'
                                 }}
                                 onInput={(e) => {
-                                  // Auto-resize the textarea to content, respecting node boundary
                                   const target = e.target as HTMLTextAreaElement;
-                                  const container = target.closest('.custom-node') as HTMLElement;
-                                  const containerHeight = container ? container.offsetHeight : 0;
-                                  const maxHeight = Math.max(120, containerHeight - 100); // Leave space for other elements
-                                  
-                                  target.style.height = 'auto';
-                                  const newHeight = Math.min(target.scrollHeight, maxHeight);
-                                  target.style.height = `${newHeight}px`;
-                                  
-                                  // Show scrollbar if content exceeds max height
-                                  target.style.overflowY = target.scrollHeight > maxHeight ? 'auto' : 'hidden';
+                                  resizeHandler(target);
                                 }}
                               />
                             </div>
@@ -466,18 +480,8 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                                     height: 'auto'
                                   }}
                                   onInput={(e) => {
-                                    // Auto-resize the textarea to content, respecting node boundary
                                     const target = e.target as HTMLTextAreaElement;
-                                    const container = target.closest('.custom-node') as HTMLElement;
-                                    const containerHeight = container ? container.offsetHeight : 0;
-                                    const maxHeight = Math.max(120, containerHeight - 100); // Leave space for other elements
-                                    
-                                    target.style.height = 'auto';
-                                    const newHeight = Math.min(target.scrollHeight, maxHeight);
-                                    target.style.height = `${newHeight}px`;
-                                    
-                                    // Show scrollbar if content exceeds max height
-                                    target.style.overflowY = target.scrollHeight > maxHeight ? 'auto' : 'hidden';
+                                    resizeHandler(target);
                                   }}
                                 />
                               ) : (

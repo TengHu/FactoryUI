@@ -100,26 +100,9 @@ pip install -r requirements.txt
 print_success "Backend dependencies installed successfully"
 echo ""
 
-# Clone feetech-servo-sdk if it doesn't exist
 print_status "Setting up custom nodes..."
 cd custom_nodes
 
-if [ -d "feetech-servo-sdk" ]; then
-    print_warning "feetech-servo-sdk already exists, skipping clone"
-else
-    print_status "Cloning feetech-servo-sdk from GitHub..."
-    git clone https://github.com/TengHu/feetech-servo-sdk.git
-    print_success "feetech-servo-sdk cloned successfully"
-fi
-
-# Install feetech-servo-sdk
-if [ -d "feetech-servo-sdk" ]; then
-    print_status "Installing feetech-servo-sdk..."
-    cd feetech-servo-sdk
-    pip install -e .
-    cd ..
-    print_success "feetech-servo-sdk installed successfully"
-fi
 
 # Clone LeRobot if it doesn't exist
 print_status "Setting up LeRobot..."
@@ -173,13 +156,6 @@ if [ -f "factory-ui/package.json" ] && [ -d "factory-ui/node_modules" ]; then
     print_success "Frontend setup verified"
 else
     print_error "Frontend setup verification failed"
-fi
-
-# Check feetech-servo-sdk
-if [ -d "backend/custom_nodes/feetech-servo-sdk" ]; then
-    print_success "feetech-servo-sdk setup verified"
-else
-    print_warning "feetech-servo-sdk setup could not be verified"
 fi
 
 # Check LeRobot
