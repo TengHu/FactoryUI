@@ -4,8 +4,8 @@
       "id": "ConnectLeRobotNode-1754010971829",
       "type": "customNode",
       "position": {
-        "x": -372.265788206153,
-        "y": 244.7277399844666
+        "x": -111.69942478744818,
+        "y": 125.76988871326708
       },
       "data": {
         "label": "Connect LeRobot",
@@ -79,8 +79,8 @@
       "id": "ConnectTeleoperatorNode-1754011348203",
       "type": "customNode",
       "position": {
-        "x": 376.84125376399487,
-        "y": 549.6540421737203
+        "x": 250.8259738893313,
+        "y": 388.74222325684224
       },
       "data": {
         "label": "Connect Teleoperator",
@@ -144,72 +144,11 @@
       "dragging": false
     },
     {
-      "id": "CreateDatasetNode-1754011550863",
-      "type": "customNode",
-      "position": {
-        "x": 1266.9715187664644,
-        "y": -366.32023163949304
-      },
-      "data": {
-        "label": "Create Dataset",
-        "nodeInfo": {
-          "name": "CreateDatasetNode",
-          "display_name": "Create Dataset",
-          "description": "Create or load LeRobot dataset for recording",
-          "detailed_description": "\nCreateDatasetNode\n\nPurpose: Creates a new LeRobot dataset or loads an existing one for recording episodes.\n\nInputs:\n  - dataset_config (DICT): Dataset configuration from DatasetRecordConfigNode\n  - robot (DICT): Connected robot instance from ConnectLeRobotNode\n  - resume (BOOLEAN): Whether to resume recording on existing dataset\n\nOutputs:\n  - dataset (DICT): LeRobot dataset instance\n  - dataset_features (DICT): Dataset features schema\n\nUsage: Use this node to create the dataset structure before recording episodes.\n        ",
-          "tags": [
-            "LeRobot"
-          ],
-          "input_types": {
-            "required": {
-              "dataset_config": [
-                "DICT",
-                {}
-              ],
-              "robot": [
-                "DICT",
-                {}
-              ],
-              "resume": [
-                "BOOLEAN",
-                {
-                  "default": false
-                }
-              ]
-            }
-          },
-          "return_types": {
-            "required": {
-              "dataset": [
-                "DICT",
-                {}
-              ],
-              "dataset_features": [
-                "DICT",
-                {}
-              ]
-            }
-          },
-          "function": "create_dataset"
-        },
-        "type": "CreateDatasetNode",
-        "inputValues": {
-          "resume": true
-        }
-      },
-      "measured": {
-        "width": 364,
-        "height": 226
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
       "id": "RecordEpisodesNode-1754016667022",
       "type": "customNode",
       "position": {
-        "x": 1216.436709205484,
-        "y": 190.17080424309643
+        "x": 1357.6946831946973,
+        "y": 188.38272862297978
       },
       "data": {
         "label": "Record Episodes",
@@ -287,17 +226,17 @@
       "dragging": false
     },
     {
-      "id": "DatasetRecordConfigForOneEposideNode-1754019664061",
+      "id": "DatasetRecordConfigForOneEpisodeNode-1754062715588",
       "type": "customNode",
       "position": {
-        "x": 77.9532702996847,
-        "y": -512.9010025821426
+        "x": -75.39718052171207,
+        "y": -640.809830919068
       },
       "data": {
-        "label": "Dataset Record Config",
+        "label": "Dataset Record Config For One Episode",
         "nodeInfo": {
-          "name": "DatasetRecordConfigForOneEposideNode",
-          "display_name": "Dataset Record Config",
+          "name": "DatasetRecordConfigForOneEpisodeNode",
+          "display_name": "Dataset Record Config For One Episode",
           "description": "Configure dataset recording parameters",
           "detailed_description": "\nDatasetRecordConfigNode\n\nPurpose: Configure parameters for dataset recording including episodes, timing, and storage options.\n\nInputs:\n  - repo_id (STRING): Dataset identifier (e.g., 'user/dataset_name')\n  - single_task (STRING): Task description for the recording\n  - fps (INT): Frames per second for recording\n  - episode_time_s (FLOAT): Duration of each episode in seconds\n  - reset_time_s (FLOAT): Time for environment reset between episodes\n  - root (STRING, optional): Root directory for dataset storage\n  - video (BOOLEAN, optional): Encode frames as video\n  - push_to_hub (BOOLEAN, optional): Upload to Hugging Face hub\n  - private (BOOLEAN, optional): Make repository private\n  - num_image_writer_processes (INT, optional): Number of image writer processes\n  - num_image_writer_threads_per_camera (INT, optional): Threads per camera for image writing\n\nOutputs:\n  - dataset_config (DICT): DatasetRecordConfig object\n\nUsage: Use this node to configure all dataset recording parameters before creating the dataset.\n        ",
           "tags": [
@@ -387,16 +326,78 @@
           },
           "function": "create_dataset_config"
         },
-        "type": "DatasetRecordConfigForOneEposideNode",
+        "type": "DatasetRecordConfigForOneEpisodeNode",
         "inputValues": {
           "repo_id": "niel1511/workflow12",
           "episode_time_s": 6,
+          "push_to_hub": true,
           "video": false
         }
       },
       "measured": {
-        "width": 289,
+        "width": 381,
         "height": 712
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "CreateDatasetNode-1754062724727",
+      "type": "customNode",
+      "position": {
+        "x": 582.4201000900711,
+        "y": -553.2432448636032
+      },
+      "data": {
+        "label": "Create Dataset",
+        "nodeInfo": {
+          "name": "CreateDatasetNode",
+          "display_name": "Create Dataset",
+          "description": "Create or load LeRobot dataset for recording",
+          "detailed_description": "\nCreateDatasetNode\n\nPurpose: Creates a new LeRobot dataset or loads an existing one for recording episodes.\n\nInputs:\n  - dataset_config (DICT): Dataset configuration from DatasetRecordConfigNode\n  - robot (DICT): Connected robot instance from ConnectLeRobotNode\n  - resume (BOOLEAN): Whether to resume recording on existing dataset\n\nOutputs:\n  - dataset (DICT): LeRobot dataset instance\n  - dataset_features (DICT): Dataset features schema\n\nUsage: Use this node to create the dataset structure before recording episodes.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "dataset_config": [
+                "DICT",
+                {}
+              ],
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "resume": [
+                "BOOLEAN",
+                {
+                  "default": false
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "dataset": [
+                "DICT",
+                {}
+              ],
+              "dataset_features": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "create_dataset"
+        },
+        "type": "CreateDatasetNode",
+        "inputValues": {
+          "resume": true
+        }
+      },
+      "measured": {
+        "width": 364,
+        "height": 226
       },
       "selected": false,
       "dragging": false
@@ -406,24 +407,9 @@
     {
       "source": "ConnectLeRobotNode-1754010971829",
       "sourceHandle": "output-0",
-      "target": "CreateDatasetNode-1754011550863",
-      "targetHandle": "robot",
-      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-CreateDatasetNode-1754011550863robot",
-      "className": ""
-    },
-    {
-      "source": "ConnectLeRobotNode-1754010971829",
-      "sourceHandle": "output-0",
       "target": "RecordEpisodesNode-1754016667022",
       "targetHandle": "robot",
       "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-RecordEpisodesNode-1754016667022robot"
-    },
-    {
-      "source": "CreateDatasetNode-1754011550863",
-      "sourceHandle": "output-0",
-      "target": "RecordEpisodesNode-1754016667022",
-      "targetHandle": "dataset",
-      "id": "xy-edge__CreateDatasetNode-1754011550863output-0-RecordEpisodesNode-1754016667022dataset"
     },
     {
       "source": "ConnectTeleoperatorNode-1754011348203",
@@ -433,25 +419,39 @@
       "id": "xy-edge__ConnectTeleoperatorNode-1754011348203output-0-RecordEpisodesNode-1754016667022teleoperator"
     },
     {
-      "source": "DatasetRecordConfigForOneEposideNode-1754019664061",
+      "source": "DatasetRecordConfigForOneEpisodeNode-1754062715588",
       "sourceHandle": "output",
-      "target": "CreateDatasetNode-1754011550863",
+      "target": "CreateDatasetNode-1754062724727",
       "targetHandle": "dataset_config",
-      "id": "xy-edge__DatasetRecordConfigForOneEposideNode-1754019664061output-CreateDatasetNode-1754011550863dataset_config"
+      "id": "xy-edge__DatasetRecordConfigForOneEpisodeNode-1754062715588output-CreateDatasetNode-1754062724727dataset_config"
     },
     {
-      "source": "DatasetRecordConfigForOneEposideNode-1754019664061",
+      "source": "ConnectLeRobotNode-1754010971829",
+      "sourceHandle": "output-0",
+      "target": "CreateDatasetNode-1754062724727",
+      "targetHandle": "robot",
+      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-CreateDatasetNode-1754062724727robot"
+    },
+    {
+      "source": "CreateDatasetNode-1754062724727",
+      "sourceHandle": "output-0",
+      "target": "RecordEpisodesNode-1754016667022",
+      "targetHandle": "dataset",
+      "id": "xy-edge__CreateDatasetNode-1754062724727output-0-RecordEpisodesNode-1754016667022dataset"
+    },
+    {
+      "source": "DatasetRecordConfigForOneEpisodeNode-1754062715588",
       "sourceHandle": "output",
       "target": "RecordEpisodesNode-1754016667022",
       "targetHandle": "dataset_config",
-      "id": "xy-edge__DatasetRecordConfigForOneEposideNode-1754019664061output-RecordEpisodesNode-1754016667022dataset_config"
+      "id": "xy-edge__DatasetRecordConfigForOneEpisodeNode-1754062715588output-RecordEpisodesNode-1754016667022dataset_config"
     }
   ],
   "metadata": {
     "name": "record_demo",
-    "description": "Auto-saved on 7/31/2025",
-    "created": "2025-08-01T03:48:56.771Z",
+    "description": "Auto-saved on 8/1/2025",
+    "created": "2025-08-01T15:39:40.605Z",
     "version": "1.0.0",
-    "modified": "2025-08-01T03:48:56.771Z"
+    "modified": "2025-08-01T15:39:40.605Z"
   }
 }

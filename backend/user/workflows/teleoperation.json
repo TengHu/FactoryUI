@@ -37,12 +37,12 @@
         },
         "type": "ConnectRobotNode",
         "inputValues": {
-          "port_name": "/dev/tty.usbmodem5A7A0573841"
+          "port_name": "/dev/tty.usbmodem5A7A0573841yhbb"
         }
       },
       "width": 280,
       "height": 137,
-      "selected": false,
+      "selected": true,
       "positionAbsolute": {
         "x": 141.37401432941033,
         "y": 171.0934761947922
@@ -160,7 +160,7 @@
       "id": "ThreeDVisualizationNode-1753057164757",
       "type": "threeDNode",
       "position": {
-        "x": 1039.331986381816,
+        "x": 1088.7284496901375,
         "y": 140.57942336407856
       },
       "data": {
@@ -193,7 +193,7 @@
         "height": 400
       },
       "selected": false,
-      "dragging": false
+      "dragging": true
     },
     {
       "id": "ThreeDVisualizationNode-1753057167079",
@@ -390,10 +390,10 @@
     }
   ],
   "metadata": {
-    "name": "Teleoperation",
-    "description": "Auto-saved on 7/21/2025",
-    "created": "2025-07-21T04:40:29.876Z",
+    "name": "teleoperation",
+    "description": "Auto-saved on 8/1/2025",
+    "created": "2025-08-01T15:37:25.785Z",
     "version": "1.0.0",
-    "modified": "2025-07-21T04:40:29.876Z"
+    "modified": "2025-08-01T15:37:25.785Z"
   }
 }
