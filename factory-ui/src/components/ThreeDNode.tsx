@@ -207,32 +207,16 @@ function RobotScene({
   }, [urdfUrl, scene, onRobotLoaded]);
 
   useEffect(() => {
-    console.log('🤖 [RobotScene DEBUG] Joint states useEffect triggered:', {
-      hasRobot: !!robotRef.current,
-      hasJoints: !!(robotRef.current && robotRef.current.joints),
-      jointStatesCount: jointStates?.length || 0,
-      jointStates: jointStates
-    });
+    // Joint states update - debug logging removed
 
     if (robotRef.current && robotRef.current.joints && jointStates) {
-      console.log('🔧 [RobotScene DEBUG] Applying joint states to robot:', jointStates);
+      // Apply joint states to robot (debug logging removed)
       jointStates.forEach((state) => {
         const joint = robotRef.current!.joints[state.name];
         if (joint && joint.jointType !== 'continuous') {
           const radians = state.angle * (Math.PI / 180);
-          console.log(`🎯 [RobotScene DEBUG] Setting joint ${state.name} to ${state.angle}° (${radians.toFixed(3)} rad)`);
-          // Direct conversion from degrees to radians (same as bambot)
           joint.setJointValue(radians);
-        } else {
-          console.log(`❌ [RobotScene DEBUG] Joint ${state.name} not found or is continuous type`);
         }
-      });
-      console.log('✅ [RobotScene DEBUG] Finished applying all joint states');
-    } else {
-      console.log('⚠️ [RobotScene DEBUG] Cannot apply joint states:', {
-        robotRef: !!robotRef.current,
-        joints: !!(robotRef.current && robotRef.current.joints),
-        jointStates: !!jointStates
       });
     }
   }, [jointStates]);
@@ -267,7 +251,6 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
   const nodeData = data as unknown as ThreeDNodeData;
   const { nodeInfo, inputModes = {}, inputValues = {}, bypassed = false, nodeState } = nodeData;
   const onContextMenu = (props as any).onContextMenu;
-  const onInputValueChange = (props as any).onInputValueChange;
   
   // State for detailed description modal
   const [showDetailedDescription, setShowDetailedDescription] = useState(false);
@@ -431,14 +414,12 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
   };
 
   const handleRobotLoaded = useCallback((robot: URDFRobot) => {
-    console.log('🤖 [DEBUG] Robot loaded, processing joints...');
+    // Robot loaded, processing joints (debug logging removed)
     const joints: Record<string, URDFJoint> = {};
     const jointStates: JointState[] = [];
 
     if (robot.joints) {
-      console.log('🔍 [DEBUG] Available robot joints:', Object.keys(robot.joints));
       Object.values(robot.joints).forEach((joint: any) => {
-        console.log(`🔧 [DEBUG] Processing joint: ${joint.name}, type: ${joint.jointType}`);
         if (joint.jointType === 'revolute' || joint.jointType === 'continuous') {
           joints[joint.name] = joint;
           
@@ -446,9 +427,8 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
           const servoInitAngle = (SO_ARM100_CONFIG.urdfInitJointAngles as any)[joint.name] || 0;
           const servoId = (SO_ARM100_CONFIG.jointNameIdMap as any)[joint.name];
           
-          const jointAngle = servoInitAngle
+          const jointAngle = servoInitAngle;
           
-          console.log(`✅ [DEBUG] Added joint: ${joint.name}, servoId: ${servoId}, angle: ${jointAngle}°`);
           jointStates.push({
             name: joint.name,
             angle: jointAngle,
@@ -457,9 +437,6 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
         }
       });
     }
-
-    console.log('📊 [DEBUG] Final joint states:', jointStates);
-    console.log('🎯 [DEBUG] SO_ARM100_CONFIG.jointNameIdMap:', SO_ARM100_CONFIG.jointNameIdMap);
     
     setRobotModel({
       robot,
@@ -470,20 +447,12 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
 
   // Convert rt_update data to jointStates and update robotModel
   useEffect(() => {
-    const timestamp = new Date().toLocaleTimeString();
-    console.log(`🔍 [DEBUG ${timestamp}] useEffect TRIGGERED! Dependencies changed:`, {
-      hasNodeState: !!nodeState,
-      hasRtUpdate: !!nodeState?.data?.rt_update,
-      hasRobot: !!robotModel.robot,
-      rtUpdateData: nodeState?.data?.rt_update,
-      currentJointStates: robotModel.jointStates,
-      robotJointsCount: robotModel.robot ? Object.keys(robotModel.robot.joints || {}).length : 0
-    });
+    // Removed debug logging to reduce console noise
     
     if (nodeState?.data?.rt_update && robotModel.robot) {
       const rtUpdate = nodeState.data.rt_update;
-      console.log('🎯 [DEBUG] Starting rt_update conversion:', rtUpdate);
-      console.log('🔧 [DEBUG] Current robotModel.jointStates:', robotModel.jointStates);
+      // Starting rt_update conversion
+      // Processing current robotModel.jointStates
       
       // Start with current joint states
       let newJointStates = [...robotModel.jointStates];
@@ -548,20 +517,14 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
             ...prev,
             jointStates: newJointStates
           };
-          console.log('📊 [DEBUG] New robotModel:', updated);
+          // Updated robotModel with new joint states
           return updated;
         });
       } else {
-        console.log('⚠️ [DEBUG] No changes detected, skipping robotModel update');
-      }
-    } else {
-      if (!nodeState?.data?.rt_update) {
-        console.log('📭 [DEBUG] No rt_update data in nodeState');
-      }
-      if (!robotModel.robot) {
-        console.log('🤖 [DEBUG] Robot not loaded yet');
+        // No changes detected, skipping robotModel update
       }
     }
+    // Removed debug logs to reduce console noise
   }, [nodeState?.data?.rt_update, robotModel.robot, robotModel.jointStates]);
 
 
