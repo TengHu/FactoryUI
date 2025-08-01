@@ -72,15 +72,15 @@
         "width": 309,
         "height": 399
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
       "id": "ConnectTeleoperatorNode-1754011348203",
       "type": "customNode",
       "position": {
-        "x": 250.8259738893313,
-        "y": 388.74222325684224
+        "x": 305.10268242719434,
+        "y": 291.92431072984334
       },
       "data": {
         "label": "Connect Teleoperator",
@@ -140,7 +140,7 @@
         "width": 262,
         "height": 343
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     },
     {
@@ -449,9 +449,9 @@
   ],
   "metadata": {
     "name": "record_demo",
-    "description": "Auto-saved on 8/1/2025",
-    "created": "2025-08-01T15:39:40.605Z",
+    "description": "Workflow saved on 8/1/2025",
+    "created": "2025-08-01T15:45:28.923Z",
     "version": "1.0.0",
-    "modified": "2025-08-01T15:39:40.605Z"
+    "modified": "2025-08-01T15:45:28.923Z"
   }
 }

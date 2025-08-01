@@ -322,7 +322,7 @@ class So101WritePositionNode(NodeBase):
 
 
 NODE_CLASS_MAPPINGS = {
-    "SO101RobotStatusReader": RobotStatusReader,
-    "SO101JointAnglesToPositions": SO101JointAnglesToPositions,
-    "So101WritePositionNode": So101WritePositionNode,
+    # "SO101RobotStatusReader": RobotStatusReader,
+    # "SO101JointAnglesToPositions": SO101JointAnglesToPositions,
+    # "So101WritePositionNode": So101WritePositionNode,
 }
