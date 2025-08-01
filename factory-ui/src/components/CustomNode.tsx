@@ -239,8 +239,8 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
               (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
               ['unknown'];
             const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-            // Default to manual mode for STRING, FLOAT, and CAMERA inputs, connection mode for others
-            const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
+            // Default to manual mode for STRING, FLOAT, INT, BOOLEAN, and CAMERA inputs, connection mode for others
+            const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'INT' || typeName === 'BOOLEAN' || typeName === 'CAMERA') ? 'manual' : 'connection';
             const inputMode = inputModes[input] || defaultMode;
             
             // Only render connection inputs here
@@ -309,7 +309,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
           (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
           ['unknown'];
         const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-        const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
+        const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'INT' || typeName === 'BOOLEAN' || typeName === 'CAMERA') ? 'manual' : 'connection';
         const inputMode = inputModes[input] || defaultMode;
         return inputMode === 'manual';
       }) && (
@@ -322,7 +322,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                 (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
                 ['unknown'];
               const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-              const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'CAMERA') ? 'manual' : 'connection';
+              const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'INT' || typeName === 'BOOLEAN' || typeName === 'CAMERA') ? 'manual' : 'connection';
               const inputMode = inputModes[input] || defaultMode;
               const inputValue = inputValues[input] || '';
               
@@ -338,7 +338,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                               <span className="input-label">{input}:</span>
                               <textarea
                                 className="manual-input manual-textarea auto-expand-textarea"
-                                value={inputValue}
+                                value={String(inputValue)}
                                 placeholder={`Enter ${typeName.toLowerCase()}`}
                                 onChange={(e) => {
                                   if (onInputValueChange) {
@@ -377,7 +377,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                               <input
                                 type="number"
                                 className="manual-input"
-                                value={inputValue}
+                                value={String(inputValue)}
                                 placeholder={`Enter ${typeName.toLowerCase()}`}
                                 onChange={(e) => {
                                   if (onInputValueChange) {
@@ -388,9 +388,48 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                               />
                             </div>
                           );
+                        case 'INT':
+                          return (
+                            <div className="manual-input-container">
+                              <span className="input-label">{input}:</span>
+                              <input
+                                type="number"
+                                step="1"
+                                className="manual-input"
+                                value={String(inputValue)}
+                                placeholder={`Enter ${typeName.toLowerCase()}`}
+                                onChange={(e) => {
+                                  if (onInputValueChange) {
+                                    onInputValueChange(id, input, e.target.value);
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          );
+                        case 'BOOLEAN':
+                          return (
+                            <div className="manual-input-container">
+                              <span className="input-label">{input}:</span>
+                              <select
+                                className="manual-input"
+                                value={String(inputValue)}
+                                onChange={(e) => {
+                                  if (onInputValueChange) {
+                                    onInputValueChange(id, input, e.target.value);
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <option value="">Select boolean value</option>
+                                <option value="true">True</option>
+                                <option value="false">False</option>
+                              </select>
+                            </div>
+                          );
                         default:
                           // Use textarea for expandable text inputs, regular input for short content
-                          const shouldUseTextarea = inputValue.length > 50 || inputValue.includes('\n');
+                          const shouldUseTextarea = String(inputValue).length > 50 || String(inputValue).includes('\n');
                           
                           return (
                             <div className="manual-input-container">
@@ -398,7 +437,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                               {shouldUseTextarea ? (
                                 <textarea
                                   className="manual-input manual-textarea auto-expand-textarea"
-                                  value={inputValue}
+                                  value={String(inputValue)}
                                   placeholder={`Enter ${typeName.toLowerCase()}`}
                                   onChange={(e) => {
                                     if (onInputValueChange) {
@@ -432,7 +471,7 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                                 <input
                                   type="text"
                                   className="manual-input"
-                                  value={inputValue}
+                                  value={String(inputValue)}
                                   placeholder={`Enter ${typeName.toLowerCase()}`}
                                   onChange={(e) => {
                                     if (onInputValueChange) {

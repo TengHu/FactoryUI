@@ -620,7 +620,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
                 (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
                 ['unknown'];
               const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-              const defaultMode = 'connection';
+              const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'INT' || typeName === 'BOOLEAN') ? 'manual' : 'connection';
               const inputMode = inputModes[input] || defaultMode;
               
               if (inputMode === 'connection') {
@@ -690,8 +690,8 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
             (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
             ['unknown'];
           const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-          const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
-          const inputMode = inputModes[input] || defaultMode;
+          const checkDefaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'INT' || typeName === 'BOOLEAN') ? 'manual' : 'connection';
+          const inputMode = inputModes[input] || checkDefaultMode;
           return inputMode === 'manual';
         }) && (
           <div className="manual-inputs-section">
@@ -703,7 +703,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
                   (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
                   ['unknown'];
                 const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-                const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
+                const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'INT' || typeName === 'BOOLEAN') ? 'manual' : 'connection';
                 const inputMode = inputModes[input] || defaultMode;
                 const inputValue = localInputValues[input] || '';
                 
@@ -715,7 +715,7 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
                         {typeName === 'STRING' ? (
                           <textarea
                             className="manual-input manual-textarea"
-                            value={inputValue}
+                            value={String(inputValue)}
                             placeholder={`Enter ${typeName.toLowerCase()}`}
                             onChange={(e) => handleInputValueChange(input, e.target.value)}
                             onClick={(e) => e.stopPropagation()}
@@ -725,16 +725,37 @@ const ThreeDNode = ({ id, data, selected, ...props }: ThreeDNodeProps) => {
                           <input
                             type="number"
                             className="manual-input"
-                            value={inputValue}
+                            value={String(inputValue)}
                             placeholder={`Enter ${typeName.toLowerCase()}`}
                             onChange={(e) => handleInputValueChange(input, e.target.value)}
                             onClick={(e) => e.stopPropagation()}
                           />
+                        ) : typeName === 'INT' ? (
+                          <input
+                            type="number"
+                            step="1"
+                            className="manual-input"
+                            value={String(inputValue)}
+                            placeholder={`Enter ${typeName.toLowerCase()}`}
+                            onChange={(e) => handleInputValueChange(input, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : typeName === 'BOOLEAN' ? (
+                          <select
+                            className="manual-input"
+                            value={String(inputValue)}
+                            onChange={(e) => handleInputValueChange(input, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <option value="">Select boolean value</option>
+                            <option value="true">True</option>
+                            <option value="false">False</option>
+                          </select>
                         ) : (
                           <input
                             type="text"
                             className="manual-input"
-                            value={inputValue}
+                            value={String(inputValue)}
                             placeholder={`Enter ${typeName.toLowerCase()}`}
                             onChange={(e) => handleInputValueChange(input, e.target.value)}
                             onClick={(e) => e.stopPropagation()}

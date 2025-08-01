@@ -177,7 +177,7 @@
         "width": 500,
         "height": 400
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     }
   ],
@@ -209,9 +209,9 @@
   ],
   "metadata": {
     "name": "ReadRobotStatus",
-    "description": "Workflow saved on 7/29/2025",
-    "created": "2025-07-30T00:38:17.496Z",
+    "description": "Auto-saved on 7/30/2025",
+    "created": "2025-07-30T20:02:00.720Z",
     "version": "1.0.0",
-    "modified": "2025-07-30T00:38:17.496Z"
+    "modified": "2025-07-30T20:02:00.720Z"
   }
 }

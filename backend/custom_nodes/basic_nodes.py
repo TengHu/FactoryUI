@@ -3,6 +3,7 @@ import random
 import sys
 import os
 import re
+import traceback
 from typing import Any, Dict, List
 from core.node_base import NodeBase
 
@@ -591,7 +592,7 @@ Usage: Use this node to display an image in your workflow. The backend will prin
                         image_format = format_match.group(1) if format_match else 'png'
                         rt_update = {"image_base64": base64_data, "image_format": image_format}
                     except Exception as e:
-                        rt_update = {"error": f"Invalid data URL format: {e}"}
+                        rt_update = {"error": f"Invalid data URL format: {e}\n{traceback.format_exc()}"}
                 else:
                     # Assume it's already base64, try to detect format
                     if image.startswith('<svg') or '<svg' in image[:100]:
@@ -607,7 +608,7 @@ Usage: Use this node to display an image in your workflow. The backend will prin
                 rt_update = {"error": f"Invalid image format: {type(image)}"}
                 
         except Exception as e:
-            rt_update = {"error": f"Error processing image: {str(e)}"}
+            rt_update = {"error": f"Error processing image: {str(e)}\n{traceback.format_exc()}"}
         
         return (None, rt_update)
 

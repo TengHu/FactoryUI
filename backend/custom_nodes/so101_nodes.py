@@ -309,6 +309,10 @@ class So101WritePositionNode(NodeBase):
     def write_positions(self, sdk: ScsServoSDK, positions: dict) -> tuple:
         """Write positions to robot servos and pass sdk as output as well"""
         import traceback
+
+        # TODO: Remove this once we have a proper gripper
+        positions[6] = positions[6] - 1000
+
         try:
             sdk.sync_write_positions(positions)
             return ((sdk, positions), "success")

@@ -955,13 +955,13 @@
 .camera-display-container {
   margin-top: 4px;
   width: 100%;
-  max-width: 200px;
   position: relative;
 }
 
 .camera-view {
   width: 100%;
-  height: 150px;
+  height: 250px;
+  min-height: 200px;
   border: 1px solid #d1d5da;
   border-radius: 4px;
   overflow: hidden;

@@ -7,13 +7,17 @@
 }
 
 .camera-node .camera-canvas {
-  /* Ensure smooth rendering for camera feeds */
-  image-rendering: optimizeSpeed;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  image-rendering: pixelated;
-  
-  /* Disable any potential CSS transitions on canvas */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 3px;
+  /* Prevent flashing during video rendering */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: auto;
+  /* Disable transitions for better performance */
   transition: none !important;
   animation: none !important;
 }
@@ -50,6 +54,79 @@
 .camera-node .camera-input-bottom .camera-controls {
   justify-content: center;
   width: 100%;
+}
+
+/* Enhanced camera display for camera nodes */
+.camera-node .camera-display-container {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.camera-node .camera-view {
+  width: 100%;
+  height: 300px;
+  min-height: 200px;
+  max-height: 500px;
+}
+
+.camera-node .camera-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Camera center display styling */
+.camera-node .camera-center-display {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: 8px;
+}
+
+.camera-node .camera-center-display .camera-input-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-node .camera-center-display .camera-display-container {
+  flex: 1;
+  width: 100%;
+  margin-top: 8px;
+  min-height: 250px;
+}
+
+.camera-node .camera-center-display .camera-view {
+  width: 100%;
+  height: 100%;
+  min-height: 250px;
+  max-height: none;
+}
+
+.camera-node .camera-center-display .camera-controls {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.camera-node .camera-center-display .camera-button {
+  padding: 4px 8px;
+  font-size: 11px;
+  min-height: auto;
+}
+
+.camera-node .camera-center-display .input-label {
+  font-size: 9px;
+  margin-bottom: 4px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 /* Override any inherited animations for camera nodes */

@@ -1,0 +1,475 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectLeRobotNode-1754010971829",
+      "type": "customNode",
+      "position": {
+        "x": -274.96904101656366,
+        "y": 471.41514705125434
+      },
+      "data": {
+        "label": "Connect LeRobot",
+        "nodeInfo": {
+          "name": "ConnectLeRobotNode",
+          "display_name": "Connect LeRobot",
+          "description": "Connect to a LeRobot robot and return robot instance",
+          "detailed_description": "\nConnectLeRobotNode\n\nPurpose: Establishes connection to a LeRobot robot using the specified configuration.\n\nInputs:\n  - robot_type (SELECTION): Type of robot (so100_follower, so101_follower, koch_follower, bi_so100_follower)\n  - port (STRING): Serial port for the robot (e.g., /dev/tty.usbmodem58760431541)\n  - robot_id (STRING): Identifier for the robot (e.g., black, blue)\n  - cameras (STRING): JSON string defining camera configuration\n\nOutputs:\n  - robot (DICT): Connected robot instance\n  - robot_config (DICT): Robot configuration object\n\nUsage: Use this node to establish connection with a LeRobot robot. The robot instance can be used by other LeRobot nodes for recording and control.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "robot_type": [
+                "STRING",
+                {
+                  "default": "so101_follower"
+                }
+              ],
+              "port": [
+                "STRING",
+                {
+                  "default": "/dev/tty.usbmodem58760431541"
+                }
+              ],
+              "robot_id": [
+                "STRING",
+                {
+                  "default": "black"
+                }
+              ],
+              "cameras": [
+                "STRING",
+                {
+                  "default": "{\"laptop\": {\"type\": \"opencv\", \"camera_index\": 0, \"width\": 640, \"height\": 480, \"fps\": 30}}"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "robot_config": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectLeRobotNode",
+        "inputValues": {
+          "cameras": "{}",
+          "robot_id": "demo",
+          "robot_type": "so101_follower",
+          "port": "/dev/tty.usbmodem5A7A0558831"
+        },
+        "bypassed": false
+      },
+      "measured": {
+        "width": 309,
+        "height": 529
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "ConnectTeleoperatorNode-1754011348203",
+      "type": "customNode",
+      "position": {
+        "x": 332.34480269061777,
+        "y": 762.0894741406406
+      },
+      "data": {
+        "label": "Connect Teleoperator",
+        "nodeInfo": {
+          "name": "ConnectTeleoperatorNode",
+          "display_name": "Connect Teleoperator",
+          "description": "Connect to a LeRobot teleoperator device",
+          "detailed_description": "\nConnectTeleoperatorNode\n\nPurpose: Establishes connection to a LeRobot teleoperator device for manual control.\n\nInputs:\n  - teleop_type (STRING): Type of teleoperator (so100_leader, so101_leader, koch_leader)\n  - port (STRING): Serial port for the teleoperator device\n  - teleop_id (STRING): Identifier for the teleoperator\n\nOutputs:\n  - teleoperator (DICT): Connected teleoperator instance\n  - teleop_config (DICT): Teleoperator configuration object\n\nUsage: Use this node to connect to a teleoperator device for manual robot control during recording.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "teleop_type": [
+                "STRING",
+                {
+                  "default": "so101_leader"
+                }
+              ],
+              "port": [
+                "STRING",
+                {
+                  "default": "/dev/tty.usbmodem58760431551"
+                }
+              ],
+              "teleop_id": [
+                "STRING",
+                {
+                  "default": "blue"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "teleoperator": [
+                "DICT",
+                {}
+              ],
+              "teleop_config": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "connect_teleoperator"
+        },
+        "type": "ConnectTeleoperatorNode",
+        "inputValues": {
+          "teleop_type": "so101_leader",
+          "teleop_id": "my_awesome_leader_arm",
+          "port": "/dev/tty.usbmodem5A7A0558831"
+        },
+        "bypassed": true
+      },
+      "measured": {
+        "width": 262,
+        "height": 343
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "CreateDatasetNode-1754011550863",
+      "type": "customNode",
+      "position": {
+        "x": 854.5022025372419,
+        "y": 300.4047467784451
+      },
+      "data": {
+        "label": "Create Dataset",
+        "nodeInfo": {
+          "name": "CreateDatasetNode",
+          "display_name": "Create Dataset",
+          "description": "Create or load LeRobot dataset for recording",
+          "detailed_description": "\nCreateDatasetNode\n\nPurpose: Creates a new LeRobot dataset or loads an existing one for recording episodes.\n\nInputs:\n  - dataset_config (DICT): Dataset configuration from DatasetRecordConfigNode\n  - robot (DICT): Connected robot instance from ConnectLeRobotNode\n  - resume (BOOLEAN): Whether to resume recording on existing dataset\n\nOutputs:\n  - dataset (DICT): LeRobot dataset instance\n  - dataset_features (DICT): Dataset features schema\n\nUsage: Use this node to create the dataset structure before recording episodes.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "dataset_config": [
+                "DICT",
+                {}
+              ],
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "resume": [
+                "BOOLEAN",
+                {
+                  "default": false
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "dataset": [
+                "DICT",
+                {}
+              ],
+              "dataset_features": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "create_dataset"
+        },
+        "type": "CreateDatasetNode",
+        "inputValues": {
+          "resume": false
+        }
+      },
+      "measured": {
+        "width": 364,
+        "height": 342
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "DatasetRecordConfigNode-1754011575178",
+      "type": "customNode",
+      "position": {
+        "x": 261.80601230689405,
+        "y": -482.61384667583917
+      },
+      "data": {
+        "label": "Dataset Record Config",
+        "nodeInfo": {
+          "name": "DatasetRecordConfigNode",
+          "display_name": "Dataset Record Config",
+          "description": "Configure dataset recording parameters",
+          "detailed_description": "\nDatasetRecordConfigNode\n\nPurpose: Configure parameters for dataset recording including episodes, timing, and storage options.\n\nInputs:\n  - repo_id (STRING): Dataset identifier (e.g., 'user/dataset_name')\n  - single_task (STRING): Task description for the recording\n  - fps (INT): Frames per second for recording\n  - episode_time_s (FLOAT): Duration of each episode in seconds\n  - reset_time_s (FLOAT): Time for environment reset between episodes\n  - num_episodes (INT): Number of episodes to record\n  - root (STRING, optional): Root directory for dataset storage\n  - video (BOOLEAN, optional): Encode frames as video\n  - push_to_hub (BOOLEAN, optional): Upload to Hugging Face hub\n  - private (BOOLEAN, optional): Make repository private\n  - num_image_writer_processes (INT, optional): Number of image writer processes\n  - num_image_writer_threads_per_camera (INT, optional): Threads per camera for image writing\n\nOutputs:\n  - dataset_config (DICT): DatasetRecordConfig object\n\nUsage: Use this node to configure all dataset recording parameters before creating the dataset.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "repo_id": [
+                "STRING",
+                {
+                  "default": "user/dataset_name"
+                }
+              ],
+              "single_task": [
+                "STRING",
+                {
+                  "default": "Pick and place task"
+                }
+              ],
+              "fps": [
+                "INT",
+                {
+                  "default": 30,
+                  "min": 1,
+                  "max": 120
+                }
+              ],
+              "episode_time_s": [
+                "FLOAT",
+                {
+                  "default": 60
+                }
+              ],
+              "reset_time_s": [
+                "FLOAT",
+                {
+                  "default": 60
+                }
+              ],
+              "num_episodes": [
+                "INT",
+                {
+                  "default": 50,
+                  "min": 1
+                }
+              ]
+            },
+            "optional": {
+              "root": [
+                "STRING",
+                {
+                  "default": ""
+                }
+              ],
+              "video": [
+                "BOOLEAN",
+                {
+                  "default": true
+                }
+              ],
+              "push_to_hub": [
+                "BOOLEAN",
+                {
+                  "default": true
+                }
+              ],
+              "private": [
+                "BOOLEAN",
+                {
+                  "default": false
+                }
+              ],
+              "num_image_writer_processes": [
+                "INT",
+                {
+                  "default": 0
+                }
+              ],
+              "num_image_writer_threads_per_camera": [
+                "INT",
+                {
+                  "default": 4
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "dataset_config": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "create_dataset_config"
+        },
+        "type": "DatasetRecordConfigNode",
+        "inputValues": {
+          "repo_id": "niel1511/workflow2",
+          "single_task": "Grab the black cube",
+          "push_to_hub": false,
+          "private": false,
+          "num_episodes": 10
+        },
+        "bypassed": false,
+        "inputModes": {
+          "episode_time_s": "manual"
+        }
+      },
+      "measured": {
+        "width": 289,
+        "height": 889
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "RecordEpisodesNode-1754012622945",
+      "type": "customNode",
+      "position": {
+        "x": 1401.1709582140295,
+        "y": 652.2651954847084
+      },
+      "data": {
+        "label": "Record Episodes",
+        "nodeInfo": {
+          "name": "RecordEpisodesNode",
+          "display_name": "Record Episodes",
+          "description": "Record robot episodes with teleoperator or policy control",
+          "detailed_description": "\nRecordEpisodesNode\n\nPurpose: Records robot episodes using teleoperator control or policy execution.\n\nInputs:\n  - robot (DICT): Connected robot instance\n  - dataset (DICT): Dataset instance for recording\n  - dataset_config (DICT): Dataset configuration\n  - teleoperator (DICT, optional): Teleoperator for manual control\n  - policy (DICT, optional): Policy for autonomous control\n  - display_data (BOOLEAN, optional): Display camera feeds during recording\n  - play_sounds (BOOLEAN, optional): Play audio notifications\n\nOutputs:\n  - recorded_dataset (DICT): Dataset with recorded episodes\n  - recording_stats (DICT): Statistics about the recording session\n\nUsage: Main recording node that captures robot episodes. Requires either teleoperator or policy for control.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "dataset": [
+                "DICT",
+                {}
+              ],
+              "dataset_config": [
+                "DICT",
+                {}
+              ]
+            },
+            "optional": {
+              "teleoperator": [
+                "DICT",
+                {}
+              ],
+              "policy": [
+                "DICT",
+                {}
+              ],
+              "display_data": [
+                "BOOLEAN",
+                {
+                  "default": false
+                }
+              ],
+              "play_sounds": [
+                "BOOLEAN",
+                {
+                  "default": true
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "recorded_dataset": [
+                "DICT",
+                {}
+              ],
+              "recording_stats": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "record_episodes"
+        },
+        "type": "RecordEpisodesNode",
+        "inputValues": {
+          "display_data": true,
+          "play_sounds": false
+        }
+      },
+      "measured": {
+        "width": 484,
+        "height": 459
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "ConnectLeRobotNode-1754010971829",
+      "sourceHandle": "output-0",
+      "target": "CreateDatasetNode-1754011550863",
+      "targetHandle": "robot",
+      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-CreateDatasetNode-1754011550863robot",
+      "className": ""
+    },
+    {
+      "source": "DatasetRecordConfigNode-1754011575178",
+      "sourceHandle": "output",
+      "target": "CreateDatasetNode-1754011550863",
+      "targetHandle": "dataset_config",
+      "id": "xy-edge__DatasetRecordConfigNode-1754011575178output-CreateDatasetNode-1754011550863dataset_config",
+      "className": ""
+    },
+    {
+      "source": "ConnectLeRobotNode-1754010971829",
+      "sourceHandle": "output-0",
+      "target": "RecordEpisodesNode-1754012622945",
+      "targetHandle": "robot",
+      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-RecordEpisodesNode-1754012622945robot",
+      "className": ""
+    },
+    {
+      "source": "CreateDatasetNode-1754011550863",
+      "sourceHandle": "output-0",
+      "target": "RecordEpisodesNode-1754012622945",
+      "targetHandle": "dataset",
+      "id": "xy-edge__CreateDatasetNode-1754011550863output-0-RecordEpisodesNode-1754012622945dataset",
+      "className": ""
+    },
+    {
+      "source": "DatasetRecordConfigNode-1754011575178",
+      "sourceHandle": "output",
+      "target": "RecordEpisodesNode-1754012622945",
+      "targetHandle": "dataset_config",
+      "id": "xy-edge__DatasetRecordConfigNode-1754011575178output-RecordEpisodesNode-1754012622945dataset_config",
+      "className": ""
+    },
+    {
+      "source": "ConnectTeleoperatorNode-1754011348203",
+      "sourceHandle": "output-0",
+      "target": "RecordEpisodesNode-1754012622945",
+      "targetHandle": "teleoperator",
+      "id": "xy-edge__ConnectTeleoperatorNode-1754011348203output-0-RecordEpisodesNode-1754012622945teleoperator",
+      "className": ""
+    }
+  ],
+  "metadata": {
+    "name": "record_demo",
+    "description": "Auto-saved on 7/31/2025",
+    "created": "2025-08-01T02:40:11.667Z",
+    "version": "1.0.0",
+    "modified": "2025-08-01T02:40:11.667Z"
+  }
+}

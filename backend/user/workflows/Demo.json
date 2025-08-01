@@ -4,8 +4,8 @@
       "id": "ConnectRobotNode-1752694507773",
       "type": "customNode",
       "position": {
-        "x": 90.30782309921378,
-        "y": 439.17723614370817
+        "x": 95.78075995848752,
+        "y": 574.1763453391272
       },
       "data": {
         "label": "Connect Robot",
@@ -37,7 +37,7 @@
         },
         "type": "ConnectRobotNode",
         "inputValues": {
-          "port_name": "/dev/tty.usbmodem5A7A0558831"
+          "port_name": "/dev/tty.usbmodem5A7A0573841"
         }
       },
       "width": 280,
@@ -108,8 +108,8 @@
       "id": "ThreeDVisualizationNode-1753835857504",
       "type": "threeDNode",
       "position": {
-        "x": 1160.8672703198586,
-        "y": 317.7326218730983
+        "x": 1128.1195198888202,
+        "y": 355.678622442997
       },
       "data": {
         "label": "3D Visualization",
@@ -137,18 +137,18 @@
         "type": "ThreeDVisualizationNode"
       },
       "measured": {
-        "width": 800,
+        "width": 764,
         "height": 600
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     },
     {
       "id": "So101WritePositionNode-1753836694409",
       "type": "customNode",
       "position": {
-        "x": 729.1374708181899,
-        "y": 969.0616963605294
+        "x": 678.4960377996832,
+        "y": 875.2862425720232
       },
       "data": {
         "label": "SO101 Write Position",
@@ -189,11 +189,11 @@
           "function": "write_positions"
         },
         "type": "So101WritePositionNode",
-        "bypassed": true
+        "bypassed": false
       },
       "measured": {
         "width": 358,
-        "height": 138
+        "height": 206
       },
       "selected": false,
       "dragging": false
@@ -202,8 +202,8 @@
       "id": "ConnectRobotNode-1753836697198",
       "type": "customNode",
       "position": {
-        "x": 377.97561607160753,
-        "y": 929.7888914781391
+        "x": 269.3610261232762,
+        "y": 836.9351042073002
       },
       "data": {
         "label": "Connect Robot",
@@ -237,7 +237,7 @@
         "inputValues": {
           "port_name": "/dev/tty.usbmodem5A7A0558831"
         },
-        "bypassed": true
+        "bypassed": false
       },
       "width": 280,
       "height": 137,
@@ -256,8 +256,8 @@
       "id": "CameraNode-1753837426114",
       "type": "cameraNode",
       "position": {
-        "x": -17.240656310717384,
-        "y": -67.71535058431161
+        "x": -305.77140856342606,
+        "y": -92.6525265911846
       },
       "data": {
         "label": "Camera",
@@ -291,10 +291,10 @@
         "bypassed": false
       },
       "measured": {
-        "width": 339,
-        "height": 354
+        "width": 578,
+        "height": 573
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -360,7 +360,7 @@
       },
       "measured": {
         "width": 349,
-        "height": 526
+        "height": 458
       },
       "selected": false,
       "dragging": false
@@ -489,13 +489,21 @@
       "targetHandle": "prompt",
       "id": "xy-edge__VLMNode-1753837540374output-VLAModelNode-1753837565136prompt",
       "className": ""
+    },
+    {
+      "source": "SO101RobotStatusReader-1752985250384",
+      "sourceHandle": "output-1",
+      "target": "So101WritePositionNode-1753836694409",
+      "targetHandle": "positions",
+      "id": "xy-edge__SO101RobotStatusReader-1752985250384output-1-So101WritePositionNode-1753836694409positions",
+      "className": ""
     }
   ],
   "metadata": {
     "name": "Demo",
-    "description": "Workflow saved on 7/29/2025",
-    "created": "2025-07-30T01:16:29.993Z",
+    "description": "Auto-saved on 7/30/2025",
+    "created": "2025-07-30T20:34:47.070Z",
     "version": "1.0.0",
-    "modified": "2025-07-30T01:16:29.993Z"
+    "modified": "2025-07-30T20:34:47.070Z"
   }
 }

@@ -6,6 +6,7 @@ import os
 import sys
 import json
 import logging
+import traceback
 import uuid
 from datetime import datetime
 
@@ -117,9 +118,10 @@ async def run_workflow(workflow: WorkflowRequest):
         return ExecutionResponse(**result)
     
     except Exception as e:
+        stacktrace = traceback.format_exc()
         return ExecutionResponse(
             success=False,
-            error=str(e)
+            error=f"{str(e)}\n\nStacktrace:\n{stacktrace}"
         )
 
 @app.post("/stop")
@@ -138,7 +140,8 @@ async def stop_execution():
                 "message": "No execution running"
             }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to stop execution: {str(e)}")
+        stacktrace = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to stop execution: {str(e)}\n\nStacktrace:\n{stacktrace}")
 
 @app.get("/status")
 async def get_execution_status():
@@ -179,7 +182,8 @@ async def start_continuous_execution(workflow: WorkflowRequest):
             }
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to start continuous execution: {str(e)}")
+        stacktrace = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to start continuous execution: {str(e)}\n\nStacktrace:\n{stacktrace}")
 
 @app.post("/continuous/stop")
 async def stop_continuous_execution():
@@ -191,7 +195,8 @@ async def stop_continuous_execution():
             "message": "Continuous execution stopped"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to stop continuous execution: {str(e)}")
+        stacktrace = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to stop continuous execution: {str(e)}\n\nStacktrace:\n{stacktrace}")
 
 @app.get("/continuous/status")
 async def get_continuous_status():

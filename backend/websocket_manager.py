@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 import json
 import asyncio
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class WebSocketManager:
         try:
             await websocket.send_text(json.dumps(message))
         except Exception as e:
-            logger.error(f"Failed to send personal message: {e}")
+            logger.error(f"Failed to send personal message: {e}\n{traceback.format_exc()}")
             self.disconnect(websocket)
             
     async def broadcast(self, message: Dict[str, Any]):
@@ -48,7 +49,7 @@ class WebSocketManager:
             try:
                 await connection.send_text(message_str)
             except Exception as e:
-                logger.error(f"Failed to send broadcast message: {e}")
+                logger.error(f"Failed to send broadcast message: {e}\n{traceback.format_exc()}")
                 disconnected.append(connection)
                 
         # Remove disconnected clients
