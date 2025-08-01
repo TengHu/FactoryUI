@@ -88,9 +88,9 @@ class RobotStatusReader(NodeBase):
         """Read status from robot servos using a provided ScsServoSDK instance"""
         
         servo_id_list = [1,2,3,4,5,6]
-        result = self._read_robot_status_once(sdk, servo_id_list)
+        status_data, positions = self._read_robot_status_once(sdk, servo_id_list)
 
-        return (result, result)
+        return (status_data, positions), positions
     
     def _read_robot_status_once(self, sdk: ScsServoSDK, servo_id_list: List[int]) -> tuple:
         """Read robot status once (non-streaming)"""
@@ -309,6 +309,10 @@ class So101WritePositionNode(NodeBase):
     def write_positions(self, sdk: ScsServoSDK, positions: dict) -> tuple:
         """Write positions to robot servos and pass sdk as output as well"""
         import traceback
+
+        # TODO: Remove this once we have a proper gripper
+        positions[6] = positions[6] - 1000
+
         try:
             sdk.sync_write_positions(positions)
             return ((sdk, positions), "success")

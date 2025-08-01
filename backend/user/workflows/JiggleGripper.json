@@ -618,7 +618,7 @@
       "target": "DisplayNode-1753054999826",
       "targetHandle": "value",
       "id": "xy-edge__SO101JointAnglesToPositions-1752679439906output-DisplayNode-1753054999826value",
-      "className": "animated"
+      "className": ""
     },
     {
       "source": "ConnectRobotNode-1752615634005",
@@ -626,7 +626,7 @@
       "target": "So101WritePositionNode-1753055737700",
       "targetHandle": "sdk",
       "id": "xy-edge__ConnectRobotNode-1752615634005output-So101WritePositionNode-1753055737700sdk",
-      "className": "animated"
+      "className": ""
     },
     {
       "source": "SO101JointAnglesToPositions-1752679439906",
@@ -634,7 +634,7 @@
       "target": "So101WritePositionNode-1753055737700",
       "targetHandle": "positions",
       "id": "xy-edge__SO101JointAnglesToPositions-1752679439906output-So101WritePositionNode-1753055737700positions",
-      "className": "animated"
+      "className": ""
     },
     {
       "source": "So101WritePositionNode-1753055737700",
@@ -642,7 +642,7 @@
       "target": "DelayNode-1753055824329",
       "targetHandle": "input",
       "id": "xy-edge__So101WritePositionNode-1753055737700output-0-DelayNode-1753055824329input",
-      "className": "animated"
+      "className": ""
     },
     {
       "source": "DelayNode-1753055824329",
@@ -650,7 +650,7 @@
       "target": "So101WritePositionNode-1753055797885",
       "targetHandle": "sdk",
       "id": "xy-edge__DelayNode-1753055824329output-So101WritePositionNode-1753055797885sdk",
-      "className": "animated"
+      "className": ""
     },
     {
       "source": "SO101JointAnglesToPositions-1753055999934",
@@ -658,7 +658,7 @@
       "target": "So101WritePositionNode-1753055797885",
       "targetHandle": "positions",
       "id": "xy-edge__SO101JointAnglesToPositions-1753055999934output-So101WritePositionNode-1753055797885positions",
-      "className": "animated"
+      "className": ""
     },
     {
       "source": "So101WritePositionNode-1753055737700",
@@ -666,7 +666,7 @@
       "target": "SO101RobotStatusReader-1753055468574",
       "targetHandle": "sdk",
       "id": "xy-edge__So101WritePositionNode-1753055737700output-0-SO101RobotStatusReader-1753055468574sdk",
-      "className": "animated"
+      "className": ""
     },
     {
       "source": "So101WritePositionNode-1753055797885",
@@ -674,7 +674,7 @@
       "target": "DelayNode-1753056261948",
       "targetHandle": "input",
       "id": "xy-edge__So101WritePositionNode-1753055797885output-0-DelayNode-1753056261948input",
-      "className": "animated"
+      "className": ""
     },
     {
       "source": "DelayNode-1753056261948",
@@ -682,14 +682,14 @@
       "target": "SO101RobotStatusReader-1753055972731",
       "targetHandle": "sdk",
       "id": "xy-edge__DelayNode-1753056261948output-SO101RobotStatusReader-1753055972731sdk",
-      "className": "animated"
+      "className": ""
     }
   ],
   "metadata": {
     "name": "JiggleGripper",
-    "description": "Auto-saved on 7/21/2025",
-    "created": "2025-07-21T04:47:18.045Z",
+    "description": "Auto-saved on 7/27/2025",
+    "created": "2025-07-28T02:01:53.806Z",
     "version": "1.0.0",
-    "modified": "2025-07-21T04:47:18.045Z"
+    "modified": "2025-07-28T02:01:53.806Z"
   }
 }

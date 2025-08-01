@@ -121,6 +121,25 @@ if [ -d "feetech-servo-sdk" ]; then
     print_success "feetech-servo-sdk installed successfully"
 fi
 
+# Clone LeRobot if it doesn't exist
+print_status "Setting up LeRobot..."
+if [ -d "lerobot" ]; then
+    print_warning "LeRobot already exists, skipping clone"
+else
+    print_status "Cloning LeRobot from GitHub..."
+    git clone https://github.com/huggingface/lerobot.git
+    print_success "LeRobot cloned successfully"
+fi
+
+# Install LeRobot if it exists
+if [ -d "lerobot" ]; then
+    print_status "Installing LeRobot..."
+    cd lerobot
+    pip install -e .
+    cd ..
+    print_success "LeRobot installed successfully"
+fi
+
 cd .. # Back to backend directory
 deactivate # Deactivate virtual environment
 cd .. # Back to root directory
@@ -161,6 +180,13 @@ if [ -d "backend/custom_nodes/feetech-servo-sdk" ]; then
     print_success "feetech-servo-sdk setup verified"
 else
     print_warning "feetech-servo-sdk setup could not be verified"
+fi
+
+# Check LeRobot
+if [ -d "backend/custom_nodes/lerobot" ]; then
+    print_success "LeRobot setup verified"
+else
+    print_warning "LeRobot setup could not be verified"
 fi
 
 echo ""

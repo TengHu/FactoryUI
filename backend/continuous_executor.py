@@ -270,7 +270,8 @@ class ContinuousExecutor:
                 ))
             
             try:
-                node_result, rt_update = self._execute_node_optimized(node_id, node_results)
+                node_result, rt_update   = self._execute_node_optimized(node_id, node_results)
+                # node_result, rt_update = results[:-1], results[-1]
                 if node_result is not None:
                     node_results[node_id] = node_result
                 

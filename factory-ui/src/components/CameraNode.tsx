@@ -223,8 +223,49 @@ const CameraNode = ({ id, data, selected, ...props }: CameraNodeProps) => {
           {/*  Don't show other inputs */}
         </div>
         
-        {/* Center content */}
-        <div className="io-center" />
+        {/* Center content - Camera display */}
+        <div className="io-center">
+          {allInputs.some((input) => {
+            const typeInfo =
+              (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
+              (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
+              ['unknown'];
+            const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+            const defaultMode = (typeName === 'CAMERA') ? 'manual' : 'connection';
+            const inputMode = inputModes[input] || defaultMode;
+            return typeName === 'CAMERA' && inputMode === 'manual';
+          }) && (
+            <div className="camera-center-display">
+              {allInputs.map((input) => {
+                const typeInfo =
+                  (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
+                  (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
+                  ['unknown'];
+                const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+                const defaultMode = (typeName === 'CAMERA') ? 'manual' : 'connection';
+                const inputMode = inputModes[input] || defaultMode;
+                
+                if (typeName === 'CAMERA' && inputMode === 'manual') {
+                  return (
+                    <CameraInput
+                      key={`camera-center-${input}`}
+                      inputName={input}
+                      nodeId={id}
+                      isActive={isCameraActive(input)}
+                      isMenuOpen={isCameraMenuOpen(input)}
+                      devices={cameraState.devices}
+                      onToggleMenu={toggleCameraMenu}
+                      onSelectDevice={selectDevice}
+                      onSetupCanvas={setupCanvas}
+                      onSetupVideo={setupVideo}
+                    />
+                  );
+                }
+                return null;
+              })}
+            </div>
+          )}
+        </div>
         
         {/* Outputs column */}
         <div className="io-column io-outputs">
@@ -255,48 +296,6 @@ const CameraNode = ({ id, data, selected, ...props }: CameraNodeProps) => {
           })}
         </div>
       </div>
-      
-      {/* Camera Input at the bottom */}
-      {allInputs.some((input) => {
-        const typeInfo =
-          (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
-          (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
-          ['unknown'];
-        const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-        const defaultMode = (typeName === 'CAMERA') ? 'manual' : 'connection';
-        const inputMode = inputModes[input] || defaultMode;
-        return typeName === 'CAMERA' && inputMode === 'manual';
-      }) && (
-        <div className="camera-input-bottom">
-          {allInputs.map((input) => {
-            const typeInfo =
-              (nodeInfo.input_types.required && nodeInfo.input_types.required[input]) ||
-              (nodeInfo.input_types.optional && nodeInfo.input_types.optional[input]) ||
-              ['unknown'];
-            const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-            const defaultMode = (typeName === 'CAMERA') ? 'manual' : 'connection';
-            const inputMode = inputModes[input] || defaultMode;
-            
-            if (typeName === 'CAMERA' && inputMode === 'manual') {
-              return (
-                <CameraInput
-                  key={`camera-bottom-${input}`}
-                  inputName={input}
-                  nodeId={id}
-                  isActive={isCameraActive(input)}
-                  isMenuOpen={isCameraMenuOpen(input)}
-                  devices={cameraState.devices}
-                  onToggleMenu={toggleCameraMenu}
-                  onSelectDevice={selectDevice}
-                  onSetupCanvas={setupCanvas}
-                  onSetupVideo={setupVideo}
-                />
-              );
-            }
-            return null;
-          })}
-        </div>
-      )}
       
       {/* Robot Status Display */}
       {robotStatus && nodeInfo.name === 'RobotStatusReader' && (

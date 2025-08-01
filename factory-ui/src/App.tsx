@@ -1336,7 +1336,7 @@ function App() {
             nodeInfo.input_types.required?.[inputName] ||
             nodeInfo.input_types.optional?.[inputName];
           const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-          const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
+          const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'INT' || typeName === 'BOOLEAN') ? 'manual' : 'connection';
           
           const currentMode = (node.data as any).inputModes?.[inputName] || defaultMode;
           const newMode = currentMode === 'connection' ? 'manual' : 'connection';
@@ -1412,7 +1412,6 @@ function App() {
       },
     ];
 
-    // Add input mode toggles if the node has string inputs
     if (contextMenu.nodeInfo && contextMenu.nodeId) {
       const node = nodes.find(n => n.id === contextMenu.nodeId);
       const requiredInputs = Object.keys(contextMenu.nodeInfo.input_types.required || {});
@@ -1424,7 +1423,7 @@ function App() {
           contextMenu.nodeInfo!.input_types.required?.[inputName] ||
           contextMenu.nodeInfo!.input_types.optional?.[inputName];
         const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-        return typeName === 'STRING' || typeName === 'FLOAT';
+        return typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'INT' || typeName === 'BOOLEAN';
       });
 
       if (manualInputs.length > 0) {
@@ -1443,7 +1442,7 @@ function App() {
             contextMenu.nodeInfo!.input_types.required?.[inputName] ||
             contextMenu.nodeInfo!.input_types.optional?.[inputName];
           const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
-          const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT') ? 'manual' : 'connection';
+          const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'INT' || typeName === 'BOOLEAN') ? 'manual' : 'connection';
           
           const currentMode = (node?.data as any).inputModes?.[inputName] || defaultMode;
           const isManual = currentMode === 'manual';
@@ -1483,7 +1482,44 @@ function App() {
     });
   }, [nodes, debouncedNodeStates]);
 
+  // Helper function to convert string input to appropriate type based on node input type
+  const convertInputValue = useCallback((nodeId: string, inputName: string, value: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return value;
+    
+    const nodeInfo = (node.data as any).nodeInfo as NodeInfo;
+    const typeInfo = 
+      nodeInfo.input_types.required?.[inputName] ||
+      nodeInfo.input_types.optional?.[inputName];
+    const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
+    
+    // Convert value based on type
+    switch (typeName) {
+      case 'STRING':
+        return value; // Keep as string
+      case 'FLOAT':
+        const floatValue = parseFloat(value);
+        return isNaN(floatValue) ? value : floatValue; // Return number if valid, original string if invalid
+      case 'INT':
+        const intValue = parseInt(value, 10);
+        return isNaN(intValue) ? value : intValue; // Return number if valid, original string if invalid
+      case 'BOOLEAN':
+        const lowerValue = value.toLowerCase();
+        if (lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes') {
+          return true;
+        } else if (lowerValue === 'false' || lowerValue === '0' || lowerValue === 'no') {
+          return false;
+        }
+        return value; // Return original string if not a valid boolean
+      default:
+        return value; // Keep as string for unknown types
+    }
+  }, [nodes]);
+
   const handleInputValueChange = useCallback((nodeId: string, inputName: string, value: string) => {
+    // Convert the value to the appropriate type
+    const convertedValue = convertInputValue(nodeId, inputName, value);
+    
     setNodes(nodes => 
       nodes.map(node => {
         if (node.id === nodeId) {
@@ -1493,7 +1529,7 @@ function App() {
               ...node.data,
               inputValues: {
                 ...(node.data as any).inputValues,
-                [inputName]: value
+                [inputName]: convertedValue
               }
             }
           };
@@ -1505,9 +1541,9 @@ function App() {
     
     // Send real-time input update via WebSocket
     if (connectionState.isConnected) {
-      websocketService.sendInputUpdate(nodeId, inputName, value);
+      websocketService.sendInputUpdate(nodeId, inputName, convertedValue);
     }
-  }, [setNodes, connectionState.isConnected]);
+  }, [setNodes, connectionState.isConnected, convertInputValue]);
 
   const nodeTypes: NodeTypes = React.useMemo(() => ({
     customNode: createCustomNodeWithContextMenu(handleNodeContextMenu, handleInputValueChange),
