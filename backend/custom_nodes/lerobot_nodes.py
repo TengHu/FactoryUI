@@ -612,6 +612,78 @@ Usage: Main recording node that captures robot episodes. Requires either teleope
             return (None,), rt_update
 
 
+class DisableTorqueNode(NodeBase):
+    """Disable torque on robot motors"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "robot": ("DICT", {})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "robot": ("DICT", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "disable_torque"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Disable Torque"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Disable torque on robot motors"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+DisableTorqueNode
+
+Purpose: Disables torque on all robot motors, allowing manual movement.
+
+Inputs:
+  - robot (DICT): Connected robot instance from ConnectLeRobotNode
+
+Outputs:
+  - robot (DICT): Robot instance with torque disabled
+
+Usage: Use this node to disable motor torque, allowing the robot to be moved manually. This is useful for manual positioning or when you want to move the robot by hand.
+        """
+    
+    def disable_torque(self, robot: dict) -> tuple:
+        """Disable torque on robot motors"""
+        
+        try:
+            robot_instance = robot["robot"]
+            
+            # Disable torque on all motors
+            robot_instance.bus.disable_torque()
+            
+            rt_update = {
+                "status": "torque_disabled",
+                "robot_type": robot.get("type", "unknown")
+            }
+            
+            return ({"robot": robot_instance, "type": robot.get("type", "unknown")},), rt_update
+            
+        except Exception as e:
+            rt_update = {"error": f"Failed to disable torque: {str(e)}\n{traceback.format_exc()}"}
+            return (None,), rt_update
+
+
 # Export the nodes
 NODE_CLASS_MAPPINGS = {
     "ConnectLeRobotNode": ConnectLeRobotNode,
@@ -619,4 +691,5 @@ NODE_CLASS_MAPPINGS = {
     "ConnectTeleoperatorNode": ConnectTeleoperatorNode,
     "CreateDatasetNode": CreateDatasetNode,
     "RecordEpisodesNode": RecordEpisodesNode,
+    "DisableTorqueNode": DisableTorqueNode,
 }

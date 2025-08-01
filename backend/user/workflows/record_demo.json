@@ -72,15 +72,15 @@
         "width": 309,
         "height": 529
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
       "id": "ConnectTeleoperatorNode-1754011348203",
       "type": "customNode",
       "position": {
-        "x": 439.5643186873316,
-        "y": 237.2280519121604
+        "x": 195.52787842997242,
+        "y": 284.33843022743787
       },
       "data": {
         "label": "Connect Teleoperator",
@@ -147,8 +147,8 @@
       "id": "RecordEpisodesNode-1754016667022",
       "type": "customNode",
       "position": {
-        "x": 1357.6946831946973,
-        "y": 188.38272862297978
+        "x": 817.154614636909,
+        "y": -48.52063475728541
       },
       "data": {
         "label": "Record Episodes",
@@ -222,7 +222,7 @@
         "width": 368,
         "height": 487
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     },
     {
@@ -345,8 +345,8 @@
       "id": "CreateDatasetNode-1754062724727",
       "type": "customNode",
       "position": {
-        "x": 582.4201000900711,
-        "y": -553.2432448636032
+        "x": 313.8183993561084,
+        "y": -547.5083483029014
       },
       "data": {
         "label": "Create Dataset",
@@ -450,8 +450,8 @@
   "metadata": {
     "name": "record_demo",
     "description": "Workflow saved on 8/1/2025",
-    "created": "2025-08-01T16:09:59.720Z",
+    "created": "2025-08-01T21:08:06.125Z",
     "version": "1.0.0",
-    "modified": "2025-08-01T16:09:59.720Z"
+    "modified": "2025-08-01T21:08:06.125Z"
   }
 }
