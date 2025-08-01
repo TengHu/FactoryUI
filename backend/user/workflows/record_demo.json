@@ -4,8 +4,8 @@
       "id": "ConnectLeRobotNode-1754010971829",
       "type": "customNode",
       "position": {
-        "x": -111.69942478744818,
-        "y": 125.76988871326708
+        "x": -300.8573198652683,
+        "y": 257.95251418933424
       },
       "data": {
         "label": "Connect LeRobot",
@@ -70,17 +70,17 @@
       },
       "measured": {
         "width": 309,
-        "height": 399
+        "height": 529
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     },
     {
       "id": "ConnectTeleoperatorNode-1754011348203",
       "type": "customNode",
       "position": {
-        "x": 305.10268242719434,
-        "y": 291.92431072984334
+        "x": 439.5643186873316,
+        "y": 237.2280519121604
       },
       "data": {
         "label": "Connect Teleoperator",
@@ -137,10 +137,10 @@
         "bypassed": false
       },
       "measured": {
-        "width": 262,
-        "height": 343
+        "width": 292,
+        "height": 473
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -220,7 +220,7 @@
       },
       "measured": {
         "width": 368,
-        "height": 371
+        "height": 487
       },
       "selected": false,
       "dragging": false
@@ -229,8 +229,8 @@
       "id": "DatasetRecordConfigForOneEpisodeNode-1754062715588",
       "type": "customNode",
       "position": {
-        "x": -75.39718052171207,
-        "y": -640.809830919068
+        "x": -380.7846255871085,
+        "y": -661.3209279756991
       },
       "data": {
         "label": "Dataset Record Config For One Episode",
@@ -329,14 +329,14 @@
         "type": "DatasetRecordConfigForOneEpisodeNode",
         "inputValues": {
           "repo_id": "niel1511/workflow12",
-          "episode_time_s": 6,
+          "episode_time_s": 60,
           "push_to_hub": true,
           "video": false
         }
       },
       "measured": {
         "width": 381,
-        "height": 712
+        "height": 828
       },
       "selected": false,
       "dragging": false
@@ -397,7 +397,7 @@
       },
       "measured": {
         "width": 364,
-        "height": 226
+        "height": 342
       },
       "selected": false,
       "dragging": false
@@ -450,8 +450,8 @@
   "metadata": {
     "name": "record_demo",
     "description": "Workflow saved on 8/1/2025",
-    "created": "2025-08-01T15:45:28.923Z",
+    "created": "2025-08-01T16:09:59.720Z",
     "version": "1.0.0",
-    "modified": "2025-08-01T15:45:28.923Z"
+    "modified": "2025-08-01T16:09:59.720Z"
   }
 }

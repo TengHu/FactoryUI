@@ -1774,7 +1774,7 @@ function App() {
             {isExecuting ? '⏳ Running...' : '▶️ Run Once'}
           </button>
           
-          {!isContinuousRunning ? (
+          {/* {!isContinuousRunning ? (
             <button 
               className="toolbar-btn continuous-btn" 
               onClick={showContinuousModal}
@@ -1791,7 +1791,7 @@ function App() {
             >
               ⏹️ Stop
             </button>
-          )}
+          )} */}
           <button className="toolbar-btn" onClick={loadWorkflow} title="Load workflow from JSON file">
             📂 Load
           </button>

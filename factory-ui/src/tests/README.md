@@ -65,8 +65,7 @@ This directory contains test-driven development tests for the Factory UI fronten
 **Steps**:
 1. Create workflow with multiple nodes
 2. Include RobotStatusReader with streaming enabled
-3. Click "Run Continuous"
-4. Observe real-time node state changes
+3. Click "Run"
 
 **Expected Results**:
 - ✅ Nodes show execution states (executing, completed, error)
