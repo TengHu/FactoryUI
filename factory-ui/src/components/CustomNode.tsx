@@ -324,7 +324,17 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
               const typeName = Array.isArray(typeInfo) ? typeInfo[0] : typeInfo;
               const defaultMode = (typeName === 'STRING' || typeName === 'FLOAT' || typeName === 'INT' || typeName === 'BOOLEAN' || typeName === 'CAMERA') ? 'manual' : 'connection';
               const inputMode = inputModes[input] || defaultMode;
-              const inputValue = inputValues[input] || '';
+              // Extract default value from node definition
+              const getDefaultValue = (typeInfo: any) => {
+                if (Array.isArray(typeInfo) && typeInfo.length > 1 && 
+                    typeof typeInfo[1] === 'object' && 'default' in typeInfo[1]) {
+                  return typeInfo[1].default;
+                }
+                return '';
+              };
+              
+              const defaultValue = getDefaultValue(typeInfo);
+              const inputValue = inputValues[input] !== undefined ? inputValues[input] : defaultValue;
               
               // Only render manual inputs here
               if (inputMode === 'manual') {
@@ -408,12 +418,15 @@ const CustomNode = ({ id, data, selected, ...props }: CustomNodeProps) => {
                             </div>
                           );
                         case 'BOOLEAN':
+                          // Convert boolean value to string for select display
+                          const boolValue = inputValue === true || inputValue === 'true' ? 'true' :
+                                           inputValue === false || inputValue === 'false' ? 'false' : '';
                           return (
                             <div className="manual-input-container">
                               <span className="input-label">{input}:</span>
                               <select
                                 className="manual-input"
-                                value={String(inputValue)}
+                                value={boolValue}
                                 onChange={(e) => {
                                   if (onInputValueChange) {
                                     onInputValueChange(id, input, e.target.value);

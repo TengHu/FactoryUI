@@ -4,8 +4,8 @@
       "id": "ConnectLeRobotNode-1754010971829",
       "type": "customNode",
       "position": {
-        "x": -274.96904101656366,
-        "y": 471.41514705125434
+        "x": -254.2483879112007,
+        "y": 419.6135142878469
       },
       "data": {
         "label": "Connect LeRobot",
@@ -140,7 +140,7 @@
         "width": 262,
         "height": 343
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -316,8 +316,8 @@
         "inputValues": {
           "repo_id": "niel1511/workflow2",
           "single_task": "Grab the black cube",
-          "push_to_hub": false,
-          "private": false,
+          "push_to_hub": true,
+          "private": true,
           "num_episodes": 10
         },
         "bypassed": false,
@@ -336,8 +336,8 @@
       "id": "RecordEpisodesNode-1754012622945",
       "type": "customNode",
       "position": {
-        "x": 1401.1709582140295,
-        "y": 652.2651954847084
+        "x": 1392.8826969718841,
+        "y": 565.2384524421839
       },
       "data": {
         "label": "Record Episodes",
@@ -403,15 +403,15 @@
         },
         "type": "RecordEpisodesNode",
         "inputValues": {
-          "display_data": true,
-          "play_sounds": false
+          "display_data": false,
+          "play_sounds": true
         }
       },
       "measured": {
         "width": 484,
         "height": 459
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     }
   ],
@@ -468,8 +468,8 @@
   "metadata": {
     "name": "record_demo",
     "description": "Auto-saved on 7/31/2025",
-    "created": "2025-08-01T02:40:11.667Z",
+    "created": "2025-08-01T02:43:55.906Z",
     "version": "1.0.0",
-    "modified": "2025-08-01T02:40:11.667Z"
+    "modified": "2025-08-01T02:43:55.906Z"
   }
 }
