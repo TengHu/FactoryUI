@@ -132,7 +132,7 @@ Usage: Use this node to establish connection with a LeRobot robot. The robot ins
             return (None, rt_update)
 
 
-class DatasetRecordConfigNode(NodeBase):
+class DatasetRecordConfigForOneEpisodeNode(NodeBase):
     """Configure dataset recording parameters"""
     
     @classmethod
@@ -144,7 +144,6 @@ class DatasetRecordConfigNode(NodeBase):
                 "fps": ("INT", {"default": 30, "min": 1, "max": 120}),
                 "episode_time_s": ("FLOAT", {"default": 60.0}),
                 "reset_time_s": ("FLOAT", {"default": 60.0}),
-                "num_episodes": ("INT", {"default": 50, "min": 1})
             },
             "optional": {
                 "root": ("STRING", {"default": ""}),
@@ -174,7 +173,7 @@ class DatasetRecordConfigNode(NodeBase):
     
     @classmethod
     def DISPLAY_NAME(cls) -> str:
-        return "Dataset Record Config"
+        return "Dataset Record Config For One Episode"
     
     @classmethod
     def DESCRIPTION(cls) -> str:
@@ -193,7 +192,6 @@ Inputs:
   - fps (INT): Frames per second for recording
   - episode_time_s (FLOAT): Duration of each episode in seconds
   - reset_time_s (FLOAT): Time for environment reset between episodes
-  - num_episodes (INT): Number of episodes to record
   - root (STRING, optional): Root directory for dataset storage
   - video (BOOLEAN, optional): Encode frames as video
   - push_to_hub (BOOLEAN, optional): Upload to Hugging Face hub
@@ -208,12 +206,13 @@ Usage: Use this node to configure all dataset recording parameters before creati
         """
     
     def create_dataset_config(self, repo_id: str, single_task: str, fps: int, 
-                            episode_time_s: float, reset_time_s: float, num_episodes: int,
+                            episode_time_s: float, reset_time_s: float,
                             root: str = None, video: bool = True, push_to_hub: bool = True,
                             private: bool = False, num_image_writer_processes: int = 0,
                             num_image_writer_threads_per_camera: int = 4) -> tuple:
         """Create dataset recording configuration"""
         
+        num_episodes = 1
         try:
             # Create DatasetRecordConfig
             dataset_config = DatasetRecordConfig(
@@ -234,11 +233,10 @@ Usage: Use this node to configure all dataset recording parameters before creati
             rt_update = {
                 "status": "configured",
                 "repo_id": repo_id,
-                "num_episodes": num_episodes,
                 "fps": fps
             }
             
-            return (dataset_config.__dict__,), rt_update
+            return ({"dataset_config": dataset_config},), rt_update
             
         except Exception as e:
             rt_update = {"error": f"Failed to create dataset config: {str(e)}\n{traceback.format_exc()}"}
@@ -408,7 +406,7 @@ Usage: Use this node to create the dataset structure before recording episodes.
         
         try:
             # Reconstruct DatasetRecordConfig from dict
-            config = DatasetRecordConfig(**dataset_config)
+            config = dataset_config["dataset_config"]
             robot_instance = robot["robot"]
             
             # Create dataset features
@@ -529,7 +527,7 @@ Usage: Main recording node that captures robot episodes. Requires either teleope
         try:
             robot_instance = robot["robot"]
             dataset_instance = dataset["dataset"]
-            config = DatasetRecordConfig(**dataset_config)
+            config = dataset_config["dataset_config"]
 
 
 
@@ -617,7 +615,7 @@ Usage: Main recording node that captures robot episodes. Requires either teleope
 # Export the nodes
 NODE_CLASS_MAPPINGS = {
     "ConnectLeRobotNode": ConnectLeRobotNode,
-    "DatasetRecordConfigNode": DatasetRecordConfigNode,
+    "DatasetRecordConfigForOneEpisodeNode": DatasetRecordConfigForOneEpisodeNode,
     "ConnectTeleoperatorNode": ConnectTeleoperatorNode,
     "CreateDatasetNode": CreateDatasetNode,
     "RecordEpisodesNode": RecordEpisodesNode,
