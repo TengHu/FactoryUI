@@ -274,7 +274,7 @@ class ConnectTeleoperatorNode(NodeBase):
     def RETURN_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "action_methods": ("DICT", {}),
+                "action_generator": ("DICT", {}),
             }
         }
     
