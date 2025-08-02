@@ -274,8 +274,7 @@ class ConnectTeleoperatorNode(NodeBase):
     def RETURN_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "teleoperator": ("DICT", {}),
-                "teleop_config": ("DICT", {})
+                "action_methods": ("DICT", {}),
             }
         }
     
@@ -344,6 +343,13 @@ Usage: Use this node to connect to a teleoperator device for manual robot contro
             teleoperator = make_teleoperator_from_config(teleop_cfg)
             teleoperator.connect()
 
+
+            def init_action(robot_instance):
+                return {}
+            
+            def generate_action(action_state, robot_instance, observations):
+                return teleoperator.get_action(),{}
+            
             rt_update = {
                 "status": "connected",
                 "teleop_type": teleop_type,
@@ -351,11 +357,11 @@ Usage: Use this node to connect to a teleoperator device for manual robot contro
                 "teleop_id": teleop_id
             }
             
-            return ({"teleoperator": teleoperator, "type": teleop_type}, teleop_cfg.__dict__), rt_update
+            return ({"init_action": init_action, "generate_action": generate_action},), rt_update
             
         except Exception as e:
             rt_update = {"error": f"Failed to connect teleoperator: {str(e)}\n{traceback.format_exc()}"}
-            return (None, rt_update)
+            return (None,), rt_update
 
 
 class CreateDatasetNode(NodeBase):
