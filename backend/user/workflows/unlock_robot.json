@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "ConnectLeRobotNode-1754082365660",
+      "id": "ConnectLeRobotNode-1754160532238",
       "type": "customNode",
       "position": {
-        "x": -426.0877162569533,
-        "y": -30.367956931427788
+        "x": 104.55414012738854,
+        "y": 347.5
       },
       "data": {
         "label": "Connect LeRobot",
@@ -13,7 +13,7 @@
           "name": "ConnectLeRobotNode",
           "display_name": "Connect LeRobot",
           "description": "Connect to a LeRobot robot and return robot instance",
-          "detailed_description": "\nConnectLeRobotNode\n\nPurpose: Establishes connection to a LeRobot robot using the specified configuration.\n\nInputs:\n  - robot_type (SELECTION): Type of robot (so100_follower, so101_follower, koch_follower, bi_so100_follower)\n  - port (STRING): Serial port for the robot (e.g., /dev/tty.usbmodem58760431541)\n  - robot_id (STRING): Identifier for the robot (e.g., black, blue)\n  - cameras (STRING): JSON string defining camera configuration\n\nOutputs:\n  - robot (DICT): Connected robot instance\n  - robot_config (DICT): Robot configuration object\n\nUsage: Use this node to establish connection with a LeRobot robot. The robot instance can be used by other LeRobot nodes for recording and control.\n        ",
+          "detailed_description": "\nConnectLeRobotNode\n\nPurpose: Establishes connection to a LeRobot robot using the specified configuration.\n\nInputs:\n  - robot_type (STRING): Type of robot (so100_follower, so101_follower, koch_follower, bi_so100_follower)\n  - port (STRING): Serial port for the robot (e.g., /dev/tty.usbmodem58760431541)\n  - robot_id (STRING): Identifier for the robot (e.g., black, blue)\n  - cameras (STRING): JSON string defining camera configuration\n\nOutputs:\n  - robot (DICT): Connected robot instance\n  - robot_config (DICT): Robot configuration object\n\nUsage: Use this node to establish connection with a LeRobot robot. The robot instance can be used by other LeRobot nodes for recording and control.\n        ",
           "tags": [
             "LeRobot"
           ],
@@ -61,12 +61,10 @@
         },
         "type": "ConnectLeRobotNode",
         "inputValues": {
-          "cameras": "{}",
+          "port": "/dev/tty.usbmodem5A7A0558831",
           "robot_id": "my_awesome_follower_arm",
-          "robot_type": "so101_follower",
-          "port": "/dev/tty.usbmodem5A7A0558831"
-        },
-        "bypassed": false
+          "cameras": "{}"
+        }
       },
       "measured": {
         "width": 309,
@@ -76,11 +74,11 @@
       "dragging": false
     },
     {
-      "id": "DisableTorqueNode-1754082372352",
+      "id": "DisableTorqueNode-1754160535938",
       "type": "customNode",
       "position": {
-        "x": -45.97818856262817,
-        "y": 10.373996027617103
+        "x": 490.32165605095554,
+        "y": 372.15159235668796
       },
       "data": {
         "label": "Disable Torque",
@@ -122,18 +120,18 @@
   ],
   "edges": [
     {
-      "source": "ConnectLeRobotNode-1754082365660",
+      "source": "ConnectLeRobotNode-1754160532238",
       "sourceHandle": "output-0",
-      "target": "DisableTorqueNode-1754082372352",
+      "target": "DisableTorqueNode-1754160535938",
       "targetHandle": "robot",
-      "id": "xy-edge__ConnectLeRobotNode-1754082365660output-0-DisableTorqueNode-1754082372352robot"
+      "id": "xy-edge__ConnectLeRobotNode-1754160532238output-0-DisableTorqueNode-1754160535938robot"
     }
   ],
   "metadata": {
     "name": "unlock_robot",
-    "description": "Workflow saved on 8/1/2025",
-    "created": "2025-08-01T21:06:49.942Z",
+    "description": "Workflow saved on 8/2/2025",
+    "created": "2025-08-02T19:34:43.091Z",
     "version": "1.0.0",
-    "modified": "2025-08-01T21:06:49.942Z"
+    "modified": "2025-08-02T19:34:43.091Z"
   }
 }

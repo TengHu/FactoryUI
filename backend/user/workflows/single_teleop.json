@@ -4,8 +4,8 @@
       "id": "ConnectLeRobotNode-1754010971829",
       "type": "customNode",
       "position": {
-        "x": -467.91221276731,
-        "y": 179.74194385829804
+        "x": -103.76780356230725,
+        "y": 135.52427432477702
       },
       "data": {
         "label": "Connect LeRobot",
@@ -76,11 +76,11 @@
       "dragging": false
     },
     {
-      "id": "CreateDatasetNode-1754155639110",
+      "id": "CreateDatasetNode-1754062724727",
       "type": "customNode",
       "position": {
-        "x": -97.82497110752267,
-        "y": -595.537595018937
+        "x": 312.3405920311809,
+        "y": -608.0984486249272
       },
       "data": {
         "label": "Create Dataset",
@@ -137,108 +137,11 @@
       "dragging": false
     },
     {
-      "id": "So100KeyboardEEControlNode-1754160898395",
+      "id": "DatasetRecordConfigForOneEpisodeNode-1754163362177",
       "type": "customNode",
       "position": {
-        "x": -87.91654871098035,
-        "y": 182.1135143538313
-      },
-      "data": {
-        "label": "Keyboard EE Control",
-        "nodeInfo": {
-          "name": "So100KeyboardEEControlNode",
-          "display_name": "Keyboard EE Control",
-          "description": "Keyboard end-effector control for LeRobot robots",
-          "detailed_description": "\nSo100KeyboardEEControlNode\n\nPurpose: Provides keyboard-based end-effector control for LeRobot robots with inverse kinematics.\n\nInputs:\n  - kp (FLOAT, optional): Proportional gain for P control (default: 0.5)\n  - xy_step (FLOAT, optional): Step size for x,y coordinate control (default: 0.004)\n  - joint_step (INT, optional): Step size for joint control (default: 1)\n  - pitch_step (FLOAT, optional): Step size for pitch adjustment (default: 1.0)\n  - initial_x (FLOAT, optional): Initial x coordinate (default: 0.1629)\n  - initial_y (FLOAT, optional): Initial y coordinate (default: 0.1131)\n  - l1 (FLOAT, optional): Upper arm length for IK (default: 0.1159)\n  - l2 (FLOAT, optional): Lower arm length for IK (default: 0.1350)\n\nOutputs:\n  - action_generator (DICT): Action generator with init_action and generate_action functions\n\nUsage: Use this node with ControlLoopNode to provide keyboard-based end-effector control. The node creates its own keyboard teleoperator instance internally.\n        ",
-          "tags": [
-            "XLeRobot"
-          ],
-          "input_types": {
-            "required": {},
-            "optional": {
-              "kp": [
-                "FLOAT",
-                {
-                  "default": 0.5,
-                  "min": 0.1,
-                  "max": 2
-                }
-              ],
-              "xy_step": [
-                "FLOAT",
-                {
-                  "default": 0.004,
-                  "min": 0.001,
-                  "max": 0.01
-                }
-              ],
-              "joint_step": [
-                "INT",
-                {
-                  "default": 1,
-                  "min": 1,
-                  "max": 5
-                }
-              ],
-              "pitch_step": [
-                "FLOAT",
-                {
-                  "default": 1,
-                  "min": 0.5,
-                  "max": 5
-                }
-              ],
-              "initial_x": [
-                "FLOAT",
-                {
-                  "default": 0.1629
-                }
-              ],
-              "initial_y": [
-                "FLOAT",
-                {
-                  "default": 0.1131
-                }
-              ],
-              "l1": [
-                "FLOAT",
-                {
-                  "default": 0.1159
-                }
-              ],
-              "l2": [
-                "FLOAT",
-                {
-                  "default": 0.135
-                }
-              ]
-            }
-          },
-          "return_types": {
-            "required": {
-              "action_generator": [
-                "DICT",
-                {}
-              ]
-            }
-          },
-          "function": "create_keyboard_ee_control"
-        },
-        "type": "So100KeyboardEEControlNode"
-      },
-      "measured": {
-        "width": 289,
-        "height": 671
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "DatasetRecordConfigForOneEpisodeNode-1754163179429",
-      "type": "customNode",
-      "position": {
-        "x": -534.3156902964274,
-        "y": -599.1678467345365
+        "x": -111.67580869863019,
+        "y": -643.3296580399219
       },
       "data": {
         "label": "Dataset Record Config For One Episode",
@@ -330,9 +233,8 @@
         },
         "type": "DatasetRecordConfigForOneEpisodeNode",
         "inputValues": {
-          "repo_id": "niel1511/workflow12",
           "episode_time_s": 10,
-          "video": false,
+          "repo_id": "niel1511/workflow12",
           "push_to_hub": false
         }
       },
@@ -340,15 +242,15 @@
         "width": 381,
         "height": 780
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
-      "id": "ControlLoopNode-1754163210548",
+      "id": "ControlLoopNode-1754163398763",
       "type": "customNode",
       "position": {
-        "x": 368.0335516911155,
-        "y": 62.84778427032069
+        "x": 679.1394114131513,
+        "y": -165.5514768207479
       },
       "data": {
         "label": "Control Loop",
@@ -400,58 +302,123 @@
       "measured": {
         "width": 354,
         "height": 304
-      }
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "ConnectTeleoperatorNode-1754163413372",
+      "type": "customNode",
+      "position": {
+        "x": 292.8537021453019,
+        "y": 133.31583893596655
+      },
+      "data": {
+        "label": "Connect Teleoperator",
+        "nodeInfo": {
+          "name": "ConnectTeleoperatorNode",
+          "display_name": "Connect Teleoperator",
+          "description": "Connect to a LeRobot teleoperator device",
+          "detailed_description": "\nConnectTeleoperatorNode\n\nPurpose: Establishes connection to a LeRobot teleoperator device for manual control.\n\nInputs:\n  - teleop_type (STRING): Type of teleoperator (so100_leader, so101_leader, koch_leader)\n  - port (STRING): Serial port for the teleoperator device\n  - teleop_id (STRING): Identifier for the teleoperator\n\nOutputs:\n  - action_generator (DICT): Action generator with init_action and generate_action functions\n\nUsage: Use this node to connect to a teleoperator device for manual robot control during recording.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "teleop_type": [
+                "STRING",
+                {
+                  "default": "so101_leader"
+                }
+              ],
+              "port": [
+                "STRING",
+                {
+                  "default": "/dev/tty.usbmodem58760431551"
+                }
+              ],
+              "teleop_id": [
+                "STRING",
+                {
+                  "default": "blue"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "action_generator": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "connect_teleoperator"
+        },
+        "type": "ConnectTeleoperatorNode",
+        "inputValues": {
+          "port": "/dev/tty.usbmodem5A7A0573841",
+          "teleop_id": "my_awesome_leader_arm"
+        },
+        "bypassed": false
+      },
+      "measured": {
+        "width": 292,
+        "height": 457
+      },
+      "selected": false,
+      "dragging": false
     }
   ],
   "edges": [
     {
       "source": "ConnectLeRobotNode-1754010971829",
       "sourceHandle": "output-0",
-      "target": "CreateDatasetNode-1754155639110",
+      "target": "CreateDatasetNode-1754062724727",
       "targetHandle": "robot",
-      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-CreateDatasetNode-1754155639110robot"
+      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-CreateDatasetNode-1754062724727robot"
     },
     {
-      "source": "DatasetRecordConfigForOneEpisodeNode-1754163179429",
+      "source": "DatasetRecordConfigForOneEpisodeNode-1754163362177",
       "sourceHandle": "output",
-      "target": "CreateDatasetNode-1754155639110",
+      "target": "CreateDatasetNode-1754062724727",
       "targetHandle": "dataset_config",
-      "id": "xy-edge__DatasetRecordConfigForOneEpisodeNode-1754163179429output-CreateDatasetNode-1754155639110dataset_config"
+      "id": "xy-edge__DatasetRecordConfigForOneEpisodeNode-1754163362177output-CreateDatasetNode-1754062724727dataset_config"
     },
     {
       "source": "ConnectLeRobotNode-1754010971829",
       "sourceHandle": "output-0",
-      "target": "ControlLoopNode-1754163210548",
+      "target": "ControlLoopNode-1754163398763",
       "targetHandle": "robot",
-      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-ControlLoopNode-1754163210548robot"
+      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-ControlLoopNode-1754163398763robot"
     },
     {
-      "source": "So100KeyboardEEControlNode-1754160898395",
+      "source": "DatasetRecordConfigForOneEpisodeNode-1754163362177",
       "sourceHandle": "output",
-      "target": "ControlLoopNode-1754163210548",
-      "targetHandle": "action_generator",
-      "id": "xy-edge__So100KeyboardEEControlNode-1754160898395output-ControlLoopNode-1754163210548action_generator"
-    },
-    {
-      "source": "CreateDatasetNode-1754155639110",
-      "sourceHandle": "output-0",
-      "target": "ControlLoopNode-1754163210548",
-      "targetHandle": "dataset",
-      "id": "xy-edge__CreateDatasetNode-1754155639110output-0-ControlLoopNode-1754163210548dataset"
-    },
-    {
-      "source": "DatasetRecordConfigForOneEpisodeNode-1754163179429",
-      "sourceHandle": "output",
-      "target": "ControlLoopNode-1754163210548",
+      "target": "ControlLoopNode-1754163398763",
       "targetHandle": "dataset_config",
-      "id": "xy-edge__DatasetRecordConfigForOneEpisodeNode-1754163179429output-ControlLoopNode-1754163210548dataset_config"
+      "id": "xy-edge__DatasetRecordConfigForOneEpisodeNode-1754163362177output-ControlLoopNode-1754163398763dataset_config"
+    },
+    {
+      "source": "CreateDatasetNode-1754062724727",
+      "sourceHandle": "output-0",
+      "target": "ControlLoopNode-1754163398763",
+      "targetHandle": "dataset",
+      "id": "xy-edge__CreateDatasetNode-1754062724727output-0-ControlLoopNode-1754163398763dataset"
+    },
+    {
+      "source": "ConnectTeleoperatorNode-1754163413372",
+      "sourceHandle": "output",
+      "target": "ControlLoopNode-1754163398763",
+      "targetHandle": "action_generator",
+      "id": "xy-edge__ConnectTeleoperatorNode-1754163413372output-ControlLoopNode-1754163398763action_generator"
     }
   ],
   "metadata": {
-    "name": "keyboard_ee",
+    "name": "single_teleop",
     "description": "Workflow saved on 8/2/2025",
-    "created": "2025-08-02T19:34:31.617Z",
+    "created": "2025-08-02T19:43:03.565Z",
     "version": "1.0.0",
-    "modified": "2025-08-02T19:34:31.617Z"
+    "modified": "2025-08-02T19:43:03.565Z"
   }
 }
