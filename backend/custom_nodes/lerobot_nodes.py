@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import traceback
+import math
 from typing import Any, Dict, List
 from pathlib import Path
 from dataclasses import dataclass
@@ -15,14 +16,28 @@ sys.path.insert(0, lerobot_path)
 
 # Import LeRobot modules
 try:
+    from lerobot.utils.robot_utils import busy_wait
+
     from lerobot.robots import make_robot_from_config, RobotConfig
     from lerobot.teleoperators import make_teleoperator_from_config, TeleoperatorConfig
     from lerobot.datasets.lerobot_dataset import LeRobotDataset
     from lerobot.record import record_loop, DatasetRecordConfig
     from lerobot.utils.control_utils import init_keyboard_listener
-    from lerobot.datasets.utils import hw_to_dataset_features
+    from lerobot.datasets.utils import hw_to_dataset_features, build_dataset_frame
+    from lerobot.teleoperators.keyboard import KeyboardTeleop, KeyboardTeleopConfig
 except ImportError as e:
     print(f"Warning: Could not import lerobot modules: {e}")
+
+# Additional imports for vision control
+# try:
+#     import cv2
+#     from ultralytics import YOLO
+#     CV2_AVAILABLE = True
+#     YOLO_AVAILABLE = True
+# except ImportError as e:
+#     print(f"Warning: CV2/YOLO not available: {e}")
+#     CV2_AVAILABLE = False
+#     YOLO_AVAILABLE = False
 
 MODULE_TAG = "LeRobot"
 
@@ -74,7 +89,7 @@ ConnectLeRobotNode
 Purpose: Establishes connection to a LeRobot robot using the specified configuration.
 
 Inputs:
-  - robot_type (SELECTION): Type of robot (so100_follower, so101_follower, koch_follower, bi_so100_follower)
+  - robot_type (STRING): Type of robot (so100_follower, so101_follower, koch_follower, bi_so100_follower)
   - port (STRING): Serial port for the robot (e.g., /dev/tty.usbmodem58760431541)
   - robot_id (STRING): Identifier for the robot (e.g., black, blue)
   - cameras (STRING): JSON string defining camera configuration
@@ -133,7 +148,7 @@ Usage: Use this node to establish connection with a LeRobot robot. The robot ins
 
 
 class DatasetRecordConfigForOneEpisodeNode(NodeBase):
-    """Configure dataset recording parameters"""
+    """Configure dataset recording parameters for a single episode"""
     
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
@@ -143,7 +158,6 @@ class DatasetRecordConfigForOneEpisodeNode(NodeBase):
                 "single_task": ("STRING", {"default": "Pick and place task"}),
                 "fps": ("INT", {"default": 30, "min": 1, "max": 120}),
                 "episode_time_s": ("FLOAT", {"default": 60.0}),
-                "reset_time_s": ("FLOAT", {"default": 60.0}),
             },
             "optional": {
                 "root": ("STRING", {"default": ""}),
@@ -177,21 +191,20 @@ class DatasetRecordConfigForOneEpisodeNode(NodeBase):
     
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Configure dataset recording parameters"
+        return "Configure dataset recording parameters for a single episode"
     
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
-DatasetRecordConfigNode
+DatasetRecordConfigForOneEpisodeNode
 
-Purpose: Configure parameters for dataset recording including episodes, timing, and storage options.
+Purpose: Configure parameters for dataset recording of a single episode.
 
 Inputs:
   - repo_id (STRING): Dataset identifier (e.g., 'user/dataset_name')
   - single_task (STRING): Task description for the recording
   - fps (INT): Frames per second for recording
-  - episode_time_s (FLOAT): Duration of each episode in seconds
-  - reset_time_s (FLOAT): Time for environment reset between episodes
+  - episode_time_s (FLOAT): Duration of the episode in seconds
   - root (STRING, optional): Root directory for dataset storage
   - video (BOOLEAN, optional): Encode frames as video
   - push_to_hub (BOOLEAN, optional): Upload to Hugging Face hub
@@ -202,17 +215,18 @@ Inputs:
 Outputs:
   - dataset_config (DICT): DatasetRecordConfig object
 
-Usage: Use this node to configure all dataset recording parameters before creating the dataset.
+Usage: Use this node to configure dataset recording parameters for a single episode recording session.
         """
     
     def create_dataset_config(self, repo_id: str, single_task: str, fps: int, 
-                            episode_time_s: float, reset_time_s: float,
-                            root: str = None, video: bool = True, push_to_hub: bool = True,
-                            private: bool = False, num_image_writer_processes: int = 0,
+                            episode_time_s: float, root: str = "", video: bool = True, 
+                            push_to_hub: bool = True, private: bool = False, 
+                            num_image_writer_processes: int = 0,
                             num_image_writer_threads_per_camera: int = 4) -> tuple:
-        """Create dataset recording configuration"""
+        """Create dataset recording configuration for a single episode"""
         
         num_episodes = 1
+        reset_time_s = 2.0  # Default reset time for single episode
         try:
             # Create DatasetRecordConfig
             dataset_config = DatasetRecordConfig(
@@ -260,8 +274,7 @@ class ConnectTeleoperatorNode(NodeBase):
     def RETURN_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
-                "teleoperator": ("DICT", {}),
-                "teleop_config": ("DICT", {})
+                "action_generator": ("DICT", {}),
             }
         }
     
@@ -294,8 +307,7 @@ Inputs:
   - teleop_id (STRING): Identifier for the teleoperator
 
 Outputs:
-  - teleoperator (DICT): Connected teleoperator instance
-  - teleop_config (DICT): Teleoperator configuration object
+  - action_generator (DICT): Action generator with init_action and generate_action functions
 
 Usage: Use this node to connect to a teleoperator device for manual robot control during recording.
         """
@@ -330,6 +342,13 @@ Usage: Use this node to connect to a teleoperator device for manual robot contro
             teleoperator = make_teleoperator_from_config(teleop_cfg)
             teleoperator.connect()
 
+
+            def init_action(robot_instance):
+                return {}
+            
+            def generate_action(action_state, robot_instance, observations):
+                return teleoperator.get_action(),{}
+            
             rt_update = {
                 "status": "connected",
                 "teleop_type": teleop_type,
@@ -337,11 +356,11 @@ Usage: Use this node to connect to a teleoperator device for manual robot contro
                 "teleop_id": teleop_id
             }
             
-            return ({"teleoperator": teleoperator, "type": teleop_type}, teleop_cfg.__dict__), rt_update
+            return ({"init_action": init_action, "generate_action": generate_action},), rt_update
             
         except Exception as e:
             rt_update = {"error": f"Failed to connect teleoperator: {str(e)}\n{traceback.format_exc()}"}
-            return (None, rt_update)
+            return (None,), rt_update
 
 
 class CreateDatasetNode(NodeBase):
@@ -390,7 +409,7 @@ CreateDatasetNode
 Purpose: Creates a new LeRobot dataset or loads an existing one for recording episodes.
 
 Inputs:
-  - dataset_config (DICT): Dataset configuration from DatasetRecordConfigNode
+  - dataset_config (DICT): Dataset configuration from DatasetRecordConfigForOneEpisodeNode
   - robot (DICT): Connected robot instance from ConnectLeRobotNode
   - resume (BOOLEAN): Whether to resume recording on existing dataset
 
@@ -452,7 +471,7 @@ Usage: Use this node to create the dataset structure before recording episodes.
             return (None,),  rt_update
 
 
-class RecordEpisodesNode(NodeBase):
+class RecordEpisodeNode(NodeBase):
     """Record episodes using LeRobot"""
     
     @classmethod
@@ -499,7 +518,7 @@ class RecordEpisodesNode(NodeBase):
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
-RecordEpisodesNode
+RecordEpisodeNode
 
 Purpose: Records robot episodes using teleoperator control or policy execution.
 
@@ -612,11 +631,305 @@ Usage: Main recording node that captures robot episodes. Requires either teleope
             return (None,), rt_update
 
 
+class DisableTorqueNode(NodeBase):
+    """Disable torque on robot motors"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "robot": ("DICT", {})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "robot": ("DICT", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "disable_torque"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Disable Torque"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Disable torque on robot motors"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+DisableTorqueNode
+
+Purpose: Disables torque on all robot motors, allowing manual movement.
+
+Inputs:
+  - robot (DICT): Connected robot instance from ConnectLeRobotNode
+
+Outputs:
+  - robot (DICT): Robot instance with torque disabled
+
+Usage: Use this node to disable motor torque, allowing the robot to be moved manually. This is useful for manual positioning or when you want to move the robot by hand.
+        """
+    
+    def disable_torque(self, robot: dict) -> tuple:
+        """Disable torque on robot motors"""
+        
+        try:
+            robot_instance = robot["robot"]
+            
+            # Disable torque on all motors
+            robot_instance.bus.disable_torque()
+            
+            rt_update = {
+                "status": "torque_disabled",
+                "robot_type": robot.get("type", "unknown")
+            }
+            
+            return ({"robot": robot_instance, "type": robot.get("type", "unknown")},), rt_update
+            
+        except Exception as e:
+            rt_update = {"error": f"Failed to disable torque: {str(e)}\n{traceback.format_exc()}"}
+            return (None,), rt_update
+
+
+class ControlLoopNode(NodeBase):
+    """Execute a control loop with robot and action generator"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "robot": ("DICT", {}),
+                "action_generator": ("DICT", {}),
+                "dataset": ("DICT", {}),
+                "dataset_config": ("DICT", {}),
+            },
+            "optional": {
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "robot": ("DICT", {}),
+                "control_stats": ("DICT", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "execute_control_loop"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Control Loop"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Execute a control loop with robot and action generator"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+ControlLoopNode
+
+Purpose: Executes a control loop that applies actions to a robot at the frequency specified in the dataset configuration.
+
+Inputs:
+  - robot (DICT): Connected robot instance from ConnectLeRobotNode
+  - action_generator (DICT): Action generator with init_action and generate_action functions
+  - dataset (DICT): Dataset instance for recording
+  - dataset_config (DICT): Dataset configuration with fps and episode_time_s
+
+Outputs:
+  - robot (DICT): Robot instance after control execution
+  - control_stats (DICT): Statistics about the control execution
+
+Usage: Use this node to execute a control loop that applies actions to a robot. The action generator should provide init_action and generate_action functions.
+        """
+    
+    def execute_control_loop(self, robot: dict, action_generator: dict, dataset: dict, dataset_config: dict) -> tuple:
+        """Execute a control loop with robot and action generator"""
+        rt_update = {}
+        try:
+            robot_instance = robot["robot"]
+            init_action = action_generator["init_action"]
+            generate_action = action_generator["generate_action"]
+            dataset_instance = dataset["dataset"]
+            config = dataset_config["dataset_config"]
+
+            action_state = init_action(robot_instance)
+            
+            timestamp = 0
+            start_episode_time = time.perf_counter()
+            while timestamp < config.episode_time_s:
+                start_loop_t = time.perf_counter()
+                
+                # Get current observations
+                current_obs = robot_instance.get_observation()
+
+                # Dataset
+                observation_frame = build_dataset_frame(dataset_instance.features, current_obs, prefix="observation")
+
+                action, action_state = generate_action(action_state, robot_instance, current_obs)
+
+                # Send action to robot if valid
+                if action and isinstance(action, dict):
+                    robot_instance.send_action(action)
+                    
+                # Dataset
+                action_frame = build_dataset_frame(dataset_instance.features, action, prefix="action")
+                frame = {**observation_frame, **action_frame}
+                dataset_instance.add_frame(frame, task=config.single_task)
+
+
+                dt_s = time.perf_counter() - start_loop_t
+                busy_wait(1 / config.fps - dt_s)
+
+                timestamp = time.perf_counter() - start_episode_time
+
+            dataset_instance.save_episode()
+
+            dataset_instance.push_to_hub(tags=config.tags, private=config.private)
+            
+            control_stats = {
+                "total_time": time.perf_counter() - start_episode_time,
+            }
+            
+            rt_update = {
+                "status": "completed",
+                "total_time": f"{control_stats['total_time']:.2f}s",
+            }
+            
+            return ({"robot": robot_instance, "type": robot.get("type", "unknown")}, control_stats), rt_update 
+            
+        except Exception as e:
+            rt_update = {"error": f"Control loop failed: {str(e)}\n{traceback.format_exc()}"}
+            return ({"robot": robot_instance, "type": robot.get("type", "unknown")}, {}), rt_update
+
+
+class DualActionGeneratorNode(NodeBase):
+    """Combine two action generators into a single action generator"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "action_generator_1": ("DICT", {}),
+                "action_generator_2": ("DICT", {})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "combined_action_generator": ("DICT", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "combine_action_generators"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Dual Action Generator"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Combine two action generators into a single action generator"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+DualActionGeneratorNode
+
+Purpose: Combines two action generators into a single action generator that merges their outputs.
+
+Inputs:
+  - action_generator_1 (DICT): First action generator with init_action and generate_action functions
+  - action_generator_2 (DICT): Second action generator with init_action and generate_action functions
+
+Outputs:
+  - combined_action_generator (DICT): Combined action generator that merges outputs from both generators
+
+Usage: Use this node to combine two different action generators (e.g., teleoperator and keyboard) into a single action generator that can be used in control loops.
+        """
+    
+    def combine_action_generators(self, action_generator_1: dict, action_generator_2: dict) -> tuple:
+        """Combine two action generators into a single action generator"""
+        
+        try:
+            # Extract action generators
+            gen1_init = action_generator_1["init_action"]
+            gen1_generate = action_generator_1["generate_action"]
+            gen2_init = action_generator_2["init_action"]
+            gen2_generate = action_generator_2["generate_action"]
+            
+            def init_combined_action(robot_instance):
+                """Initialize both action generators"""
+                state1 = gen1_init(robot_instance)
+                state2 = gen2_init(robot_instance)
+                return {"state1": state1, "state2": state2}
+            
+            def generate_combined_action(action_state, robot_instance, observations):
+                """Generate combined action from both generators"""
+                # Get actions from both generators
+                action1, new_state1 = gen1_generate(action_state["state1"], robot_instance, observations)
+                action2, new_state2 = gen2_generate(action_state["state2"], robot_instance, observations)
+                
+                combined_action = {**action1, **action2}
+                
+                # Update action state
+                new_action_state = {
+                    "state1": new_state1,
+                    "state2": new_state2
+                }
+                
+                return combined_action, new_action_state
+            
+            rt_update = {
+                "status": "combined",
+                "generator1_type": action_generator_1.get("type", "unknown"),
+                "generator2_type": action_generator_2.get("type", "unknown")
+            }
+            
+            return ({"init_action": init_combined_action, "generate_action": generate_combined_action},), rt_update
+            
+        except Exception as e:
+            rt_update = {"error": f"Failed to combine action generators: {str(e)}\n{traceback.format_exc()}"}
+            return (None,), rt_update
+
+
 # Export the nodes
 NODE_CLASS_MAPPINGS = {
     "ConnectLeRobotNode": ConnectLeRobotNode,
     "DatasetRecordConfigForOneEpisodeNode": DatasetRecordConfigForOneEpisodeNode,
     "ConnectTeleoperatorNode": ConnectTeleoperatorNode,
     "CreateDatasetNode": CreateDatasetNode,
-    "RecordEpisodesNode": RecordEpisodesNode,
+    # "RecordEpisodeNode": RecordEpisodeNode,
+    "DisableTorqueNode": DisableTorqueNode,
+    "ControlLoopNode": ControlLoopNode,
+    "DualActionGeneratorNode": DualActionGeneratorNode,
 }

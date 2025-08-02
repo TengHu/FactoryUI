@@ -66,4 +66,4 @@ Pipfile.lock
 
 # Pyre type checker
 .pyre/ 
-feetech-servo-sdk/ 
+feetech-servo-sdk/ backend/custom_nodes/lerobot/

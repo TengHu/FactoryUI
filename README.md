@@ -8,6 +8,13 @@ A powerful GUI for open-source robotics. Offers modular, reusable building block
 
 Before you begin, assemble and set up your robot by following the instructions at [https://bambot.org/](https://bambot.org/). Find the serial port that's connected to your robot.
 
+## Examples 
+
+Explore the sample workflows located in `backend/user/workflows`, such as:
+- Teleoperating a robot
+- Teleoperating using a keyboard
+- Dual teleoperation with two or more teleoperators
+
 
 ## 🚀 Quick Start
 
