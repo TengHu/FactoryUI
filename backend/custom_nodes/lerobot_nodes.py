@@ -89,7 +89,7 @@ ConnectLeRobotNode
 Purpose: Establishes connection to a LeRobot robot using the specified configuration.
 
 Inputs:
-  - robot_type (SELECTION): Type of robot (so100_follower, so101_follower, koch_follower, bi_so100_follower)
+  - robot_type (STRING): Type of robot (so100_follower, so101_follower, koch_follower, bi_so100_follower)
   - port (STRING): Serial port for the robot (e.g., /dev/tty.usbmodem58760431541)
   - robot_id (STRING): Identifier for the robot (e.g., black, blue)
   - cameras (STRING): JSON string defining camera configuration
@@ -148,7 +148,7 @@ Usage: Use this node to establish connection with a LeRobot robot. The robot ins
 
 
 class DatasetRecordConfigForOneEpisodeNode(NodeBase):
-    """Configure dataset recording parameters"""
+    """Configure dataset recording parameters for a single episode"""
     
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
@@ -191,21 +191,20 @@ class DatasetRecordConfigForOneEpisodeNode(NodeBase):
     
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Configure dataset recording parameters"
+        return "Configure dataset recording parameters for a single episode"
     
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
-DatasetRecordConfigNode
+DatasetRecordConfigForOneEpisodeNode
 
-Purpose: Configure parameters for dataset recording including episodes, timing, and storage options.
+Purpose: Configure parameters for dataset recording of a single episode.
 
 Inputs:
   - repo_id (STRING): Dataset identifier (e.g., 'user/dataset_name')
   - single_task (STRING): Task description for the recording
   - fps (INT): Frames per second for recording
-  - episode_time_s (FLOAT): Duration of each episode in seconds
-  - reset_time_s (FLOAT): Time for environment reset between episodes
+  - episode_time_s (FLOAT): Duration of the episode in seconds
   - root (STRING, optional): Root directory for dataset storage
   - video (BOOLEAN, optional): Encode frames as video
   - push_to_hub (BOOLEAN, optional): Upload to Hugging Face hub
@@ -216,17 +215,18 @@ Inputs:
 Outputs:
   - dataset_config (DICT): DatasetRecordConfig object
 
-Usage: Use this node to configure all dataset recording parameters before creating the dataset.
+Usage: Use this node to configure dataset recording parameters for a single episode recording session.
         """
     
     def create_dataset_config(self, repo_id: str, single_task: str, fps: int, 
-                            episode_time_s: float, reset_time_s: float,
-                            root: str = None, video: bool = True, push_to_hub: bool = True,
-                            private: bool = False, num_image_writer_processes: int = 0,
+                            episode_time_s: float, root: str = "", video: bool = True, 
+                            push_to_hub: bool = True, private: bool = False, 
+                            num_image_writer_processes: int = 0,
                             num_image_writer_threads_per_camera: int = 4) -> tuple:
-        """Create dataset recording configuration"""
+        """Create dataset recording configuration for a single episode"""
         
         num_episodes = 1
+        reset_time_s = 2.0  # Default reset time for single episode
         try:
             # Create DatasetRecordConfig
             dataset_config = DatasetRecordConfig(
@@ -307,8 +307,7 @@ Inputs:
   - teleop_id (STRING): Identifier for the teleoperator
 
 Outputs:
-  - teleoperator (DICT): Connected teleoperator instance
-  - teleop_config (DICT): Teleoperator configuration object
+  - action_generator (DICT): Action generator with init_action and generate_action functions
 
 Usage: Use this node to connect to a teleoperator device for manual robot control during recording.
         """
@@ -410,7 +409,7 @@ CreateDatasetNode
 Purpose: Creates a new LeRobot dataset or loads an existing one for recording episodes.
 
 Inputs:
-  - dataset_config (DICT): Dataset configuration from DatasetRecordConfigNode
+  - dataset_config (DICT): Dataset configuration from DatasetRecordConfigForOneEpisodeNode
   - robot (DICT): Connected robot instance from ConnectLeRobotNode
   - resume (BOOLEAN): Whether to resume recording on existing dataset
 
@@ -705,14 +704,14 @@ Usage: Use this node to disable motor torque, allowing the robot to be moved man
 
 
 class ControlLoopNode(NodeBase):
-    """Execute a control loop with robot and action"""
+    """Execute a control loop with robot and action generator"""
     
     @classmethod
     def INPUT_TYPES(cls) -> Dict[str, Any]:
         return {
             "required": {
                 "robot": ("DICT", {}),
-                "generate_actions": ("DICT", {}),
+                "action_generator": ("DICT", {}),
                 "dataset": ("DICT", {}),
                 "dataset_config": ("DICT", {}),
             },
@@ -743,43 +742,43 @@ class ControlLoopNode(NodeBase):
     
     @classmethod
     def DESCRIPTION(cls) -> str:
-        return "Execute a control loop with robot and action"
+        return "Execute a control loop with robot and action generator"
     
     @classmethod
     def get_detailed_description(cls) -> str:
         return """
 ControlLoopNode
 
-Purpose: Executes a control loop that applies actions to a robot at a specified frequency.
+Purpose: Executes a control loop that applies actions to a robot at the frequency specified in the dataset configuration.
 
 Inputs:
   - robot (DICT): Connected robot instance from ConnectLeRobotNode
-  - action_generator (DICT): Action generator function from So100KeyboardEEControlNode
-  - control_frequency (FLOAT, optional): Control frequency in Hz (default: 30.0)
-  - max_duration (FLOAT, optional): Maximum duration of control loop in seconds (default: 10.0)
+  - action_generator (DICT): Action generator with init_action and generate_action functions
+  - dataset (DICT): Dataset instance for recording
+  - dataset_config (DICT): Dataset configuration with fps and episode_time_s
 
 Outputs:
   - robot (DICT): Robot instance after control execution
   - control_stats (DICT): Statistics about the control execution
 
-Usage: Use this node to execute a control loop that applies actions to a robot. The action_generator should be a function that takes observations and returns robot actions.
+Usage: Use this node to execute a control loop that applies actions to a robot. The action generator should provide init_action and generate_action functions.
         """
     
-    def execute_control_loop(self, robot: dict, generate_actions: dict, dataset: dict, dataset_config: dict) -> tuple:
+    def execute_control_loop(self, robot: dict, action_generator: dict, dataset: dict, dataset_config: dict) -> tuple:
         """Execute a control loop with robot and action generator"""
         rt_update = {}
         try:
             robot_instance = robot["robot"]
-            init_action = generate_actions["init_action"]
-            generate_action = generate_actions["generate_action"]
+            init_action = action_generator["init_action"]
+            generate_action = action_generator["generate_action"]
             dataset_instance = dataset["dataset"]
-            dataset_config = dataset_config["dataset_config"]
+            config = dataset_config["dataset_config"]
 
             action_state = init_action(robot_instance)
             
             timestamp = 0
             start_episode_time = time.perf_counter()
-            while timestamp < dataset_config.episode_time_s:
+            while timestamp < config.episode_time_s:
                 start_loop_t = time.perf_counter()
                 
                 # Get current observations
@@ -797,17 +796,17 @@ Usage: Use this node to execute a control loop that applies actions to a robot. 
                 # Dataset
                 action_frame = build_dataset_frame(dataset_instance.features, action, prefix="action")
                 frame = {**observation_frame, **action_frame}
-                dataset_instance.add_frame(frame, task=dataset_config.single_task)
+                dataset_instance.add_frame(frame, task=config.single_task)
 
 
                 dt_s = time.perf_counter() - start_loop_t
-                busy_wait(1 / dataset_config.fps - dt_s)
+                busy_wait(1 / config.fps - dt_s)
 
                 timestamp = time.perf_counter() - start_episode_time
 
             dataset_instance.save_episode()
 
-            dataset_instance.push_to_hub(tags=dataset_config.tags, private=dataset_config.private)
+            dataset_instance.push_to_hub(tags=config.tags, private=config.private)
             
             control_stats = {
                 "total_time": time.perf_counter() - start_episode_time,
@@ -825,9 +824,6 @@ Usage: Use this node to execute a control loop that applies actions to a robot. 
             return ({"robot": robot_instance, "type": robot.get("type", "unknown")}, {}), rt_update
 
 
-
-
-# Export the nodes
 class DualActionGeneratorNode(NodeBase):
     """Combine two action generators into a single action generator"""
     
