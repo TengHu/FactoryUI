@@ -825,6 +825,107 @@ Usage: Use this node to execute a control loop that applies actions to a robot. 
             return ({"robot": robot_instance, "type": robot.get("type", "unknown")}, {}), rt_update
 
 
+
+
+# Export the nodes
+class DualActionGeneratorNode(NodeBase):
+    """Combine two action generators into a single action generator"""
+    
+    @classmethod
+    def INPUT_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "action_generator_1": ("DICT", {}),
+                "action_generator_2": ("DICT", {})
+            }
+        }
+    
+    @classmethod
+    def RETURN_TYPES(cls) -> Dict[str, Any]:
+        return {
+            "required": {
+                "combined_action_generator": ("DICT", {})
+            }
+        }
+    
+    @classmethod
+    def FUNCTION(cls) -> str:
+        return "combine_action_generators"
+    
+    @classmethod
+    def TAGS(cls) -> List[str]:
+        return [MODULE_TAG]
+    
+    @classmethod
+    def DISPLAY_NAME(cls) -> str:
+        return "Dual Action Generator"
+    
+    @classmethod
+    def DESCRIPTION(cls) -> str:
+        return "Combine two action generators into a single action generator"
+    
+    @classmethod
+    def get_detailed_description(cls) -> str:
+        return """
+DualActionGeneratorNode
+
+Purpose: Combines two action generators into a single action generator that merges their outputs.
+
+Inputs:
+  - action_generator_1 (DICT): First action generator with init_action and generate_action functions
+  - action_generator_2 (DICT): Second action generator with init_action and generate_action functions
+
+Outputs:
+  - combined_action_generator (DICT): Combined action generator that merges outputs from both generators
+
+Usage: Use this node to combine two different action generators (e.g., teleoperator and keyboard) into a single action generator that can be used in control loops.
+        """
+    
+    def combine_action_generators(self, action_generator_1: dict, action_generator_2: dict) -> tuple:
+        """Combine two action generators into a single action generator"""
+        
+        try:
+            # Extract action generators
+            gen1_init = action_generator_1["init_action"]
+            gen1_generate = action_generator_1["generate_action"]
+            gen2_init = action_generator_2["init_action"]
+            gen2_generate = action_generator_2["generate_action"]
+            
+            def init_combined_action(robot_instance):
+                """Initialize both action generators"""
+                state1 = gen1_init(robot_instance)
+                state2 = gen2_init(robot_instance)
+                return {"state1": state1, "state2": state2}
+            
+            def generate_combined_action(action_state, robot_instance, observations):
+                """Generate combined action from both generators"""
+                # Get actions from both generators
+                action1, new_state1 = gen1_generate(action_state["state1"], robot_instance, observations)
+                action2, new_state2 = gen2_generate(action_state["state2"], robot_instance, observations)
+                
+                combined_action = {**action1, **action2}
+                
+                # Update action state
+                new_action_state = {
+                    "state1": new_state1,
+                    "state2": new_state2
+                }
+                
+                return combined_action, new_action_state
+            
+            rt_update = {
+                "status": "combined",
+                "generator1_type": action_generator_1.get("type", "unknown"),
+                "generator2_type": action_generator_2.get("type", "unknown")
+            }
+            
+            return ({"init_action": init_combined_action, "generate_action": generate_combined_action},), rt_update
+            
+        except Exception as e:
+            rt_update = {"error": f"Failed to combine action generators: {str(e)}\n{traceback.format_exc()}"}
+            return (None,), rt_update
+
+
 # Export the nodes
 NODE_CLASS_MAPPINGS = {
     "ConnectLeRobotNode": ConnectLeRobotNode,
@@ -834,4 +935,5 @@ NODE_CLASS_MAPPINGS = {
     # "RecordEpisodeNode": RecordEpisodeNode,
     "DisableTorqueNode": DisableTorqueNode,
     "ControlLoopNode": ControlLoopNode,
+    "DualActionGeneratorNode": DualActionGeneratorNode,
 }
