@@ -1,0 +1,139 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectLeRobotNode-1754082365660",
+      "type": "customNode",
+      "position": {
+        "x": -426.0877162569533,
+        "y": -30.367956931427788
+      },
+      "data": {
+        "label": "Connect LeRobot",
+        "nodeInfo": {
+          "name": "ConnectLeRobotNode",
+          "display_name": "Connect LeRobot",
+          "description": "Connect to a LeRobot robot and return robot instance",
+          "detailed_description": "\nConnectLeRobotNode\n\nPurpose: Establishes connection to a LeRobot robot using the specified configuration.\n\nInputs:\n  - robot_type (SELECTION): Type of robot (so100_follower, so101_follower, koch_follower, bi_so100_follower)\n  - port (STRING): Serial port for the robot (e.g., /dev/tty.usbmodem58760431541)\n  - robot_id (STRING): Identifier for the robot (e.g., black, blue)\n  - cameras (STRING): JSON string defining camera configuration\n\nOutputs:\n  - robot (DICT): Connected robot instance\n  - robot_config (DICT): Robot configuration object\n\nUsage: Use this node to establish connection with a LeRobot robot. The robot instance can be used by other LeRobot nodes for recording and control.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "robot_type": [
+                "STRING",
+                {
+                  "default": "so101_follower"
+                }
+              ],
+              "port": [
+                "STRING",
+                {
+                  "default": "/dev/tty.usbmodem58760431541"
+                }
+              ],
+              "robot_id": [
+                "STRING",
+                {
+                  "default": "black"
+                }
+              ],
+              "cameras": [
+                "STRING",
+                {
+                  "default": "{\"laptop\": {\"type\": \"opencv\", \"camera_index\": 0, \"width\": 640, \"height\": 480, \"fps\": 30}}"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "robot_config": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectLeRobotNode",
+        "inputValues": {
+          "cameras": "{}",
+          "robot_id": "my_awesome_follower_arm",
+          "robot_type": "so101_follower",
+          "port": "/dev/tty.usbmodem5A7A0558831"
+        },
+        "bypassed": false
+      },
+      "measured": {
+        "width": 309,
+        "height": 529
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "DisableTorqueNode-1754082372352",
+      "type": "customNode",
+      "position": {
+        "x": -45.97818856262817,
+        "y": 10.373996027617103
+      },
+      "data": {
+        "label": "Disable Torque",
+        "nodeInfo": {
+          "name": "DisableTorqueNode",
+          "display_name": "Disable Torque",
+          "description": "Disable torque on robot motors",
+          "detailed_description": "\nDisableTorqueNode\n\nPurpose: Disables torque on all robot motors, allowing manual movement.\n\nInputs:\n  - robot (DICT): Connected robot instance from ConnectLeRobotNode\n\nOutputs:\n  - robot (DICT): Robot instance with torque disabled\n\nUsage: Use this node to disable motor torque, allowing the robot to be moved manually. This is useful for manual positioning or when you want to move the robot by hand.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "disable_torque"
+        },
+        "type": "DisableTorqueNode"
+      },
+      "measured": {
+        "width": 241,
+        "height": 224
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "ConnectLeRobotNode-1754082365660",
+      "sourceHandle": "output-0",
+      "target": "DisableTorqueNode-1754082372352",
+      "targetHandle": "robot",
+      "id": "xy-edge__ConnectLeRobotNode-1754082365660output-0-DisableTorqueNode-1754082372352robot"
+    }
+  ],
+  "metadata": {
+    "name": "unlock_robot",
+    "description": "Workflow saved on 8/1/2025",
+    "created": "2025-08-01T21:06:49.942Z",
+    "version": "1.0.0",
+    "modified": "2025-08-01T21:06:49.942Z"
+  }
+}

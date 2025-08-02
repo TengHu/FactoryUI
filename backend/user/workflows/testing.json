@@ -1,0 +1,465 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectLeRobotNode-1754010971829",
+      "type": "customNode",
+      "position": {
+        "x": -641.5993543717843,
+        "y": 456.0623964108708
+      },
+      "data": {
+        "label": "Connect LeRobot",
+        "nodeInfo": {
+          "name": "ConnectLeRobotNode",
+          "display_name": "Connect LeRobot",
+          "description": "Connect to a LeRobot robot and return robot instance",
+          "detailed_description": "\nConnectLeRobotNode\n\nPurpose: Establishes connection to a LeRobot robot using the specified configuration.\n\nInputs:\n  - robot_type (SELECTION): Type of robot (so100_follower, so101_follower, koch_follower, bi_so100_follower)\n  - port (STRING): Serial port for the robot (e.g., /dev/tty.usbmodem58760431541)\n  - robot_id (STRING): Identifier for the robot (e.g., black, blue)\n  - cameras (STRING): JSON string defining camera configuration\n\nOutputs:\n  - robot (DICT): Connected robot instance\n  - robot_config (DICT): Robot configuration object\n\nUsage: Use this node to establish connection with a LeRobot robot. The robot instance can be used by other LeRobot nodes for recording and control.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "robot_type": [
+                "STRING",
+                {
+                  "default": "so101_follower"
+                }
+              ],
+              "port": [
+                "STRING",
+                {
+                  "default": "/dev/tty.usbmodem58760431541"
+                }
+              ],
+              "robot_id": [
+                "STRING",
+                {
+                  "default": "black"
+                }
+              ],
+              "cameras": [
+                "STRING",
+                {
+                  "default": "{\"laptop\": {\"type\": \"opencv\", \"camera_index\": 0, \"width\": 640, \"height\": 480, \"fps\": 30}}"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "robot_config": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectLeRobotNode",
+        "inputValues": {
+          "cameras": "{}",
+          "robot_id": "my_awesome_follower_arm",
+          "robot_type": "so101_follower",
+          "port": "/dev/tty.usbmodem5A7A0558831"
+        },
+        "bypassed": false
+      },
+      "measured": {
+        "width": 309,
+        "height": 529
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "DatasetRecordConfigForOneEpisodeNode-1754155633890",
+      "type": "customNode",
+      "position": {
+        "x": -330.7846255871085,
+        "y": -611.3209279756991
+      },
+      "data": {
+        "label": "Dataset Record Config For One Episode",
+        "nodeInfo": {
+          "name": "DatasetRecordConfigForOneEpisodeNode",
+          "display_name": "Dataset Record Config For One Episode",
+          "description": "Configure dataset recording parameters",
+          "detailed_description": "\nDatasetRecordConfigNode\n\nPurpose: Configure parameters for dataset recording including episodes, timing, and storage options.\n\nInputs:\n  - repo_id (STRING): Dataset identifier (e.g., 'user/dataset_name')\n  - single_task (STRING): Task description for the recording\n  - fps (INT): Frames per second for recording\n  - episode_time_s (FLOAT): Duration of each episode in seconds\n  - reset_time_s (FLOAT): Time for environment reset between episodes\n  - root (STRING, optional): Root directory for dataset storage\n  - video (BOOLEAN, optional): Encode frames as video\n  - push_to_hub (BOOLEAN, optional): Upload to Hugging Face hub\n  - private (BOOLEAN, optional): Make repository private\n  - num_image_writer_processes (INT, optional): Number of image writer processes\n  - num_image_writer_threads_per_camera (INT, optional): Threads per camera for image writing\n\nOutputs:\n  - dataset_config (DICT): DatasetRecordConfig object\n\nUsage: Use this node to configure all dataset recording parameters before creating the dataset.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "repo_id": [
+                "STRING",
+                {
+                  "default": "user/dataset_name"
+                }
+              ],
+              "single_task": [
+                "STRING",
+                {
+                  "default": "Pick and place task"
+                }
+              ],
+              "fps": [
+                "INT",
+                {
+                  "default": 30,
+                  "min": 1,
+                  "max": 120
+                }
+              ],
+              "episode_time_s": [
+                "FLOAT",
+                {
+                  "default": 60
+                }
+              ],
+              "reset_time_s": [
+                "FLOAT",
+                {
+                  "default": 60
+                }
+              ]
+            },
+            "optional": {
+              "root": [
+                "STRING",
+                {
+                  "default": ""
+                }
+              ],
+              "video": [
+                "BOOLEAN",
+                {
+                  "default": true
+                }
+              ],
+              "push_to_hub": [
+                "BOOLEAN",
+                {
+                  "default": true
+                }
+              ],
+              "private": [
+                "BOOLEAN",
+                {
+                  "default": false
+                }
+              ],
+              "num_image_writer_processes": [
+                "INT",
+                {
+                  "default": 0
+                }
+              ],
+              "num_image_writer_threads_per_camera": [
+                "INT",
+                {
+                  "default": 4
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "dataset_config": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "create_dataset_config"
+        },
+        "type": "DatasetRecordConfigForOneEpisodeNode",
+        "inputValues": {
+          "repo_id": "niel1511/workflow12",
+          "episode_time_s": 6,
+          "push_to_hub": false,
+          "video": false
+        }
+      },
+      "measured": {
+        "width": 381,
+        "height": 828
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "CreateDatasetNode-1754155639110",
+      "type": "customNode",
+      "position": {
+        "x": 275.86554567786146,
+        "y": -306.0590256781465
+      },
+      "data": {
+        "label": "Create Dataset",
+        "nodeInfo": {
+          "name": "CreateDatasetNode",
+          "display_name": "Create Dataset",
+          "description": "Create or load LeRobot dataset for recording",
+          "detailed_description": "\nCreateDatasetNode\n\nPurpose: Creates a new LeRobot dataset or loads an existing one for recording episodes.\n\nInputs:\n  - dataset_config (DICT): Dataset configuration from DatasetRecordConfigNode\n  - robot (DICT): Connected robot instance from ConnectLeRobotNode\n  - resume (BOOLEAN): Whether to resume recording on existing dataset\n\nOutputs:\n  - dataset (DICT): LeRobot dataset instance\n  - dataset_features (DICT): Dataset features schema\n\nUsage: Use this node to create the dataset structure before recording episodes.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "dataset_config": [
+                "DICT",
+                {}
+              ],
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "resume": [
+                "BOOLEAN",
+                {
+                  "default": false
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "dataset": [
+                "DICT",
+                {}
+              ],
+              "dataset_features": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "create_dataset"
+        },
+        "type": "CreateDatasetNode",
+        "inputValues": {
+          "resume": true
+        }
+      },
+      "measured": {
+        "width": 364,
+        "height": 342
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "So100KeyboardEEControlNode-1754155759971",
+      "type": "customNode",
+      "position": {
+        "x": -87.09420631506634,
+        "y": 427.5414527325824
+      },
+      "data": {
+        "label": "Keyboard EE Control",
+        "nodeInfo": {
+          "name": "So100KeyboardEEControlNode",
+          "display_name": "Keyboard EE Control",
+          "description": "Keyboard end-effector control for LeRobot robots",
+          "detailed_description": "\nKeyboardEEControlNode\n\nPurpose: Provides keyboard-based end-effector control for LeRobot robots with inverse kinematics.\n\nInputs:\n  - robot (DICT): Connected robot instance from ConnectLeRobotNode\n  - keyboard (DICT): Keyboard teleoperator instance from ConnectTeleoperatorNode\n  - kp (FLOAT, optional): Proportional gain for P control (default: 0.5)\n  - xy_step (FLOAT, optional): Step size for x,y coordinate control (default: 0.004)\n  - joint_step (INT, optional): Step size for joint control (default: 1)\n  - pitch_step (FLOAT, optional): Step size for pitch adjustment (default: 1.0)\n  - initial_x (FLOAT, optional): Initial x coordinate (default: 0.1629)\n  - initial_y (FLOAT, optional): Initial y coordinate (default: 0.1131)\n  - l1 (FLOAT, optional): Upper arm length for IK (default: 0.1159)\n  - l2 (FLOAT, optional): Lower arm length for IK (default: 0.1350)\n\nOutputs:\n  - action_generator (DICT): Function that generates actions based on keyboard input\n  - observations (DICT): Current robot observations\n  - control_state (DICT): Current control state including target positions\n\nUsage: Use this node with ControlLoopNode to provide keyboard-based end-effector control.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {},
+            "optional": {
+              "kp": [
+                "FLOAT",
+                {
+                  "default": 0.5,
+                  "min": 0.1,
+                  "max": 2
+                }
+              ],
+              "xy_step": [
+                "FLOAT",
+                {
+                  "default": 0.004,
+                  "min": 0.001,
+                  "max": 0.01
+                }
+              ],
+              "joint_step": [
+                "INT",
+                {
+                  "default": 1,
+                  "min": 1,
+                  "max": 5
+                }
+              ],
+              "pitch_step": [
+                "FLOAT",
+                {
+                  "default": 1,
+                  "min": 0.5,
+                  "max": 5
+                }
+              ],
+              "initial_x": [
+                "FLOAT",
+                {
+                  "default": 0.1629
+                }
+              ],
+              "initial_y": [
+                "FLOAT",
+                {
+                  "default": 0.1131
+                }
+              ],
+              "l1": [
+                "FLOAT",
+                {
+                  "default": 0.1159
+                }
+              ],
+              "l2": [
+                "FLOAT",
+                {
+                  "default": 0.135
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "action_methods": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "create_keyboard_ee_control"
+        },
+        "type": "So100KeyboardEEControlNode"
+      },
+      "measured": {
+        "width": 289,
+        "height": 671
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "ControlLoopNode-1754155881080",
+      "type": "customNode",
+      "position": {
+        "x": 842.2627729077295,
+        "y": 143.96150993592198
+      },
+      "data": {
+        "label": "Control Loop",
+        "nodeInfo": {
+          "name": "ControlLoopNode",
+          "display_name": "Control Loop",
+          "description": "Execute a control loop with robot and action",
+          "detailed_description": "\nControlLoopNode\n\nPurpose: Executes a control loop that applies actions to a robot at a specified frequency.\n\nInputs:\n  - robot (DICT): Connected robot instance from ConnectLeRobotNode\n  - action_generator (DICT): Action generator function from So100KeyboardEEControlNode\n  - control_frequency (FLOAT, optional): Control frequency in Hz (default: 30.0)\n  - max_duration (FLOAT, optional): Maximum duration of control loop in seconds (default: 10.0)\n\nOutputs:\n  - robot (DICT): Robot instance after control execution\n  - control_stats (DICT): Statistics about the control execution\n\nUsage: Use this node to execute a control loop that applies actions to a robot. The action_generator should be a function that takes observations and returns robot actions.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "generate_actions": [
+                "DICT",
+                {}
+              ],
+              "dataset": [
+                "DICT",
+                {}
+              ],
+              "dataset_config": [
+                "DICT",
+                {}
+              ]
+            },
+            "optional": {}
+          },
+          "return_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "control_stats": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "execute_control_loop"
+        },
+        "type": "ControlLoopNode"
+      },
+      "measured": {
+        "width": 355,
+        "height": 304
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "DatasetRecordConfigForOneEpisodeNode-1754155633890",
+      "sourceHandle": "output",
+      "target": "CreateDatasetNode-1754155639110",
+      "targetHandle": "dataset_config",
+      "id": "xy-edge__DatasetRecordConfigForOneEpisodeNode-1754155633890output-CreateDatasetNode-1754155639110dataset_config"
+    },
+    {
+      "source": "ConnectLeRobotNode-1754010971829",
+      "sourceHandle": "output-0",
+      "target": "CreateDatasetNode-1754155639110",
+      "targetHandle": "robot",
+      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-CreateDatasetNode-1754155639110robot"
+    },
+    {
+      "source": "ConnectLeRobotNode-1754010971829",
+      "sourceHandle": "output-0",
+      "target": "ControlLoopNode-1754155881080",
+      "targetHandle": "robot",
+      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-ControlLoopNode-1754155881080robot"
+    },
+    {
+      "source": "So100KeyboardEEControlNode-1754155759971",
+      "sourceHandle": "output",
+      "target": "ControlLoopNode-1754155881080",
+      "targetHandle": "generate_actions",
+      "id": "xy-edge__So100KeyboardEEControlNode-1754155759971output-ControlLoopNode-1754155881080generate_actions"
+    },
+    {
+      "source": "CreateDatasetNode-1754155639110",
+      "sourceHandle": "output-0",
+      "target": "ControlLoopNode-1754155881080",
+      "targetHandle": "dataset",
+      "id": "xy-edge__CreateDatasetNode-1754155639110output-0-ControlLoopNode-1754155881080dataset"
+    },
+    {
+      "source": "DatasetRecordConfigForOneEpisodeNode-1754155633890",
+      "sourceHandle": "output",
+      "target": "ControlLoopNode-1754155881080",
+      "targetHandle": "dataset_config",
+      "id": "xy-edge__DatasetRecordConfigForOneEpisodeNode-1754155633890output-ControlLoopNode-1754155881080dataset_config"
+    }
+  ],
+  "metadata": {
+    "name": "testing",
+    "description": "Workflow saved on 8/2/2025",
+    "created": "2025-08-02T17:37:04.455Z",
+    "version": "1.0.0",
+    "modified": "2025-08-02T17:37:04.455Z"
+  }
+}

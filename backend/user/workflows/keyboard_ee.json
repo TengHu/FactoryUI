@@ -1,0 +1,272 @@
+{
+  "nodes": [
+    {
+      "id": "ConnectLeRobotNode-1754010971829",
+      "type": "customNode",
+      "position": {
+        "x": -496.6921096429126,
+        "y": 317.1340569610832
+      },
+      "data": {
+        "label": "Connect LeRobot",
+        "nodeInfo": {
+          "name": "ConnectLeRobotNode",
+          "display_name": "Connect LeRobot",
+          "description": "Connect to a LeRobot robot and return robot instance",
+          "detailed_description": "\nConnectLeRobotNode\n\nPurpose: Establishes connection to a LeRobot robot using the specified configuration.\n\nInputs:\n  - robot_type (SELECTION): Type of robot (so100_follower, so101_follower, koch_follower, bi_so100_follower)\n  - port (STRING): Serial port for the robot (e.g., /dev/tty.usbmodem58760431541)\n  - robot_id (STRING): Identifier for the robot (e.g., black, blue)\n  - cameras (STRING): JSON string defining camera configuration\n\nOutputs:\n  - robot (DICT): Connected robot instance\n  - robot_config (DICT): Robot configuration object\n\nUsage: Use this node to establish connection with a LeRobot robot. The robot instance can be used by other LeRobot nodes for recording and control.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "robot_type": [
+                "STRING",
+                {
+                  "default": "so101_follower"
+                }
+              ],
+              "port": [
+                "STRING",
+                {
+                  "default": "/dev/tty.usbmodem58760431541"
+                }
+              ],
+              "robot_id": [
+                "STRING",
+                {
+                  "default": "black"
+                }
+              ],
+              "cameras": [
+                "STRING",
+                {
+                  "default": "{\"laptop\": {\"type\": \"opencv\", \"camera_index\": 0, \"width\": 640, \"height\": 480, \"fps\": 30}}"
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "robot_config": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "connect_robot"
+        },
+        "type": "ConnectLeRobotNode",
+        "inputValues": {
+          "cameras": "{}",
+          "robot_id": "my_awesome_follower_arm",
+          "robot_type": "so101_follower",
+          "port": "/dev/tty.usbmodem5A7A0558831"
+        },
+        "bypassed": false
+      },
+      "measured": {
+        "width": 309,
+        "height": 529
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "ControlLoopNode-1754093800336",
+      "type": "customNode",
+      "position": {
+        "x": 339.50596802009557,
+        "y": 420.8345855861324
+      },
+      "data": {
+        "label": "Control Loop",
+        "nodeInfo": {
+          "name": "ControlLoopNode",
+          "display_name": "Control Loop",
+          "description": "Execute a control loop with robot and action",
+          "detailed_description": "\nControlLoopNode\n\nPurpose: Executes a control loop that applies actions to a robot at a specified frequency.\n\nInputs:\n  - robot (DICT): Connected robot instance from ConnectLeRobotNode\n  - action_generator (DICT): Action generator function from KeyboardEEControlNode\n  - control_frequency (FLOAT, optional): Control frequency in Hz (default: 30.0)\n  - max_duration (FLOAT, optional): Maximum duration of control loop in seconds (default: 10.0)\n\nOutputs:\n  - robot (DICT): Robot instance after control execution\n  - control_stats (DICT): Statistics about the control execution\n\nUsage: Use this node to execute a control loop that applies actions to a robot. The action_generator should be a function that takes observations and returns robot actions.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "generate_actions": [
+                "DICT",
+                {}
+              ]
+            },
+            "optional": {
+              "control_frequency": [
+                "FLOAT",
+                {
+                  "default": 30,
+                  "min": 1,
+                  "max": 100
+                }
+              ],
+              "max_duration": [
+                "FLOAT",
+                {
+                  "default": 10,
+                  "min": 1,
+                  "max": 3600
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "robot": [
+                "DICT",
+                {}
+              ],
+              "control_stats": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "execute_control_loop"
+        },
+        "type": "ControlLoopNode",
+        "inputValues": {
+          "max_duration": 60
+        }
+      },
+      "measured": {
+        "width": 355,
+        "height": 402
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "KeyboardEEControlNode-1754093823651",
+      "type": "customNode",
+      "position": {
+        "x": -91.25606537251525,
+        "y": 143.02428868799933
+      },
+      "data": {
+        "label": "Keyboard EE Control",
+        "nodeInfo": {
+          "name": "KeyboardEEControlNode",
+          "display_name": "Keyboard EE Control",
+          "description": "Keyboard end-effector control for LeRobot robots",
+          "detailed_description": "\nKeyboardEEControlNode\n\nPurpose: Provides keyboard-based end-effector control for LeRobot robots with inverse kinematics.\n\nInputs:\n  - robot (DICT): Connected robot instance from ConnectLeRobotNode\n  - keyboard (DICT): Keyboard teleoperator instance from ConnectTeleoperatorNode\n  - kp (FLOAT, optional): Proportional gain for P control (default: 0.5)\n  - xy_step (FLOAT, optional): Step size for x,y coordinate control (default: 0.004)\n  - joint_step (INT, optional): Step size for joint control (default: 1)\n  - pitch_step (FLOAT, optional): Step size for pitch adjustment (default: 1.0)\n  - initial_x (FLOAT, optional): Initial x coordinate (default: 0.1629)\n  - initial_y (FLOAT, optional): Initial y coordinate (default: 0.1131)\n  - l1 (FLOAT, optional): Upper arm length for IK (default: 0.1159)\n  - l2 (FLOAT, optional): Lower arm length for IK (default: 0.1350)\n\nOutputs:\n  - action_generator (DICT): Function that generates actions based on keyboard input\n  - observations (DICT): Current robot observations\n  - control_state (DICT): Current control state including target positions\n\nUsage: Use this node with ControlLoopNode to provide keyboard-based end-effector control.\n        ",
+          "tags": [
+            "LeRobot"
+          ],
+          "input_types": {
+            "required": {},
+            "optional": {
+              "kp": [
+                "FLOAT",
+                {
+                  "default": 0.5,
+                  "min": 0.1,
+                  "max": 2
+                }
+              ],
+              "xy_step": [
+                "FLOAT",
+                {
+                  "default": 0.004,
+                  "min": 0.001,
+                  "max": 0.01
+                }
+              ],
+              "joint_step": [
+                "INT",
+                {
+                  "default": 1,
+                  "min": 1,
+                  "max": 5
+                }
+              ],
+              "pitch_step": [
+                "FLOAT",
+                {
+                  "default": 1,
+                  "min": 0.5,
+                  "max": 5
+                }
+              ],
+              "initial_x": [
+                "FLOAT",
+                {
+                  "default": 0.1629
+                }
+              ],
+              "initial_y": [
+                "FLOAT",
+                {
+                  "default": 0.1131
+                }
+              ],
+              "l1": [
+                "FLOAT",
+                {
+                  "default": 0.1159
+                }
+              ],
+              "l2": [
+                "FLOAT",
+                {
+                  "default": 0.135
+                }
+              ]
+            }
+          },
+          "return_types": {
+            "required": {
+              "action_methods": [
+                "DICT",
+                {}
+              ]
+            }
+          },
+          "function": "create_keyboard_ee_control"
+        },
+        "type": "KeyboardEEControlNode"
+      },
+      "measured": {
+        "width": 289,
+        "height": 671
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "ConnectLeRobotNode-1754010971829",
+      "sourceHandle": "output-0",
+      "target": "ControlLoopNode-1754093800336",
+      "targetHandle": "robot",
+      "id": "xy-edge__ConnectLeRobotNode-1754010971829output-0-ControlLoopNode-1754093800336robot"
+    },
+    {
+      "source": "KeyboardEEControlNode-1754093823651",
+      "sourceHandle": "output",
+      "target": "ControlLoopNode-1754093800336",
+      "targetHandle": "generate_actions",
+      "id": "xy-edge__KeyboardEEControlNode-1754093823651output-ControlLoopNode-1754093800336generate_actions"
+    }
+  ],
+  "metadata": {
+    "name": "keyboard_ee",
+    "description": "Workflow saved on 8/1/2025",
+    "created": "2025-08-02T00:23:45.313Z",
+    "version": "1.0.0",
+    "modified": "2025-08-02T00:23:45.313Z"
+  }
+}

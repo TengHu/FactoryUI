@@ -4,8 +4,8 @@
       "id": "ConnectLeRobotNode-1754010971829",
       "type": "customNode",
       "position": {
-        "x": -300.8573198652683,
-        "y": 257.95251418933424
+        "x": -365.3397000744674,
+        "y": 247.83763101926382
       },
       "data": {
         "label": "Connect LeRobot",
@@ -79,8 +79,8 @@
       "id": "ConnectTeleoperatorNode-1754011348203",
       "type": "customNode",
       "position": {
-        "x": 195.52787842997242,
-        "y": 284.33843022743787
+        "x": 107.02265069185611,
+        "y": 241.35017675463854
       },
       "data": {
         "label": "Connect Teleoperator",
@@ -137,8 +137,8 @@
         "bypassed": false
       },
       "measured": {
-        "width": 292,
-        "height": 473
+        "width": 262,
+        "height": 343
       },
       "selected": false,
       "dragging": false
@@ -220,9 +220,9 @@
       },
       "measured": {
         "width": 368,
-        "height": 487
+        "height": 371
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -336,7 +336,7 @@
       },
       "measured": {
         "width": 381,
-        "height": 828
+        "height": 712
       },
       "selected": false,
       "dragging": false
@@ -397,9 +397,9 @@
       },
       "measured": {
         "width": 364,
-        "height": 342
+        "height": 226
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     }
   ],
@@ -449,9 +449,9 @@
   ],
   "metadata": {
     "name": "record_demo",
-    "description": "Workflow saved on 8/1/2025",
-    "created": "2025-08-01T21:08:06.125Z",
+    "description": "Workflow saved on 8/2/2025",
+    "created": "2025-08-02T17:27:35.606Z",
     "version": "1.0.0",
-    "modified": "2025-08-01T21:08:06.125Z"
+    "modified": "2025-08-02T17:27:35.606Z"
   }
 }

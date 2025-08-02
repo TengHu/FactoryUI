@@ -11,7 +11,6 @@ from core.node_base import NodeBase
 feetech_path = os.path.join(os.path.dirname(__file__), 'feetech-servo-sdk')
 sys.path.insert(0, feetech_path)
 
-from feetech_servo import ScsServoSDK
 
 import http.client
 import json
