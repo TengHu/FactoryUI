@@ -2,7 +2,6 @@
 
 A powerful GUI for open-source robotics. Offers modular, reusable building blocks—like Lego—for constructing custom robot agent workflows.
 
-![FactoryUI Screenshot](screenshot.png)
 
 ## 📋 Prerequisites
 
@@ -12,7 +11,13 @@ Before you begin, assemble and set up your robot by following the instructions a
 
 Explore the sample workflows located in `backend/user/workflows`, such as:
 - Teleoperating a robot
+  
+<img width="659" height="741" alt="image" src="https://github.com/user-attachments/assets/77f0d0ef-bf25-4147-8422-d51b5597fb67" />
+
 - Teleoperating using a keyboard
+
+<img width="714" height="746" alt="image" src="https://github.com/user-attachments/assets/a3e3a737-2cc1-4b09-bb20-7191470b32c0" />
+
 - Dual teleoperation with two or more teleoperators
 
 
