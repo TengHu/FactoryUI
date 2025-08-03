@@ -911,8 +911,6 @@ Usage: Use this node to combine two different action generators (e.g., teleopera
             
             rt_update = {
                 "status": "combined",
-                "generator1_type": action_generator_1.get("type", "unknown"),
-                "generator2_type": action_generator_2.get("type", "unknown")
             }
             
             return ({"init_action": init_combined_action, "generate_action": generate_combined_action},), rt_update
