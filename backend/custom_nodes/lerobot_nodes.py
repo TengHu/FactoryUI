@@ -910,7 +910,7 @@ Usage: Use this node to combine two different action generators (e.g., teleopera
                 return combined_action, new_action_state
             
             rt_update = {
-                "status": "combined",
+                "status": "combined"
             }
             
             return ({"init_action": init_combined_action, "generate_action": generate_combined_action},), rt_update
